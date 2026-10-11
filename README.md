@@ -4,10 +4,11 @@
 
 ## Links
 
-- **Live frontend:** https://devops-saurabhpandey.github.io/ktl_rto/
+- **Live frontend:** https://devops-saurabhpandey.github.io/shivasha/
+- **Repository:** https://github.com/devops-saurabhpandey/shivasha
 - **Frontend documentation:** [FRONTEND.md](./FRONTEND.md)
 - **Backend source:** [server/](./server/)
-- **GitHub Actions deployments:** https://github.com/devops-saurabhpandey/ktl_rto/actions
+- **GitHub Actions deployments:** https://github.com/devops-saurabhpandey/shivasha/actions
 
 ## Technology Stack
 
@@ -34,8 +35,8 @@ Features that use data or authentication require the backend service and databas
 Requirements: Node.js and npm.
 
 ```bash
-git clone https://github.com/devops-saurabhpandey/ktl_rto.git
-cd ktl_rto
+git clone https://github.com/devops-saurabhpandey/shivasha.git
+cd shivasha
 npm install
 npm run dev
 ```
@@ -60,13 +61,13 @@ Configure the backend environment variables before starting it:
 
 - `MONGODB_URI` — MongoDB Atlas connection string
 - `JWT_SECRET` — long, random private secret
-- `FRONTEND_URL` — `https://devops-saurabhpandey.github.io/ktl_rto`
+- `FRONTEND_URL` — `https://devops-saurabhpandey.github.io/shivasha`
 
 See [server/.env.example](./server/.env.example) for the variable names. Create a private local `.env` file; do not commit secrets.
 
 ## Deployment Notes
 
-GitHub Pages serves the frontend from the `/ktl_rto/` path. The frontend build uses the `VITE_API_URL` GitHub Actions repository variable to choose the deployed backend URL. Set it to the public HTTPS URL of the backend service, without a trailing slash, and rerun the deployment workflow.
+GitHub Pages serves the frontend from the `/shivasha/` path. The frontend build uses the `VITE_API_URL` GitHub Actions repository variable to choose the deployed backend URL. Set it to the public HTTPS URL of the backend service, without a trailing slash, and rerun the deployment workflow.
 
 A successful frontend build/deployment does not by itself verify backend availability, MongoDB connectivity, login, uploads, or messaging. Test those separately after backend deployment.
 
