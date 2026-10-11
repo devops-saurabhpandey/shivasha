@@ -26,3 +26,10 @@
     background-position: center;
   }
 }
+
+.social-shell {
+  background-image: linear-gradient(rgba(255, 247, 236, .86), rgba(255, 247, 236, .90)), url("/shivasha/images/navratri-wallpaper.svg");
+  background-position: center;
+  background-size: cover;
+  background-attachment: fixed;
+}
