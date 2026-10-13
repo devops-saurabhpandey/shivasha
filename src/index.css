@@ -22,8 +22,7 @@
 }
 @media (max-width: 700px) {
   .login-page {
-    background-image: linear-gradient(rgba(38, 7, 18, .68), rgba(65, 12, 24, .52)), url("/shivasha/images/navratri-wallpaper.svg");
-    background-position: center;
+    background-image: none;
   }
 }
 
