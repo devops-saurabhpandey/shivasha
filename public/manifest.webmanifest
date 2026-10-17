@@ -1,0 +1,19 @@
+{
+  "name": "SHIVASHA — Global Technology Super App",
+  "short_name": "SHIVASHA",
+  "description": "Connect, discover businesses, create content, and grow with Shivasha.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#111827",
+  "theme_color": "#111827",
+  "icons": [
+    {
+      "src": "./images/shivasha-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
