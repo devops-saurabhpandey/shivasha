@@ -1,0 +1,13 @@
+.git
+.github
+node_modules
+**/node_modules
+dist
+build
+android
+coverage
+.env
+.env.*
+!.env.example
+npm-debug.log*
+.DS_Store
