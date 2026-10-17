@@ -1,6 +1,10 @@
 # SHIVASHA
 
-**SHIVASHA — Social • Connect • Share** is a React-based social community platform with a Node.js/Express API and MongoDB data store.
+**Shivasha is a Software Company.** Its flagship product, **Shivasha Global Technology Super App**, is planned around 12 Jyotish-inspired Houses, 15 product modules and 7 delivery phases. The current application remains the foundation; the 12-House Explorer is a navigation and product-mapping milestone, not a claim that all planned modules are already live.
+
+**Product plan:** [Global Super App Master Plan](./docs/SHIVASHA_GLOBAL_SUPER_APP_PLAN.md)
+
+The existing React-based social community app, Node.js/Express API and MongoDB data store are the starting point for this wider ecosystem.
 
 ## Links
 
