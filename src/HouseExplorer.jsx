@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from "react";
+import "./house-explorer.css";
 
 const HOUSES = [
   { number: 1, name: "Self & Identity", hindi: "प्रथम भाव", color: "red", symbol: "◉", purpose: "Personal identity, profiles and self-development.", modules: ["M1 · Shivasha Social"], features: ["Digital identity and profiles", "Personal branding", "Social feed and connections"], phase: "Phase 1 · Foundation" },
