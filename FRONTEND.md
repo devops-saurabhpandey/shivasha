@@ -110,7 +110,7 @@ The backend also needs environment variables on its hosting service:
 
 - `MONGODB_URI`: MongoDB Atlas connection string.
 - `JWT_SECRET`: long, random, private signing secret.
-- `FRONTEND_URL`: `https://devops-saurabhpandey.github.io/ktl_rto`
+- `FRONTEND_URL`: `https://devops-saurabhpandey.github.io/shivasha`
 
 Never put database credentials or `JWT_SECRET` in frontend code, Vite variables, or public repository files. Only the public API base URL belongs in `VITE_API_URL`.
 
