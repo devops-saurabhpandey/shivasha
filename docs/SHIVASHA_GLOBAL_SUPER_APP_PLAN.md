@@ -145,3 +145,26 @@ Set numeric targets only after collecting a reliable baseline.
 The 12-House Explorer is a **navigation/product-mapping foundation**. The cards describe planned capabilities and roadmap mappings; they do not imply that every listed service is already implemented, connected to a backend, or enabled in production.
 
 The current social application should remain intact while the new framework is added incrementally. Use a feature branch and pull request for review before merging changes into the live deployment.
+
+
+## 8. Unified Content Platform (new prototype milestone)
+
+The Content Studio UI provides a shared discovery surface for these planned formats:
+- Long-form video
+- Vertical short video / Reels
+- Articles
+- Images and galleries
+- Courses and lessons
+- Live events and streaming
+- Business product/service videos linked to inquiries
+
+The current UI is a **front-end prototype with clearly labelled example cards**. Its type tabs, text search and 12-House filter work locally in the browser. Example cards are not published user content, and the prototype does not yet upload or persist media, play hosted videos, enroll learners, track course progress, host live streams, or create business leads.
+
+### Implementation sequence to production
+1. Define a shared content model and authenticated API with House, creator, format, status, visibility, tags and media metadata.
+2. Add secure media storage/video hosting with upload validation, size/type limits, processing state and signed/private access where needed.
+3. Build creator publishing workflow: draft, preview, thumbnail, captions, alt text, moderation status and publish/unpublish.
+4. Implement format-specific experiences: video player and playlists, vertical feed, article reader, image galleries, course lessons/progress, live provider integration, and business inquiry actions.
+5. Add reporting/moderation, quotas, accessibility, analytics, retention/deletion controls and end-to-end tests.
+
+Do not describe this prototype as a working video hosting, course or live-streaming service until the corresponding backend and provider flows are implemented and tested.
