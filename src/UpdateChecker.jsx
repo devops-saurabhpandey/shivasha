@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import packageInfo from "../package.json";
 
 const RELEASES_API = "https://api.github.com/repos/devops-saurabhpandey/shivasha/releases/latest";
-const CURRENT_VERSION = packageInfo.version || "1.0.0";
+const CURRENT_VERSION = import.meta.env.VITE_APP_VERSION || packageInfo.version || "1.0.0";
 
 function normalizeVersion(value = "") {
   return value.replace(/^v/i, "").split(/[+-]/)[0].split(".").map(part => Number.parseInt(part, 10) || 0);
