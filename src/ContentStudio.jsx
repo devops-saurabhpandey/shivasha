@@ -84,7 +84,7 @@ export default function ContentStudio() {
       {TYPES.map(item => <button type="button" key={item.id} role="tab" aria-selected={type === item.id} className={type === item.id ? "studio-type-tab selected" : "studio-type-tab"} onClick={() => setType(item.id)}><span>{item.icon}</span>{item.label}</button>)}
     </div>
 
-    <div className="studio-results-heading"><div><span className="studio-eyebrow">EXPLORE CONTENT</span><h3>{type === "all" ? "Discover on Shivasha" : TYPE_NAMES[type]}</h3><p>{house === "All 12 Houses" ? "{purushartha === "all" ? "Content across Dharma, Artha, Kaam and Moksh" : PURUSHARTHAS.find(item => item.id === purushartha)?.label}{house === "All 12 Houses" ? "" : " · " + house}</p></div><span className="studio-count">{items.length} preview {items.length === 1 ? "item" : "items"}</span></div>
+    <div className="studio-results-heading"><div><span className="studio-eyebrow">EXPLORE CONTENT</span><h3>{type === "all" ? "Discover on Shivasha" : TYPE_NAMES[type]}</h3><p>{purushartha === "all" ? "Content across Dharma, Artha, Kaam and Moksh" : PURUSHARTHAS.find(item => item.id === purushartha)?.label}{house === "All 12 Houses" ? "" : " · " + house}</p></div><span className="studio-count">{items.length} preview {items.length === 1 ? "item" : "items"}</span></div>
 
     {items.length ? <div className="studio-content-grid">{items.map(item => <article className="studio-content-card" key={item.id}>
       <div className={"studio-card-art " + item.tone}><span className="studio-art-icon">{item.icon}</span><span className="studio-art-type">{TYPE_NAMES[item.type]}</span>{item.type === "live" && <span className="studio-live-label">LIVE FORMAT</span>}<span className="studio-art-watermark">S</span></div>
