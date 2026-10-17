@@ -1,8 +1,8 @@
 # SHIVASHA Frontend Documentation
 
 **Product:** SHIVASHA Social Community Platform  
-**Repository:** `devops-saurabhpandey/ktl_rto`  
-**Live frontend:** https://devops-saurabhpandey.github.io/ktl_rto/  
+**Repository:** `devops-saurabhpandey/shivasha`  
+**Live frontend:** https://devops-saurabhpandey.github.io/shivasha/  
 **Frontend stack:** React 19, Vite 7, JavaScript, CSS, Socket.IO Client
 
 > This document describes the frontend currently present in the repository. A successful GitHub Pages deployment publishes the UI, but user accounts, posts, messages, and other API-backed features require the backend and MongoDB to be configured and reachable.
@@ -13,7 +13,7 @@
 
 ## 1. Frontend Overview
 
-The frontend is a responsive single-page application (SPA). Vite builds the React application into the `dist/` directory, and GitHub Pages hosts that static output under the `/ktl_rto/` path.
+The frontend is a responsive single-page application (SPA). Vite builds the React application into the `dist/` directory, and GitHub Pages hosts that static output under the `/shivasha/` path.
 
 ### Main technologies
 
@@ -76,8 +76,8 @@ Prerequisites: Node.js and npm installed.
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/devops-saurabhpandey/ktl_rto.git
-   cd ktl_rto
+   git clone https://github.com/devops-saurabhpandey/shivasha.git
+   cd shivasha
    ```
 2. Install frontend dependencies:
    ```bash
@@ -140,8 +140,8 @@ Current deployment settings:
 
 - Build command: `npm run build`
 - Published directory: `dist/`
-- Vite base path: `/ktl_rto/`
-- Hosting URL: https://devops-saurabhpandey.github.io/ktl_rto/
+- Vite base path: `/shivasha/`
+- Hosting URL: https://devops-saurabhpandey.github.io/shivasha/
 
 To verify a deployment, open the repository's **Actions** tab and check that both the **build** and **deploy** jobs completed successfully.
 
@@ -191,8 +191,8 @@ Check that the API URL points to the deployed backend, the backend is running, t
 
 ## 11. Useful Links
 
-- [Live SHIVASHA frontend](https://devops-saurabhpandey.github.io/ktl_rto/)
-- [GitHub repository](https://github.com/devops-saurabhpandey/ktl_rto)
-- [GitHub Actions deployments](https://github.com/devops-saurabhpandey/ktl_rto/actions)
+- [Live SHIVASHA frontend](https://devops-saurabhpandey.github.io/shivasha/)
+- [GitHub repository](https://github.com/devops-saurabhpandey/shivasha)
+- [GitHub Actions deployments](https://github.com/devops-saurabhpandey/shivasha/actions)
 - [MongoDB Atlas](https://cloud.mongodb.com/)
 - [Render Dashboard](https://dashboard.render.com/)
