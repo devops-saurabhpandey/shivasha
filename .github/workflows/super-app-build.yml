@@ -22,5 +22,7 @@ jobs:
           node-version: 20
       - name: Install dependencies
         run: npm install
+      - name: Check backend JavaScript syntax
+        run: node --check server/index.js && node --check server/routes/content.js && node --check server/models/Content.js
       - name: Build frontend
         run: npm run build

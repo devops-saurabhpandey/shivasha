@@ -1,106 +1,167 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import "./content-studio.css";
 
+const API_BASE = (import.meta.env.VITE_API_URL || "https://shivasha.onrender.com").replace(/\/$/, "");
+const CATEGORIES = [
+  { id: "dharma", label: "धर्म", english: "DHARMA", icon: "☼", houses: ["Self & Identity", "Education & Creativity", "Knowledge & Philosophy"], description: "ज्ञान, शिक्षा, रचनात्मकता और जीवन की दिशा", tone: "dharma" },
+  { id: "artha", label: "अर्थ", english: "ARTHA", icon: "₹", houses: ["Wealth & Finance", "Services & Wellbeing", "Career & Profession"], description: "धन, व्यवसाय, सेवाएँ और करियर", tone: "artha" },
+  { id: "kaam", label: "काम", english: "KAAM", icon: "⇄", houses: ["Skills & Communication", "Business & Partnerships", "Networks & Growth"], description: "कौशल, संबंध, नेटवर्क और महत्वाकांक्षाएँ", tone: "kaam" },
+  { id: "moksh", label: "मोक्ष", english: "MOKSH", icon: "✧", houses: ["Home & Property", "Research & Transformation", "Inner Growth & Global Reach"], description: "आत्मचिंतन, परिवर्तन और आंतरिक विकास", tone: "moksh" }
+];
 const TYPES = [
-  { id: "all", label: "All content", icon: "✦" },
-  { id: "video", label: "Long videos", icon: "▶" },
-  { id: "reel", label: "Reels & Shorts", icon: "▣" },
-  { id: "article", label: "Articles", icon: "▤" },
-  { id: "image", label: "Images", icon: "▧" },
-  { id: "course", label: "Courses", icon: "▥" },
-  { id: "live", label: "Live events", icon: "◉" },
-  { id: "business", label: "Business videos", icon: "▣" }
+  { id: "article", label: "Article / लेख", icon: "▤" },
+  { id: "video", label: "Long Video", icon: "▶" },
+  { id: "reel", label: "Reel / Short", icon: "▣" },
+  { id: "image", label: "Image / फोटो", icon: "▧" },
+  { id: "course", label: "Course / पाठ्यक्रम", icon: "▥" },
+  { id: "live", label: "Live Event", icon: "◉" },
+  { id: "business", label: "Business Video", icon: "▣" }
 ];
+const CATEGORY_NAMES = Object.fromEntries(CATEGORIES.map(c => [c.id, c.label + " · " + c.english]));
+const TYPE_NAMES = Object.fromEntries(TYPES.map(t => [t.id, t.label]));
+const formatDate = value => { try { return new Date(value).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" }); } catch { return ""; } };
 
-const HOUSES = [
-  "All 12 Houses", "Self & Identity", "Wealth & Finance", "Skills & Communication",
-  "Home & Property", "Education & Creativity", "Services & Wellbeing",
-  "Business & Partnerships", "Research & Transformation", "Knowledge & Philosophy",
-  "Career & Profession", "Networks & Growth", "Inner Growth & Global Reach"
-];
-
-
-const PURUSHARTHA_BY_HOUSE = {
-  "Self & Identity": "dharma", "Education & Creativity": "dharma", "Knowledge & Philosophy": "dharma",
-  "Wealth & Finance": "artha", "Services & Wellbeing": "artha", "Career & Profession": "artha",
-  "Skills & Communication": "kaam", "Business & Partnerships": "kaam", "Networks & Growth": "kaam",
-  "Home & Property": "moksh", "Research & Transformation": "moksh", "Inner Growth & Global Reach": "moksh"
-};
-const PURUSHARTHAS = [
-  { id: "all", label: "All four categories" },
-  { id: "dharma", label: "धर्म · Dharma" },
-  { id: "artha", label: "अर्थ · Artha" },
-  { id: "kaam", label: "काम · Kaam" },
-  { id: "moksh", label: "मोक्ष · Moksh" }
-];
-
-const EXAMPLES = [
-  { id: 1, type: "video", house: "Skills & Communication", title: "Web Development: From Basics to Projects", creator: "Shivasha Learning", description: "Long-form tutorial series for people learning modern web development.", duration: "18 min", icon: "▶", tone: "blue", tags: ["Coding", "Tutorial"] },
-  { id: 2, type: "reel", house: "Education & Creativity", title: "One concept in 60 seconds", creator: "Creator Studio", description: "A short vertical-video format for quick lessons and useful ideas.", duration: "0:58", icon: "▣", tone: "violet", tags: ["Shorts", "Learning"] },
-  { id: 3, type: "article", house: "Research & Transformation", title: "How AI discovery can help people find the right service", creator: "Shivasha Editorial", description: "An article format with readable text, tags, author details and related content.", duration: "6 min read", icon: "▤", tone: "green", tags: ["AI", "Discovery"] },
-  { id: 4, type: "image", house: "Self & Identity", title: "Creator portfolio and visual story", creator: "Community Creators", description: "Image posts and galleries with captions, attribution and accessible alt text.", duration: "Gallery", icon: "▧", tone: "orange", tags: ["Images", "Creator"] },
-  { id: 5, type: "course", house: "Education & Creativity", title: "Practical Software Skills", creator: "Shivasha Edutech", description: "A course structure with lessons, progress tracking, quizzes and learning resources.", duration: "8 lessons", icon: "▥", tone: "gold", tags: ["Course", "Skills"] },
-  { id: 6, type: "live", house: "Networks & Growth", title: "Community webinar and Q&A", creator: "Shivasha Community", description: "Planned live-event experience with scheduled sessions, chat and replay support.", duration: "Scheduled", icon: "◉", tone: "red", tags: ["Live", "Community"] },
-  { id: 7, type: "business", house: "Business & Partnerships", title: "Product demo and customer inquiry", creator: "Shivasha Business", description: "Business product videos connected to a company profile, catalogue and inquiry form.", duration: "Product demo", icon: "▣", tone: "teal", tags: ["Business", "Leads"] },
-  { id: 8, type: "video", house: "Knowledge & Philosophy", title: "Knowledge, philosophy and reflection", creator: "Knowledge Library", description: "A long-form video library organized by topics, creators and playlists.", duration: "12 min", icon: "▶", tone: "indigo", tags: ["Knowledge", "Library"] }
-];
-
-const TYPE_NAMES = Object.fromEntries(TYPES.map(type => [type.id, type.label]));
-
-export default function ContentStudio() {
+export default function ContentStudio({ auth }) {
+  const [category, setCategory] = useState("all");
+  const [house, setHouse] = useState("all");
   const [type, setType] = useState("all");
-  const [house, setHouse] = useState("All 12 Houses");
-  const [purushartha, setPurushartha] = useState("all");
   const [query, setQuery] = useState("");
-  const [showPublishingPlan, setShowPublishingPlan] = useState(false);
+  const [items, setItems] = useState([]);
+  const [allItems, setAllItems] = useState([]);
+  const [mine, setMine] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [publishing, setPublishing] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+  const [showForm, setShowForm] = useState(false);
+  const [form, setForm] = useState({ title: "", description: "", type: "article", purushartha: "dharma", house: CATEGORIES[0].houses[0], tags: "" });
+  const [file, setFile] = useState(null);
 
-  const items = useMemo(() => EXAMPLES.filter(item => {
-    const typeMatch = type === "all" || item.type === type;
-    const houseMatch = house === "All 12 Houses" || item.house === house;
-    const categoryMatch = purushartha === "all" || PURUSHARTHA_BY_HOUSE[item.house] === purushartha;
-    const text = (item.title + " " + item.creator + " " + item.description + " " + item.tags.join(" ")).toLowerCase();
-    return typeMatch && houseMatch && categoryMatch && text.includes(query.trim().toLowerCase());
-  }), [type, house, purushartha, query]);
+  const loadContent = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const params = new URLSearchParams();
+      if (category !== "all") params.set("purushartha", category);
+      if (house !== "all") params.set("house", house);
+      if (type !== "all") params.set("type", type);
+      if (query.trim()) params.set("q", query.trim());
+      if (mine) params.set("mine", "true");
+      const response = await fetch(API_BASE + "/api/content?" + params.toString(), { headers: { Authorization: "Bearer " + auth?.token } });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.message || "Content load failed");
+      setItems(data.items || []);
+      if (category === "all" && house === "all" && type === "all" && !query.trim() && !mine) setAllItems(data.items || []);
+      else {
+        const statsResponse = await fetch(API_BASE + "/api/content", { headers: { Authorization: "Bearer " + auth?.token } });
+        const statsData = await statsResponse.json().catch(() => ({}));
+        if (statsResponse.ok) setAllItems(statsData.items || []);
+      }
+    } catch (e) {
+      setError(e.message || "Content API is not available. Check backend deployment.");
+    } finally { setLoading(false); }
+  };
+
+  useEffect(() => { if (auth?.token) loadContent(); }, [auth?.token, category, house, type, query, mine]);
+
+  const counts = useMemo(() => CATEGORIES.map(c => ({ ...c, count: allItems.filter(item => item.purushartha === c.id).length })), [allItems]);
+  const activeCategory = CATEGORIES.find(c => c.id === form.purushartha) || CATEGORIES[0];
+  const availableHouses = activeCategory.houses;
+  const needsVideo = ["video", "reel", "business"].includes(form.type);
+  const needsImage = form.type === "image";
+  const accept = needsVideo ? "video/mp4,video/webm,video/quicktime" : needsImage ? "image/jpeg,image/png,image/webp,image/gif" : "image/*,video/mp4,video/webm,video/quicktime";
+
+  const changeCategory = id => {
+    const next = CATEGORIES.find(c => c.id === id) || CATEGORIES[0];
+    setForm(prev => ({ ...prev, purushartha: id, house: next.houses[0] }));
+  };
+  const publish = async event => {
+    event.preventDefault();
+    setError(""); setSuccess("");
+    if (!form.title.trim()) { setError("Content title is required."); return; }
+    if ((needsVideo || needsImage) && !file) { setError(needsVideo ? "Please select a video file." : "Please select an image file."); return; }
+    if (file && file.size > 50 * 1024 * 1024) { setError("File size must be 50 MB or less."); return; }
+    const body = new FormData();
+    Object.entries(form).forEach(([key, value]) => body.append(key, value));
+    if (file) body.append("media", file);
+    setPublishing(true);
+    try {
+      const response = await fetch(API_BASE + "/api/content", { method: "POST", headers: { Authorization: "Bearer " + auth?.token }, body });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.message || "Publishing failed");
+      setSuccess("आपका content सफलतापूर्वक publish हो गया।");
+      setForm({ title: "", description: "", type: "article", purushartha: category === "all" ? "dharma" : category, house: (CATEGORIES.find(c => c.id === (category === "all" ? "dharma" : category)) || CATEGORIES[0]).houses[0], tags: "" });
+      setFile(null);
+      const picker = document.getElementById("content-media-file"); if (picker) picker.value = "";
+      setCategory("all"); setHouse("all"); setType("all"); setMine(false);
+      setShowForm(false);
+      await loadContent();
+    } catch (e) { setError(e.message || "Publishing failed."); }
+    finally { setPublishing(false); }
+  };
+  const remove = async item => {
+    if (!window.confirm("Delete this content permanently?")) return;
+    setError(""); setSuccess("");
+    try {
+      const response = await fetch(API_BASE + "/api/content/" + item._id, { method: "DELETE", headers: { Authorization: "Bearer " + auth?.token } });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.message || "Delete failed");
+      setItems(prev => prev.filter(x => x._id !== item._id));
+      setSuccess("Content deleted.");
+    } catch (e) { setError(e.message); }
+  };
 
   return <section className="content content-studio">
     <div className="studio-hero">
       <div className="studio-hero-copy">
-        <span className="studio-eyebrow">SHIVASHA · UNIFIED CONTENT PLATFORM</span>
-        <h2>One place for <span>every format.</span></h2>
-        <p>Long videos, Reels, articles, images, courses, live events and business product videos — organized across the 12 Houses.</p>
-        <div className="studio-format-pills">{TYPES.slice(1).map(item => <span key={item.id}>{item.icon} {item.label}</span>)}</div>
+        <span className="studio-eyebrow">SHIVASHA · FOUR PURUSHARTHAS</span>
+        <h2>One platform. <span>Four purposes.</span></h2>
+        <p>धर्म, अर्थ, काम और मोक्ष — हर category में articles, videos, Reels, images, courses और business content publish करें।</p>
+        <div className="studio-format-pills">{TYPES.map(item => <span key={item.id}>{item.icon} {item.label}</span>)}</div>
+        <button type="button" className="studio-publish-hero" onClick={() => { setShowForm(v => !v); setError(""); setSuccess(""); }}>{showForm ? "✕ Close publisher" : "＋ Publish new content"}</button>
       </div>
       <div className="studio-hero-mark" aria-hidden="true"><span>▶</span><i>▤</i><b>SHIVASHA</b><small>WATCH · READ · LEARN · GROW</small></div>
     </div>
 
-    <div className="studio-notice"><b>Prototype preview:</b> These cards demonstrate the planned content experience. Publishing, persistent media uploads, course progress and live streaming need backend, storage and provider integration before they can work for real users.</div>
+    <div className="purushartha-dashboard" aria-label="Four category dashboards">
+      {counts.map(c => <button key={c.id} type="button" className={"purushartha-dashboard-card " + c.tone + (category === c.id ? " selected" : "")} onClick={() => { setCategory(category === c.id ? "all" : c.id); setHouse("all"); setMine(false); }}>
+        <span className="purushartha-dashboard-icon">{c.icon}</span><span className="purushartha-dashboard-english">{c.english}</span><strong>{c.label}</strong><p>{c.description}</p><small>{c.count} published · {c.houses.length} Houses</small>
+      </button>)}
+    </div>
+
+    {showForm && <form className="studio-publish-form" onSubmit={publish}>
+      <div className="studio-form-heading"><div><span className="studio-eyebrow">CREATOR WORKSPACE</span><h3>Publish to Shivasha</h3><p>Your content will be visible to signed-in users after publishing.</p></div><span className="studio-form-badge">AUTHENTICATED</span></div>
+      <div className="studio-form-grid">
+        <label>Content title *<input required maxLength="140" value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} placeholder="Give your content a clear title"/></label>
+        <label>Content type *<select value={form.type} onChange={e => { setForm({ ...form, type: e.target.value }); setFile(null); const picker = document.getElementById("content-media-file"); if (picker) picker.value = ""; }}>{TYPES.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}</select></label>
+        <label>Main category *<select value={form.purushartha} onChange={e => changeCategory(e.target.value)}>{CATEGORIES.map(c => <option key={c.id} value={c.id}>{c.label} · {c.english}</option>)}</select></label>
+        <label>House subcategory *<select value={form.house} onChange={e => setForm({ ...form, house: e.target.value })}>{availableHouses.map(h => <option key={h} value={h}>{h}</option>)}</select></label>
+        <label className="studio-form-wide">Description<textarea rows="4" maxLength="4000" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} placeholder="Explain what people will learn, watch or discover..."/></label>
+        <label className="studio-form-wide">Tags (comma separated)<input value={form.tags} onChange={e => setForm({ ...form, tags: e.target.value })} placeholder="education, business, meditation"/></label>
+        <label className="studio-form-wide studio-file-label">Media file {needsVideo ? "(required · MP4/WEBM/MOV · max 50 MB)" : needsImage ? "(required · JPG/PNG/WEBP/GIF · max 50 MB)" : "(optional · image or video · max 50 MB)"}<input id="content-media-file" type="file" accept={accept} onChange={e => setFile(e.target.files?.[0] || null)}/>{file && <small>Selected: {file.name} · {(file.size / (1024 * 1024)).toFixed(1)} MB</small>}</label>
+      </div>
+      <div className="studio-form-actions"><button type="button" className="studio-reset" onClick={() => { setShowForm(false); setFile(null); setError(""); }}>Cancel</button><button type="submit" className="studio-publish-button" disabled={publishing}>{publishing ? "Uploading & publishing…" : "Publish content"}</button></div>
+      <p className="studio-upload-note">Images/videos are uploaded to secure media hosting. Text content is stored in the app database. Publishing media requires the backend Cloudinary settings.</p>
+    </form>}
+
+    {error && <div className="studio-alert error" role="alert"><b>Action needed:</b> {error}</div>}
+    {success && <div className="studio-alert success" role="status">{success}</div>}
 
     <div className="studio-toolbar">
-      <label className="studio-search"><span>⌕</span><input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search content, creators or topics…" aria-label="Search content" /></label>
-      <label className="studio-house-select"><span>Main category</span><select value={purushartha} onChange={e => { setPurushartha(e.target.value); setHouse("All 12 Houses"); }} aria-label="Filter by Purushartha">{PURUSHARTHAS.map(item => <option key={item.id} value={item.id}>{item.label}</option>)}</select></label>
-      <label className="studio-house-select"><span>House</span><select value={house} onChange={e => setHouse(e.target.value)} aria-label="Filter by house">{HOUSES.map(item => <option key={item}>{item}</option>)}</select></label>
+      <label className="studio-search"><span>⌕</span><input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search titles, descriptions or tags…" aria-label="Search content"/></label>
+      <label className="studio-house-select"><span>Category</span><select value={category} onChange={e => { setCategory(e.target.value); setHouse("all"); }}><option value="all">All four categories</option>{CATEGORIES.map(c => <option key={c.id} value={c.id}>{c.label} · {c.english}</option>)}</select></label>
+      <label className="studio-house-select"><span>House</span><select value={house} onChange={e => setHouse(e.target.value)}><option value="all">All Houses</option>{CATEGORIES.filter(c => category === "all" || c.id === category).flatMap(c => c.houses).map(h => <option key={h}>{h}</option>)}</select></label>
+      <label className="studio-house-select"><span>Type</span><select value={type} onChange={e => setType(e.target.value)}><option value="all">All types</option>{TYPES.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}</select></label>
     </div>
+    <div className="studio-results-heading"><div><span className="studio-eyebrow">PUBLISHED CONTENT</span><h3>{mine ? "My published content" : category === "all" ? "Discover on Shivasha" : CATEGORY_NAMES[category]}</h3><p>Content saved in the Shivasha database, filtered by your selected category and House.</p></div><div className="studio-heading-actions"><button type="button" className={mine ? "studio-view-toggle selected" : "studio-view-toggle"} onClick={() => setMine(v => !v)}>{mine ? "✓ My content" : "My content"}</button><span className="studio-count">{items.length} items</span></div></div>
 
-    <div className="studio-type-tabs" role="tablist" aria-label="Content type filters">
-      {TYPES.map(item => <button type="button" key={item.id} role="tab" aria-selected={type === item.id} className={type === item.id ? "studio-type-tab selected" : "studio-type-tab"} onClick={() => setType(item.id)}><span>{item.icon}</span>{item.label}</button>)}
-    </div>
-
-    <div className="studio-results-heading"><div><span className="studio-eyebrow">EXPLORE CONTENT</span><h3>{type === "all" ? "Discover on Shivasha" : TYPE_NAMES[type]}</h3><p>{purushartha === "all" ? "Content across Dharma, Artha, Kaam and Moksh" : PURUSHARTHAS.find(item => item.id === purushartha)?.label}{house === "All 12 Houses" ? "" : " · " + house}</p></div><span className="studio-count">{items.length} preview {items.length === 1 ? "item" : "items"}</span></div>
-
-    {items.length ? <div className="studio-content-grid">{items.map(item => <article className="studio-content-card" key={item.id}>
-      <div className={"studio-card-art " + item.tone}><span className="studio-art-icon">{item.icon}</span><span className="studio-art-type">{TYPE_NAMES[item.type]}</span>{item.type === "live" && <span className="studio-live-label">LIVE FORMAT</span>}<span className="studio-art-watermark">S</span></div>
-      <div className="studio-card-body"><div className="studio-card-meta"><span>{item.house}</span><span>{item.duration}</span></div><h4>{item.title}</h4><p>{item.description}</p><div className="studio-card-footer"><span className="studio-creator"><span className="studio-creator-avatar">{item.creator.charAt(0)}</span>{item.creator}</span><span className="studio-preview-label">Example</span></div><div className="studio-tags">{item.tags.map(tag => <span key={tag}>#{tag.replace(/\s+/g, "")}</span>)}</div></div>
-    </article>)}</div> : <div className="studio-empty"><span>⌕</span><h3>No matching preview content</h3><p>Try another content type, House or search term.</p><button type="button" className="studio-reset" onClick={() => { setType("all"); setHouse("All 12 Houses"); setPurushartha("all"); setQuery(""); }}>Reset filters</button></div>}
-
-    <section className="studio-roadmap">
-      <button type="button" className="studio-roadmap-toggle" aria-expanded={showPublishingPlan} onClick={() => setShowPublishingPlan(value => !value)}><span><span className="studio-eyebrow">NEXT IMPLEMENTATION STEP</span><strong>What is needed to make publishing real?</strong><small>Review the backend and media roadmap</small></span><span>{showPublishingPlan ? "−" : "+"}</span></button>
-      {showPublishingPlan && <div className="studio-roadmap-list">
-        <article><b>1. Shared content API</b><p>Store content metadata, creator, House, format, visibility and publication state in the database.</p></article>
-        <article><b>2. Secure media storage</b><p>Upload images and videos to object storage or a video platform; keep file URLs and processing status in the database.</p></article>
-        <article><b>3. Creator publishing tools</b><p>Add drafts, previews, thumbnails, captions, alt text, categories and publish controls.</p></article>
-        <article><b>4. Format-specific features</b><p>Build video playback, vertical Reels, course lessons and progress, business inquiries, and live-stream provider integration.</p></article>
-        <article><b>5. Trust, safety and scale</b><p>Add reporting, moderation, access permissions, quotas, transcoding, analytics and accessibility checks.</p></article>
-      </div>}
-    </section>
+    {loading ? <div className="studio-empty"><span>◌</span><h3>Loading published content…</h3></div> : items.length ? <div className="studio-content-grid">{items.map(item => <article className="studio-content-card" key={item._id}>
+      <div className={"studio-card-art " + (item.type === "reel" ? "violet" : item.type === "image" ? "orange" : item.type === "course" ? "gold" : item.type === "live" ? "red" : item.type === "business" ? "teal" : item.purushartha)}>
+        {item.mediaType === "video" && item.mediaUrl ? <video className="studio-media-preview" src={item.mediaUrl} controls preload="metadata" playsInline/> : item.mediaType === "image" && item.mediaUrl ? <img className="studio-media-preview" src={item.mediaUrl} alt={item.title}/> : <span className="studio-art-icon">{TYPES.find(t => t.id === item.type)?.icon || "✦"}</span>}
+        <span className="studio-art-type">{TYPE_NAMES[item.type] || item.type}</span>
+      </div>
+      <div className="studio-card-body"><div className="studio-card-meta"><span>{CATEGORY_NAMES[item.purushartha]} · {item.house}</span><span>{formatDate(item.createdAt)}</span></div><h4>{item.title}</h4><p>{item.description || "No description provided."}</p><div className="studio-card-footer"><span className="studio-creator"><span className="studio-creator-avatar">{(item.creator?.name || "S").charAt(0).toUpperCase()}</span>{item.creator?.name || "Shivasha Creator"}</span>{item.creator?._id === auth?.user?._id && <button type="button" className="studio-delete-button" onClick={() => remove(item)}>Delete</button>}</div>{item.tags?.length > 0 && <div className="studio-tags">{item.tags.map(tag => <span key={tag}>#{tag}</span>)}</div>}</div>
+    </article>)}</div> : <div className="studio-empty"><span>▤</span><h3>No published content yet</h3><p>Be the first to publish an article, video, Reel, image or learning resource in this category.</p><button type="button" className="studio-publish-button" onClick={() => setShowForm(true)}>＋ Publish first content</button></div>}
+    <p className="studio-footer-note">Content Studio uses the authenticated Shivasha API. Video/image files require Cloudinary credentials on the backend; text publishing requires the API and MongoDB to be online.</p>
   </section>;
 }

@@ -32,9 +32,12 @@ The existing React-based social community app, Node.js/Express API and MongoDB d
 - Direct messaging and real-time presence/typing integration
 - User report/moderation UI
 - Unified Content Studio prototype with filters for long videos, Reels/Shorts, articles, images, courses, live-event formats and business product videos
-- Four-Purushartha and 12-house content discovery filters; an implementation roadmap for real publishing/media integration
+- Four-Purushartha category dashboards with 12-house subcategories
+- Authenticated content publishing for articles, images, videos, Reels, courses, live-event listings and business videos
+- Database-backed content feed, category/house/type/search filters, own-content view and owner-only deletion
+- Cloudinary-backed image/video uploads (configure backend credentials to enable media hosting)
 
-Features that use data or authentication require the backend service and database to be configured and running.
+Features that use data or authentication require the backend service and database to be configured and running. Content publishing requires MongoDB; image/video uploads additionally require Cloudinary credentials on the backend. Uploaded media is limited to 50 MB per file.
 
 ## Frontend Quick Start
 
@@ -68,6 +71,7 @@ Configure the backend environment variables before starting it:
 - `MONGODB_URI` — MongoDB Atlas connection string
 - `JWT_SECRET` — long, random private secret
 - `FRONTEND_URL` — `https://devops-saurabhpandey.github.io/shivasha`
+- `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` — required for persistent image/video uploads
 
 See [server/.env.example](./server/.env.example) for the variable names. Create a private local `.env` file; do not commit secrets.
 

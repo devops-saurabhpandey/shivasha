@@ -11,6 +11,7 @@ import postRoutes from "./routes/posts.js";
 import notificationRoutes from "./routes/notifications.js";
 import messageRoutes from "./routes/messages.js";
 import adminRoutes from "./routes/admin.js";
+import contentRoutes from "./routes/content.js";
 
 dotenv.config();
 
@@ -78,6 +79,7 @@ app.use("/api/posts", postRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/messages", messageRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/content", contentRoutes);
 
 app.get("/api", (_req, res) => res.json({ message: "SHIVASHA API is running" }));
 
