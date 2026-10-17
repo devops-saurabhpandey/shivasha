@@ -3,11 +3,22 @@
 
 **Company:** Shivasha Software Company  
 **Flagship product:** Shivasha Global Technology Super App  
-**Product principle:** The 12 Jyotish-inspired Houses are the app's primary category/navigation framework. The 15 modules are product capabilities mapped into those houses. The 7 phases are the delivery roadmap. Software engineering, AI, security, and shared platform services power the entire ecosystem.
+**Product principle:** The four Purusharthas — Dharma, Artha, Kaam and Moksh — are the app's top-level category/navigation framework. The 12 Jyotish houses are subcategories grouped under them. The 15 modules are product capabilities mapped into those houses. The 7 phases are the delivery roadmap. Software engineering, AI, security, and shared platform services power the entire ecosystem.
 
 > The house taxonomy is a modern product organization inspired by traditional Jyotish house themes. It is not a claim that software features are traditional astrological rules.
 
-## 1. The 12 Houses
+## 1. Four Main Categories: Purusharthas
+
+The top-level navigation is organized into four main categories. The 12 Jyotish houses remain as subcategories within these categories, using the traditional Purushartha grouping:
+
+| Main category | Houses | Product organization |
+|---|---|---|
+| **Dharma (धर्म)** | 1, 5, 9 | Self & Identity; Education & Creativity; Knowledge & Philosophy |
+| **Artha (अर्थ)** | 2, 6, 10 | Wealth & Finance; Services & Wellbeing; Career & Profession |
+| **Kaam (काम)** | 3, 7, 11 | Skills & Communication; Business & Partnerships; Networks & Growth |
+| **Moksh (मोक्ष)** | 4, 8, 12 | Home & Property; Research & Transformation; Inner Growth & Global Reach |
+
+## 2. The 12 Houses
 
 | House | Category | Primary purpose | Primary module mapping |
 |---|---|---|---|
@@ -26,7 +37,7 @@
 
 Modules can appear in more than one House when useful for discovery, but every module should have a documented primary House to avoid duplicated implementations.
 
-## 2. The 15 Product Modules
+## 3. The 15 Product Modules
 
 1. **M1 — Shivasha Social:** profiles, feed, posts, follows, messaging, notifications, communities.
 2. **M2 — Shivasha Business:** business registration, profiles, products/services, inquiries, leads, reviews, analytics.
@@ -44,7 +55,7 @@ Modules can appear in more than one House when useful for discovery, but every m
 14. **M14 — Shivasha Creator Platform:** creator profiles, publishing, audience analytics and future monetization.
 15. **M15 — Shivasha Enterprise:** organization accounts, access controls, audit logs, integrations and enterprise support.
 
-## 3. Seven Development Phases
+## 4. Seven Development Phases
 
 ### Phase 1 — Foundation
 - Audit the current codebase and preserve existing working features.
@@ -103,7 +114,7 @@ Modules can appear in more than one House when useful for discovery, but every m
 
 **Exit criteria:** a specific target market has a documented compliance review, operational support plan and measurable launch criteria.
 
-## 4. Shared technical foundation
+## 5. Shared technical foundation
 
 The current repository uses React/Vite on the frontend and Node.js/Express with MongoDB/Mongoose on the API. Prefer a **modular monolith** initially: separate modules by domain without prematurely splitting into microservices.
 
@@ -120,7 +131,7 @@ Shared platform capabilities:
 
 Potential later integrations (AI providers, payment gateways, cloud services) should be provider-agnostic where practical. Never commit secrets or place private API keys in frontend code.
 
-## 5. Recommended implementation order
+## 6. Recommended implementation order
 
 1. Audit repository and deployed environment; record current behavior and known gaps.
 2. Implement and test the 12-House navigation shell (current first UI milestone).
@@ -131,7 +142,7 @@ Potential later integrations (AI providers, payment gateways, cloud services) sh
 7. Open developer APIs only after authentication, rate limits, versioning and observability are ready.
 8. Expand globally only with real usage evidence and market-specific reviews.
 
-## 6. Product metrics
+## 7. Product metrics
 
 - **Consumer:** active users, retention, successful sign-ups, meaningful conversations, abuse/report rate.
 - **Business:** active profiles, listing completeness, inquiries, response rate, qualified leads and lead conversion.

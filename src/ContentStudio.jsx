@@ -19,6 +19,21 @@ const HOUSES = [
   "Career & Profession", "Networks & Growth", "Inner Growth & Global Reach"
 ];
 
+
+const PURUSHARTHA_BY_HOUSE = {
+  "Self & Identity": "dharma", "Education & Creativity": "dharma", "Knowledge & Philosophy": "dharma",
+  "Wealth & Finance": "artha", "Services & Wellbeing": "artha", "Career & Profession": "artha",
+  "Skills & Communication": "kaam", "Business & Partnerships": "kaam", "Networks & Growth": "kaam",
+  "Home & Property": "moksh", "Research & Transformation": "moksh", "Inner Growth & Global Reach": "moksh"
+};
+const PURUSHARTHAS = [
+  { id: "all", label: "All four categories" },
+  { id: "dharma", label: "धर्म · Dharma" },
+  { id: "artha", label: "अर्थ · Artha" },
+  { id: "kaam", label: "काम · Kaam" },
+  { id: "moksh", label: "मोक्ष · Moksh" }
+];
+
 const EXAMPLES = [
   { id: 1, type: "video", house: "Skills & Communication", title: "Web Development: From Basics to Projects", creator: "Shivasha Learning", description: "Long-form tutorial series for people learning modern web development.", duration: "18 min", icon: "▶", tone: "blue", tags: ["Coding", "Tutorial"] },
   { id: 2, type: "reel", house: "Education & Creativity", title: "One concept in 60 seconds", creator: "Creator Studio", description: "A short vertical-video format for quick lessons and useful ideas.", duration: "0:58", icon: "▣", tone: "violet", tags: ["Shorts", "Learning"] },
@@ -35,15 +50,17 @@ const TYPE_NAMES = Object.fromEntries(TYPES.map(type => [type.id, type.label]));
 export default function ContentStudio() {
   const [type, setType] = useState("all");
   const [house, setHouse] = useState("All 12 Houses");
+  const [purushartha, setPurushartha] = useState("all");
   const [query, setQuery] = useState("");
   const [showPublishingPlan, setShowPublishingPlan] = useState(false);
 
   const items = useMemo(() => EXAMPLES.filter(item => {
     const typeMatch = type === "all" || item.type === type;
     const houseMatch = house === "All 12 Houses" || item.house === house;
+    const categoryMatch = purushartha === "all" || PURUSHARTHA_BY_HOUSE[item.house] === purushartha;
     const text = (item.title + " " + item.creator + " " + item.description + " " + item.tags.join(" ")).toLowerCase();
-    return typeMatch && houseMatch && text.includes(query.trim().toLowerCase());
-  }), [type, house, query]);
+    return typeMatch && houseMatch && categoryMatch && text.includes(query.trim().toLowerCase());
+  }), [type, house, purushartha, query]);
 
   return <section className="content content-studio">
     <div className="studio-hero">
@@ -60,6 +77,7 @@ export default function ContentStudio() {
 
     <div className="studio-toolbar">
       <label className="studio-search"><span>⌕</span><input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search content, creators or topics…" aria-label="Search content" /></label>
+      <label className="studio-house-select"><span>Main category</span><select value={purushartha} onChange={e => { setPurushartha(e.target.value); setHouse("All 12 Houses"); }} aria-label="Filter by Purushartha">{PURUSHARTHAS.map(item => <option key={item.id} value={item.id}>{item.label}</option>)}</select></label>
       <label className="studio-house-select"><span>House</span><select value={house} onChange={e => setHouse(e.target.value)} aria-label="Filter by house">{HOUSES.map(item => <option key={item}>{item}</option>)}</select></label>
     </div>
 
@@ -67,12 +85,12 @@ export default function ContentStudio() {
       {TYPES.map(item => <button type="button" key={item.id} role="tab" aria-selected={type === item.id} className={type === item.id ? "studio-type-tab selected" : "studio-type-tab"} onClick={() => setType(item.id)}><span>{item.icon}</span>{item.label}</button>)}
     </div>
 
-    <div className="studio-results-heading"><div><span className="studio-eyebrow">EXPLORE CONTENT</span><h3>{type === "all" ? "Discover on Shivasha" : TYPE_NAMES[type]}</h3><p>{house === "All 12 Houses" ? "Content from across the 12 Houses" : house}</p></div><span className="studio-count">{items.length} preview {items.length === 1 ? "item" : "items"}</span></div>
+    <div className="studio-results-heading"><div><span className="studio-eyebrow">EXPLORE CONTENT</span><h3>{type === "all" ? "Discover on Shivasha" : TYPE_NAMES[type]}</h3><p>{purushartha === "all" ? "Content across Dharma, Artha, Kaam and Moksh" : PURUSHARTHAS.find(item => item.id === purushartha)?.label}{house === "All 12 Houses" ? "" : " · " + house}</p></div><span className="studio-count">{items.length} preview {items.length === 1 ? "item" : "items"}</span></div>
 
     {items.length ? <div className="studio-content-grid">{items.map(item => <article className="studio-content-card" key={item.id}>
       <div className={"studio-card-art " + item.tone}><span className="studio-art-icon">{item.icon}</span><span className="studio-art-type">{TYPE_NAMES[item.type]}</span>{item.type === "live" && <span className="studio-live-label">LIVE FORMAT</span>}<span className="studio-art-watermark">S</span></div>
       <div className="studio-card-body"><div className="studio-card-meta"><span>{item.house}</span><span>{item.duration}</span></div><h4>{item.title}</h4><p>{item.description}</p><div className="studio-card-footer"><span className="studio-creator"><span className="studio-creator-avatar">{item.creator.charAt(0)}</span>{item.creator}</span><span className="studio-preview-label">Example</span></div><div className="studio-tags">{item.tags.map(tag => <span key={tag}>#{tag.replace(/\s+/g, "")}</span>)}</div></div>
-    </article>)}</div> : <div className="studio-empty"><span>⌕</span><h3>No matching preview content</h3><p>Try another content type, House or search term.</p><button type="button" className="studio-reset" onClick={() => { setType("all"); setHouse("All 12 Houses"); setQuery(""); }}>Reset filters</button></div>}
+    </article>)}</div> : <div className="studio-empty"><span>⌕</span><h3>No matching preview content</h3><p>Try another content type, House or search term.</p><button type="button" className="studio-reset" onClick={() => { setType("all"); setHouse("All 12 Houses"); setPurushartha("all"); setQuery(""); }}>Reset filters</button></div>}
 
     <section className="studio-roadmap">
       <button type="button" className="studio-roadmap-toggle" aria-expanded={showPublishingPlan} onClick={() => setShowPublishingPlan(value => !value)}><span><span className="studio-eyebrow">NEXT IMPLEMENTATION STEP</span><strong>What is needed to make publishing real?</strong><small>Review the backend and media roadmap</small></span><span>{showPublishingPlan ? "−" : "+"}</span></button>
