@@ -52,9 +52,10 @@ export default function HouseExplorer() {
         <p>Explore Shivasha through the four Purusharthas — Dharma, Artha, Kaam and Moksh. The 12 Jyotish houses become subcategories inside these four main sections.</p>
         <div className="house-hero-stats"><span><b>4</b> Main Categories</span><span><b>12</b> House Subcategories</span><span><b>15</b> Product Modules</span></div>
       </div>
-      <div className="house-wheel" aria-label="Twelve house subcategories">
-        {HOUSES.map(h => <button key={h.number} type="button" className={selected === h.number ? "wheel-segment selected" : "wheel-segment"} onClick={() => setSelected(h.number)} title={h.name}><span>{h.number}</span><small>{h.symbol}</small></button>)}
-        <div className="wheel-center"><b>S</b><small>SHIVASHA</small></div>
+      <div className="purushartha-hero-visual" aria-label="Dharma, Artha, Kaam and Moksh">
+        <div className="purushartha-orbit"></div>
+        {PURUSHARTHAS.map(p => <div key={p.id} className={"purushartha-orbit-item " + p.color}><span>{p.icon}</span><b>{p.name}</b><small>{p.english}</small></div>)}
+        <div className="purushartha-orbit-center"><b>S</b><small>SHIVASHA</small></div>
       </div>
     </div>
 
