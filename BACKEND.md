@@ -17,8 +17,8 @@ SHIVASHA uses a Node.js + Express API, MongoDB/Mongoose for persistence, JWT for
 Use a supported, current Node.js LTS release.
 
 ```bash
-git clone https://github.com/devops-saurabhpandey/ktl_rto.git
-cd ktl_rto/server
+git clone https://github.com/devops-saurabhpandey/shivasha.git
+cd shivasha/server
 npm install
 cp .env.example .env
 ```
