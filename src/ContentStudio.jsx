@@ -27,6 +27,7 @@ export default function ContentStudio({ auth }) {
   const [type, setType] = useState("all");
   const [query, setQuery] = useState("");
   const [items, setItems] = useState([]);
+  const [allItems, setAllItems] = useState([]);
   const [mine, setMine] = useState(false);
   const [loading, setLoading] = useState(true);
   const [publishing, setPublishing] = useState(false);
@@ -50,6 +51,12 @@ export default function ContentStudio({ auth }) {
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.message || "Content load failed");
       setItems(data.items || []);
+      if (category === "all" && house === "all" && type === "all" && !query.trim() && !mine) setAllItems(data.items || []);
+      else {
+        const statsResponse = await fetch(API_BASE + "/api/content", { headers: { Authorization: "Bearer " + auth?.token } });
+        const statsData = await statsResponse.json().catch(() => ({}));
+        if (statsResponse.ok) setAllItems(statsData.items || []);
+      }
     } catch (e) {
       setError(e.message || "Content API is not available. Check backend deployment.");
     } finally { setLoading(false); }
@@ -57,7 +64,7 @@ export default function ContentStudio({ auth }) {
 
   useEffect(() => { if (auth?.token) loadContent(); }, [auth?.token, category, house, type, query, mine]);
 
-  const counts = useMemo(() => CATEGORIES.map(c => ({ ...c, count: items.filter(item => item.purushartha === c.id).length })), [items]);
+  const counts = useMemo(() => CATEGORIES.map(c => ({ ...c, count: allItems.filter(item => item.purushartha === c.id).length })), [allItems]);
   const activeCategory = CATEGORIES.find(c => c.id === form.purushartha) || CATEGORIES[0];
   const availableHouses = activeCategory.houses;
   const needsVideo = ["video", "reel", "business"].includes(form.type);
@@ -118,7 +125,7 @@ export default function ContentStudio({ auth }) {
 
     <div className="purushartha-dashboard" aria-label="Four category dashboards">
       {counts.map(c => <button key={c.id} type="button" className={"purushartha-dashboard-card " + c.tone + (category === c.id ? " selected" : "")} onClick={() => { setCategory(category === c.id ? "all" : c.id); setHouse("all"); setMine(false); }}>
-        <span className="purushartha-dashboard-icon">{c.icon}</span><span className="purushartha-dashboard-english">{c.english}</span><strong>{c.label}</strong><p>{c.description}</p><small>{c.count} published in current results · {c.houses.length} Houses</small>
+        <span className="purushartha-dashboard-icon">{c.icon}</span><span className="purushartha-dashboard-english">{c.english}</span><strong>{c.label}</strong><p>{c.description}</p><small>{c.count} published · {c.houses.length} Houses</small>
       </button>)}
     </div>
 
