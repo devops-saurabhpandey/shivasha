@@ -31,6 +31,8 @@ The existing React-based social community app, Node.js/Express API and MongoDB d
 - Saved posts, hashtags and notifications
 - Direct messaging and real-time presence/typing integration
 - User report/moderation UI
+- Unified Content Studio prototype with filters for long videos, Reels/Shorts, articles, images, courses, live-event formats and business product videos
+- House-based content discovery and an implementation roadmap for real publishing/media integration
 
 Features that use data or authentication require the backend service and database to be configured and running.
 
