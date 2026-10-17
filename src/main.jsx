@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App";
+import UpdateChecker from "./UpdateChecker.jsx";
 import "./index.css";
 
 function PwaControls() {
@@ -79,5 +80,6 @@ createRoot(document.getElementById("root")).render(
   <React.StrictMode>
     <App />
     <PwaControls />
+    <UpdateChecker />
   </React.StrictMode>
 );
