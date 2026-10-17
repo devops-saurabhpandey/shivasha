@@ -1,6 +1,6 @@
 # SHIVASHA
 
-**Shivasha is a Software Company.** Its flagship product, **Shivasha Global Technology Super App**, is planned around 12 Jyotish-inspired Houses, 15 product modules and 7 delivery phases. The current application remains the foundation; the 12-House Explorer is a navigation and product-mapping milestone, not a claim that all planned modules are already live.
+**Shivasha is a Software Company.** Its flagship product, **Shivasha Global Technology Super App**, is organized into four main Purushartha categories — Dharma (धर्म), Artha (अर्थ), Kaam (काम) and Moksh (मोक्ष). The 12 Jyotish houses are subcategories grouped 1/5/9 under Dharma, 2/6/10 under Artha, 3/7/11 under Kaam and 4/8/12 under Moksh. The product roadmap includes 15 modules and 7 delivery phases. The current application remains the foundation; the four-Purushartha navigation and 12-house subcategory explorer are product-mapping milestones, not a claim that all planned modules are already live.
 
 **Product plan:** [Global Super App Master Plan](./docs/SHIVASHA_GLOBAL_SUPER_APP_PLAN.md)
 
@@ -32,7 +32,7 @@ The existing React-based social community app, Node.js/Express API and MongoDB d
 - Direct messaging and real-time presence/typing integration
 - User report/moderation UI
 - Unified Content Studio prototype with filters for long videos, Reels/Shorts, articles, images, courses, live-event formats and business product videos
-- House-based content discovery and an implementation roadmap for real publishing/media integration
+- Four-Purushartha and 12-house content discovery filters; an implementation roadmap for real publishing/media integration
 
 Features that use data or authentication require the backend service and database to be configured and running.
 
