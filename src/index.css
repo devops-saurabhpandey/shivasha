@@ -58,3 +58,5 @@
 .wisdom-list-item p{font-size:13px;line-height:1.7;color:#586171}
 .wisdom-disclaimer{font-size:12px;line-height:1.7;color:#7b8492;margin:14px 4px}
 @media(max-width:700px){.wisdom-page{padding:10px}.wisdom-card{padding:20px 15px;border-radius:16px}.wisdom-symbol{width:54px;height:54px;font-size:29px}.wisdom-section{padding:14px}.wisdom-actions{display:grid;grid-template-columns:1fr}.wisdom-actions button{width:100%}.wisdom-history .panel-head{align-items:flex-start;gap:10px}}
+
+.auth-tabs{display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:5px;background:#f0f2f7;border-radius:10px;margin:18px 0 22px}.auth-tab{border:0;border-radius:7px;padding:11px;background:transparent;color:#667085;font-size:14px;font-weight:700;cursor:pointer}.auth-tab.selected{background:#fff;color:#182235;box-shadow:0 1px 4px rgba(17,24,39,.12)}.auth-tab:focus-visible{outline:2px solid #465a88;outline-offset:2px}
