@@ -21,8 +21,10 @@ export default function UpdateChecker() {
   const [state, setState] = useState("idle");
   const [release, setRelease] = useState(null);
   const [details, setDetails] = useState("");
+  const [showPanel, setShowPanel] = useState(false);
 
   const check = async (manual = false) => {
+    if (manual) setShowPanel(true);
     setState("checking");
     setDetails("");
     try {
@@ -47,6 +49,7 @@ export default function UpdateChecker() {
       }
       setRelease({ ...data, apk });
       setState("available");
+      setShowPanel(true);
     } catch {
       setState("error");
       setDetails("Update check failed. Please try again when you are online.");
@@ -54,32 +57,34 @@ export default function UpdateChecker() {
   };
 
   useEffect(() => {
-    check();
-    const timer = window.setInterval(() => check(), 6 * 60 * 60 * 1000);
+    check(false);
+    const timer = window.setInterval(() => check(false), 6 * 60 * 60 * 1000);
     return () => window.clearInterval(timer);
   }, []);
 
   const download = () => {
     if (!release?.apk?.browser_download_url) return;
-    // Opening the release asset lets Android show its normal download/install confirmation.
     window.open(release.apk.browser_download_url, "_blank", "noopener,noreferrer");
   };
 
-  return (
-    <aside aria-live="polite" style={panelStyle}>
+  return <>
+    <button onClick={() => check(true)} disabled={state === "checking"} style={checkButtonStyle}>
+      {state === "checking" ? "Checking updates…" : "Check for Updates"}
+    </button>
+    {showPanel && <aside role="status" aria-live="polite" style={panelStyle}>
       <div style={{ minWidth: 0, flex: 1 }}>
         <strong>SHIVASHA Updates</strong>
         {state === "available" && <p style={textStyle}>Version {release.tag_name} is available.</p>}
-        {state === "checking" && <p style={textStyle}>Checking for updates…</p>}
         {(state === "current" || state === "error") && details && <p style={textStyle}>{details}</p>}
       </div>
       {state === "available" && <button onClick={download} style={primaryStyle}>Download Update</button>}
-      <button onClick={() => check(true)} disabled={state === "checking"} style={secondaryStyle}>Check</button>
+      <button onClick={() => setShowPanel(false)} aria-label="Close update message" style={secondaryStyle}>Close</button>
       <span style={versionStyle}>Installed: v{CURRENT_VERSION}</span>
-    </aside>
-  );
+    </aside>}
+  </>;
 }
 
+const checkButtonStyle = { position: "fixed", right: 12, top: 12, zIndex: 9998, border: "1px solid #6b7280", borderRadius: 10, padding: "8px 10px", background: "#111827", color: "#fff", fontWeight: 600, fontSize: 12 };
 const panelStyle = { position: "fixed", left: 12, right: 12, bottom: 12, zIndex: 10001, display: "flex", alignItems: "center", flexWrap: "wrap", gap: 10, padding: 14, borderRadius: 14, background: "#111827", color: "#fff", boxShadow: "0 4px 24px #0005", fontSize: 13 };
 const textStyle = { margin: "5px 0 0", color: "#d1d5db" };
 const primaryStyle = { border: 0, borderRadius: 8, padding: "9px 12px", background: "#f59e0b", color: "#111827", fontWeight: 700 };
