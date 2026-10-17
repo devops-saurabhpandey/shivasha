@@ -32,3 +32,29 @@
   background-size: cover;
   background-attachment: fixed;
 }
+
+
+/* Daily Spiritual Wisdom */
+.wisdom-page{max-width:900px;margin:0 auto;padding-bottom:34px}
+.wisdom-card{position:relative;overflow:hidden;border:1px solid #ead9b7;border-radius:22px;padding:clamp(20px,4vw,38px);background:linear-gradient(145deg,#fffdf6 0%,#fff4df 55%,#f9e5c4 100%);box-shadow:0 14px 38px rgba(105,66,25,.10);color:#38291d}
+.wisdom-date{font-size:12px;color:#886746;text-align:center;letter-spacing:.04em}
+.wisdom-symbol{display:grid;place-items:center;width:64px;height:64px;margin:20px auto 10px;border-radius:50%;background:#fff8e9;border:1px solid #e9d3a8;color:#9b5d16;font-size:35px}
+.wisdom-card h3{text-align:center;margin:8px 0 18px;font-size:23px;color:#7b4315}
+.wisdom-card blockquote{white-space:pre-line;text-align:center;font-size:clamp(19px,3vw,25px);font-weight:650;line-height:1.9;margin:0 auto 18px;max-width:700px;color:#4c3020}
+.wisdom-source{text-align:center;font-size:13px;color:#87613c;padding-bottom:22px;border-bottom:1px solid #ead8b7}
+.wisdom-section{margin-top:20px;padding:16px 18px;border-radius:14px;background:rgba(255,255,255,.62)}
+.wisdom-section h4{margin:0 0 8px;color:#814916;font-size:15px}
+.wisdom-section p{margin:0;line-height:1.8;font-size:14px;color:#4e4034}
+.wisdom-actions{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;margin-top:22px}
+.wisdom-actions button,.wisdom-list-item button{min-height:40px}
+.wisdom-notice{text-align:center;color:#725022;font-size:13px;margin:14px 0 0}
+.wisdom-history{margin-top:18px}
+.wisdom-history .panel-head p{margin:4px 0 0;font-size:12px;color:#8992a0}
+.wisdom-list{display:grid;gap:12px;margin-top:16px}
+.wisdom-list-item{padding:16px;border:1px solid #e8ebf0;border-radius:14px;background:#fff}
+.wisdom-list-item small{color:#8b6539}
+.wisdom-list-item blockquote{white-space:pre-line;line-height:1.8;margin:10px 0;color:#3d3026;font-weight:600}
+.wisdom-list-item>b{font-size:12px;color:#7e684f}
+.wisdom-list-item p{font-size:13px;line-height:1.7;color:#586171}
+.wisdom-disclaimer{font-size:12px;line-height:1.7;color:#7b8492;margin:14px 4px}
+@media(max-width:700px){.wisdom-page{padding:10px}.wisdom-card{padding:20px 15px;border-radius:16px}.wisdom-symbol{width:54px;height:54px;font-size:29px}.wisdom-section{padding:14px}.wisdom-actions{display:grid;grid-template-columns:1fr}.wisdom-actions button{width:100%}.wisdom-history .panel-head{align-items:flex-start;gap:10px}}
