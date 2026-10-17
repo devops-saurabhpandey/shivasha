@@ -59,8 +59,8 @@ export default function ContentStudio() {
     const houseMatch = house === "All 12 Houses" || item.house === house;
     const categoryMatch = purushartha === "all" || PURUSHARTHA_BY_HOUSE[item.house] === purushartha;
     const text = (item.title + " " + item.creator + " " + item.description + " " + item.tags.join(" ")).toLowerCase();
-    return typeMatch && houseMatch && text.includes(query.trim().toLowerCase());
-  }), [type, house, query]);
+    return typeMatch && houseMatch && categoryMatch && text.includes(query.trim().toLowerCase());
+  }), [type, house, purushartha, query]);
 
   return <section className="content content-studio">
     <div className="studio-hero">
