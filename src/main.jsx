@@ -15,7 +15,6 @@ function PwaControls() {
     };
     window.addEventListener("beforeinstallprompt", onBeforeInstall);
 
-    let registration;
     let reloading = false;
     const onControllerChange = () => {
       if (!reloading) {
@@ -26,10 +25,9 @@ function PwaControls() {
     navigator.serviceWorker?.addEventListener("controllerchange", onControllerChange);
 
     if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) {
-      const swUrl = new URL("sw.js", import.meta.env.BASE_URL).toString();
+      const swUrl = new URL(`${import.meta.env.BASE_URL}sw.js`, window.location.origin).toString();
       navigator.serviceWorker.register(swUrl, { scope: import.meta.env.BASE_URL })
         .then((reg) => {
-          registration = reg;
           if (reg.waiting && navigator.serviceWorker.controller) {
             setWaitingWorker(reg.waiting);
             setUpdateReady(true);
