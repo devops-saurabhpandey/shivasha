@@ -3,7 +3,7 @@ import { io } from "socket.io-client";
 import AdminDashboard from "./AdminDashboard.jsx";
 import DailyWisdom from "./DailyWisdom.jsx";
 
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:5000";
+const API_BASE = (import.meta.env.VITE_API_URL || "https://ktl-rto-api.onrender.com").replace(/\/$/, "");
 function apiFetch(path, auth, options = {}) {
   return fetch(API_BASE + path, {...options, headers: {"Content-Type":"application/json", ...(auth?.token ? {Authorization:"Bearer "+auth.token}:{}), ...(options.headers||{})}})
     .then(async r => { const d=await r.json().catch(()=>({})); if(!r.ok) throw new Error(d.message||"API request failed"); return d; });
