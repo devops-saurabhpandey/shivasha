@@ -77,7 +77,8 @@ export default function ContentStudio() {
 
     <div className="studio-toolbar">
       <label className="studio-search"><span>⌕</span><input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search content, creators or topics…" aria-label="Search content" /></label>
-      <label className="studio-house-select"><span>Main category</span><select value={purushartha} onChange={e => { setPurushartha(e.target.value); setHouse("All 12 Houses"); }} aria-label="Filter by Purushartha">{PURUSHARTHAS.map(item => <option key={item.id} value={item.id}>{item.label}</option>)}</select></label>\n      <label className="studio-house-select"><span>House</span><select value={house} onChange={e => setHouse(e.target.value)} aria-label="Filter by house">{HOUSES.map(item => <option key={item}>{item}</option>)}</select></label>
+      <label className="studio-house-select"><span>Main category</span><select value={purushartha} onChange={e => { setPurushartha(e.target.value); setHouse("All 12 Houses"); }} aria-label="Filter by Purushartha">{PURUSHARTHAS.map(item => <option key={item.id} value={item.id}>{item.label}</option>)}</select></label>
+      <label className="studio-house-select"><span>House</span><select value={house} onChange={e => setHouse(e.target.value)} aria-label="Filter by house">{HOUSES.map(item => <option key={item}>{item}</option>)}</select></label>
     </div>
 
     <div className="studio-type-tabs" role="tablist" aria-label="Content type filters">
