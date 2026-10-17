@@ -10,7 +10,7 @@ on:
       - "index.html"
       - "package.json"
       - "vite.config.js"
-      - "capacitor.config.ts"
+      - "capacitor.config.json"
       - ".github/workflows/android.yml"
 
 permissions:
