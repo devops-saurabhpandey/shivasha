@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import AdminReportActions from "./AdminReportActions.jsx";
+import CreatorFinanceAdmin from "./CreatorFinanceAdmin.jsx";
 
 const API_BASE = (import.meta.env.VITE_API_URL || "https://shivasha.onrender.com").replace(/\/$/, "");
 
@@ -24,7 +25,7 @@ export default function AdminDashboard({ auth }) {
     return () => { cancelled = true; };
   }, [auth?.token]);
 
-  return <section className="content">
+  return <><section className="content">
     <div className="feed-head"><div><h2>Admin Moderation</h2><p>Review user reports submitted to SHIVASHA.</p></div><b>{reports.filter(r => r.status === "open").length} open</b></div>
     {error && <div className="api-error">{error}</div>}
     {loading ? <div className="panel empty">Loading reports…</div> :
@@ -37,5 +38,5 @@ export default function AdminDashboard({ auth }) {
           </div>
         </article>)}
       </div> : <div className="panel empty">No reports to review.</div>}
-  </section>;
+  </section><CreatorFinanceAdmin auth={auth} /></>;
 }
