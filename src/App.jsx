@@ -13,7 +13,6 @@ function apiFetch(path, auth, options = {}) {
       let data = {};
       try { data = raw ? JSON.parse(raw) : {}; } catch { data = {}; }
       if (!r.ok) throw new Error(data.message || `API request failed (${r.status}) at ${path}`);
-      if (raw && !Object.keys(data).length) throw new Error(`Unexpected API response at ${path}`);
       return data;
     })
     .catch(error => {
