@@ -16,9 +16,40 @@ export default function App() {
   return <SocialApp auth={auth} setAuth={setAuth} onLogout={()=>{localStorage.removeItem("shivasha_auth");setAuth(null)}}/>;
 }
 function Login({onLogin}) {
-  const [mode,setMode]=useState("login"),[form,setForm]=useState({name:"",email:"",password:""}),[message,setMessage]=useState(""),[loading,setLoading]=useState(false);
+  const [mode,setMode]=useState("login"),[form,setForm]=useState({name:"",email:"",password:""}),[message,setMessage]=useState(""),[loading,setLoading]=useState(false),[showPassword,setShowPassword]=useState(false);
   const submit=async e=>{e.preventDefault();setMessage("");setLoading(true);try{const d=await apiFetch("/api/auth/"+mode,null,{method:"POST",body:JSON.stringify(form)});if(mode==="register"){setMode("login");setMessage("Account created. Now login.")}else{localStorage.setItem("shivasha_auth",JSON.stringify(d));onLogin(d)}}catch(e){setMessage(e.message)}finally{setLoading(false)}};
-  return <div className="login-page"><div className="login-card"><div className="shivasha-logo" aria-label="एको ब्रह्म द्वितीयो नास्ति।">एको ब्रह्म<br/>द्वितीयो नास्ति।</div><div className="login-brand"><b>SHIVASHA</b><small>Social • Connect • Share</small></div><p className="eyebrow">SOCIAL COMMUNITY PLATFORM</p><div className="auth-tabs" role="tablist" aria-label="Account access"><button type="button" role="tab" aria-selected={mode==="login"} className={mode==="login"?"auth-tab selected":"auth-tab"} onClick={()=>{setMode("login");setMessage("")}}>Login</button><button type="button" role="tab" aria-selected={mode==="register"} className={mode==="register"?"auth-tab selected":"auth-tab"} onClick={()=>{setMode("register");setMessage("")}}>Sign Up</button></div><h1>{mode==="login"?"Welcome to SHIVASHA":"Join SHIVASHA"}</h1><p className="muted">{mode==="login"?"Connect with people and share what matters.":"Create your profile and start connecting."}</p><form onSubmit={submit}>{mode==="register"&&<label>Name<input required value={form.name} onChange={e=>setForm({...form,name:e.target.value})} placeholder="Your name"/></label>}<label>Email<input required type="email" value={form.email} onChange={e=>setForm({...form,email:e.target.value})} placeholder="name@example.com"/></label><label>Password<input required minLength="6" type="password" value={form.password} onChange={e=>setForm({...form,password:e.target.value})} placeholder="Minimum 6 characters"/></label><button className="primary login-button" disabled={loading}>{loading?"Please wait...":mode==="login"?"Login":"Create account"}</button></form>{message&&<div className="login-message">{message}</div>}<button className="switch-auth" onClick={()=>{setMode(mode==="login"?"register":"login");setMessage("")}}>{mode==="login"?"Create a new account":"Already have an account? Login"}</button></div></div>;
+  const changeMode=next=>{setMode(next);setMessage("")};
+  return <main className="login-page">
+    <div className="login-ornament login-ornament-top" aria-hidden="true">✦</div>
+    <section className="login-wrap">
+      <header className="login-masthead">
+        <div className="login-emblem" aria-hidden="true"><span>ॐ</span></div>
+        <div className="login-motto">एको ब्रह्म द्वितीयो नास्ति।</div>
+        <div className="login-divider"><span>◆</span></div>
+        <div className="login-brand"><b>SHIVASHA</b><small>Social <i>•</i> Connect <i>•</i> Share</small></div>
+        <p className="eyebrow">SOCIAL COMMUNITY PLATFORM</p>
+      </header>
+      <div className="login-card">
+        <div className="auth-tabs" role="tablist" aria-label="Account access">
+          <button type="button" role="tab" aria-selected={mode==="login"} className={mode==="login"?"auth-tab selected":"auth-tab"} onClick={()=>changeMode("login")}><span aria-hidden="true">♙</span> Login</button>
+          <button type="button" role="tab" aria-selected={mode==="register"} className={mode==="register"?"auth-tab selected":"auth-tab"} onClick={()=>changeMode("register")}><span aria-hidden="true">♧</span> Sign Up</button>
+        </div>
+        <div className="login-heading-accent" aria-hidden="true"></div>
+        <h1>{mode==="login"?"Welcome Back":"Join SHIVASHA"}</h1>
+        <p className="muted">{mode==="login"?"Reconnect with your community and share what matters.":"Create your profile and start connecting with your community."}</p>
+        <form onSubmit={submit}>
+          {mode==="register"&&<label className="login-field"><span className="field-icon" aria-hidden="true">♙</span><span className="field-copy">Name<input required autoComplete="name" value={form.name} onChange={e=>setForm({...form,name:e.target.value})} placeholder="Your name"/></span></label>}
+          <label className="login-field"><span className="field-icon" aria-hidden="true">✉</span><span className="field-copy">Email<input required type="email" autoComplete="email" value={form.email} onChange={e=>setForm({...form,email:e.target.value})} placeholder="name@example.com"/></span></label>
+          <label className="login-field"><span className="field-icon" aria-hidden="true">♙</span><span className="field-copy">Password<input required minLength="6" type={showPassword?"text":"password"} autoComplete={mode==="login"?"current-password":"new-password"} value={form.password} onChange={e=>setForm({...form,password:e.target.value})} placeholder="Minimum 6 characters"/></span><button type="button" className="password-toggle" aria-label={showPassword?"Hide password":"Show password"} onClick={()=>setShowPassword(v=>!v)}>{showPassword?"Hide":"Show"}</button></label>
+          <button className="primary login-button" disabled={loading}><span aria-hidden="true">↪</span>{loading?"Please wait...":mode==="login"?"Login":"Create account"}</button>
+        </form>
+        {message&&<div className="login-message" role="status">{message}</div>}
+        <div className="login-or"><span></span>OR<span></span></div>
+        <button className="switch-auth" onClick={()=>changeMode(mode==="login"?"register":"login")}>{mode==="login"?"Don't have an account?  Create a new account  ›":"Already have an account?  Login  ›"}</button>
+      </div>
+      <footer className="login-footer"><span>✿</span><p>BETTER PEOPLE <b>•</b> STRONGER COMMUNITY <b>•</b> BRIGHTER FUTURE</p></footer>
+    </section>
+  </main>;
 }
 function Avatar({user,large=false}){const letter=(user?.name||"S").trim().charAt(0).toUpperCase();return user?.avatarUrl?<img className={large?"avatar large":"avatar"} src={user.avatarUrl} alt=""/>:<div className={large?"avatar large":"avatar"}>{letter}</div>}
 function SocialApp({auth,setAuth,onLogout}) {
