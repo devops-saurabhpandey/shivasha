@@ -63,3 +63,6 @@
 
 /* Sanskrit motto replaces the lettermark in SHIVASHA branding. */
 .brand-mark,.shivasha-logo{width:auto;min-width:58px;height:auto;min-height:42px;padding:7px 10px;border-radius:10px;background:#fff;color:#111827;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;font-family:system-ui,sans-serif;font-size:11px;line-height:1.35;font-weight:800;white-space:nowrap}.shivasha-logo{min-width:150px;min-height:58px;margin:0 auto 14px;padding:10px 14px;border-radius:12px;font-size:15px;line-height:1.45}@media(max-width:650px){.brand-mark{display:none}}
+
+/* Always-visible logout control in the main app header. */
+.topbar-logout{border:0;border-radius:8px;padding:10px 14px;background:#111827;color:#fff;font-weight:700;cursor:pointer;white-space:nowrap}.topbar-logout:hover{background:#273247}@media(max-width:650px){.topbar-logout{display:inline-flex;align-items:center;justify-content:center;padding:9px 12px}.top-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}}
