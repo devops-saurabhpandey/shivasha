@@ -66,3 +66,99 @@
 
 /* Always-visible logout control in the main app header. */
 .topbar-logout{border:0;border-radius:8px;padding:10px 14px;background:#111827;color:#fff;font-weight:700;cursor:pointer;white-space:nowrap}.topbar-logout:hover{background:#273247}@media(max-width:650px){.topbar-logout{display:inline-flex;align-items:center;justify-content:center;padding:9px 12px}.top-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}}
+
+
+/* SHIVASHA premium mobile-first authentication refresh */
+.login-page{
+  min-height:100svh;
+  padding:clamp(14px,4vw,34px);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:
+    radial-gradient(ellipse at 12% 8%,rgba(255,199,120,.34),transparent 34%),
+    radial-gradient(ellipse at 90% 88%,rgba(222,94,87,.24),transparent 35%),
+    linear-gradient(145deg,#fff7ed 0%,#f6e8e4 48%,#e9efff 100%);
+}
+.login-card{
+  position:relative;
+  width:min(100%,480px);
+  padding:clamp(22px,5vw,38px);
+  overflow:hidden;
+  border:1px solid rgba(255,255,255,.92);
+  border-radius:28px;
+  background:rgba(255,255,255,.94);
+  box-shadow:0 24px 70px rgba(37,31,57,.14),0 3px 12px rgba(37,31,57,.05);
+  backdrop-filter:blur(16px);
+}
+.login-card:before{
+  content:"";
+  position:absolute;
+  top:0;left:0;right:0;height:5px;
+  background:linear-gradient(90deg,#9b1c31,#e5a34a,#9b1c31);
+}
+.shivasha-logo{
+  min-width:0;
+  width:fit-content;
+  min-height:0;
+  margin:0 auto 18px;
+  padding:12px 20px;
+  border:1px solid #f0d9bd;
+  border-radius:16px;
+  color:#762538;
+  background:linear-gradient(145deg,#fff8e9,#fff);
+  box-shadow:0 8px 22px rgba(128,54,42,.10);
+  font-size:clamp(16px,4vw,20px);
+  line-height:1.55;
+}
+.login-brand{margin-bottom:20px}
+.login-brand b{font-size:clamp(25px,6vw,31px);letter-spacing:3px;color:#20263a}
+.login-brand small{font-size:14px;color:#818797;margin-top:6px}
+.login-card .eyebrow{text-align:center;color:#9b6a48;letter-spacing:2px;font-size:10px}
+.auth-tabs{margin:22px 0 25px;padding:5px;background:#f5f1f2;border:1px solid #f0e7e7;border-radius:14px}
+.auth-tab{padding:13px;border-radius:10px;font-size:15px;transition:background .2s,box-shadow .2s}
+.auth-tab.selected{color:#fff;background:linear-gradient(135deg,#20263a,#343e58);box-shadow:0 5px 14px rgba(32,38,58,.2)}
+.login-card h1{font-size:clamp(28px,7vw,38px);line-height:1.13;letter-spacing:-1.1px;margin:0 0 12px;color:#20263a}
+.login-card .muted{font-size:16px;line-height:1.65;margin:0 0 22px;color:#737b8b}
+.login-card label{font-size:14px;color:#343b4d;margin:17px 0}
+.login-card label input{
+  margin-top:8px;
+  min-height:54px;
+  padding:14px 16px;
+  border:1px solid #e0e3eb;
+  border-radius:13px;
+  background:#fbfcff;
+  color:#20263a;
+  font-size:16px;
+  transition:border-color .2s,box-shadow .2s,background .2s;
+}
+.login-card label input:focus{outline:none;border-color:#a64a58;background:#fff;box-shadow:0 0 0 4px rgba(166,74,88,.11)}
+.login-card label input::placeholder{color:#a0a5b1}
+.login-button{
+  min-height:56px;
+  margin-top:12px;
+  border-radius:14px;
+  background:linear-gradient(135deg,#20263a,#343e58);
+  box-shadow:0 9px 20px rgba(32,38,58,.18);
+  font-size:16px;
+  transition:transform .2s,box-shadow .2s;
+}
+.login-button:hover{transform:translateY(-1px);box-shadow:0 12px 24px rgba(32,38,58,.22)}
+.login-button:disabled{opacity:.65;transform:none}
+.switch-auth{display:block;margin:22px auto 0;color:#8c3447;font-size:14px}
+.login-message{margin:14px 0 0}
+@media(max-width:650px){
+  .login-page{padding:12px;align-items:center;background:
+    radial-gradient(ellipse at 0% 0%,rgba(255,199,120,.28),transparent 38%),
+    radial-gradient(ellipse at 100% 100%,rgba(222,94,87,.19),transparent 38%),
+    linear-gradient(145deg,#fff7ed,#edf0fb)}
+  .login-card{width:100%;max-width:460px;padding:28px 22px 26px;border-radius:24px}
+  .shivasha-logo{margin-bottom:14px}
+  .login-brand{margin-bottom:16px}
+  .auth-tabs{margin:18px 0 22px}
+  .login-card h1{font-size:clamp(29px,8vw,36px)}
+  .login-card .muted{font-size:15px;margin-bottom:18px}
+  .login-card label{margin:15px 0}
+  .login-card label input{min-height:52px}
+}
+@media(prefers-reduced-motion:reduce){.login-button,.auth-tab,.login-card label input{transition:none}}
