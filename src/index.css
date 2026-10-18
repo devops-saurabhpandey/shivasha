@@ -358,3 +358,33 @@
  .login-card label.login-field input{font-size:14px}
  .login-footer p{font-size:8px;letter-spacing:1.2px}
 }
+
+/* SHIVASHA community feed refresh */
+.shivasha-feed{max-width:780px;padding-top:28px}
+.feed-welcome{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:20px;padding:25px 26px;border:1px solid #e4e7ec;border-radius:18px;background:linear-gradient(135deg,#fff 0%,#f7f8fb 100%);box-shadow:0 8px 24px rgba(17,24,39,.045)}
+.feed-kicker{font-size:10px;font-weight:850;letter-spacing:1.5px;color:#7a6a50}
+.feed-welcome h2{font-size:29px;letter-spacing:-.7px;margin:7px 0 5px;color:#111827}
+.feed-welcome p{margin:0;color:#727b8b;font-size:13px;line-height:1.6}
+.feed-refresh{border:1px solid #d9dee7;background:#fff;color:#1b2433;border-radius:10px;padding:10px 13px;font-size:12px;font-weight:750;white-space:nowrap;cursor:pointer}
+.feed-refresh:hover,.feed-composer-shortcut:hover{border-color:#aeb7c5;box-shadow:0 5px 16px rgba(17,24,39,.07)}
+.feed-refresh:disabled{opacity:.6;cursor:wait}
+.feed-composer-shortcut{width:100%;display:flex;align-items:center;gap:12px;padding:15px 17px;margin-bottom:24px;background:#fff;border:1px solid #e4e7ec;border-radius:15px;text-align:left;cursor:pointer;transition:box-shadow .18s,border-color .18s}
+.feed-composer-shortcut>span{flex:1;color:#858d9b;font-size:14px}
+.feed-composer-shortcut>b{padding:10px 13px;border-radius:9px;background:#111827;color:#fff;font-size:12px;white-space:nowrap}
+.feed-section-label{display:flex;justify-content:space-between;align-items:center;margin:0 3px 13px;color:#687385;font-size:10px;font-weight:850;letter-spacing:1.3px}
+.feed-section-label span:last-child{font-size:10px;color:#8c94a2}
+.shivasha-feed .post-card{border-radius:16px;padding:21px;margin-bottom:17px;box-shadow:0 4px 16px rgba(17,24,39,.035);transition:box-shadow .18s,border-color .18s}
+.shivasha-feed .post-card:hover{border-color:#d7dce5;box-shadow:0 8px 24px rgba(17,24,39,.065)}
+.shivasha-feed .post-author{gap:12px}
+.shivasha-feed .post-author b{font-size:14px;color:#171e2c}
+.shivasha-feed .post-author small{font-size:11px}
+.shivasha-feed .post-text{color:#303949;font-size:15px;line-height:1.8;margin:17px 0}
+.shivasha-feed .post-actions{justify-content:space-between;gap:8px;margin-top:12px}
+.shivasha-feed .post-actions button{padding:8px 10px;border-radius:8px;font-size:12px;transition:background .15s}
+.shivasha-feed .post-actions button:hover{background:#f2f4f7}
+.shivasha-feed .post-actions button.liked{background:#fff0f2}
+.feed-empty{padding:36px 22px;border-style:dashed}
+.feed-empty-icon{display:grid;place-items:center;width:52px;height:52px;margin:0 auto 12px;border-radius:16px;background:#f0f2f6;color:#111827;font-size:25px}
+.feed-empty h3{color:#172033;margin:8px 0}
+.feed-empty p{max-width:330px;margin:0 auto 18px;line-height:1.7;font-size:13px}
+@media(max-width:650px){.shivasha-feed{padding:14px}.feed-welcome{padding:20px 17px;align-items:flex-start}.feed-welcome h2{font-size:25px}.feed-welcome p{max-width:245px}.feed-refresh{padding:9px;font-size:11px}.feed-composer-shortcut{padding:12px;gap:9px}.feed-composer-shortcut .avatar{width:34px;height:34px}.feed-composer-shortcut>span{font-size:12px}.feed-composer-shortcut>b{padding:9px;font-size:11px}.shivasha-feed .post-card{padding:15px}.shivasha-feed .post-actions{gap:2px}.shivasha-feed .post-actions button{font-size:11px;padding:7px 5px}}
