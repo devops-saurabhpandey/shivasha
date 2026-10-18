@@ -51,6 +51,13 @@ router.use("/admin", requireAuth, async (req, res, next) => {
   } catch (error) { next(error); }
 });
 
+router.get("/admin/creators", async (_req, res, next) => {
+  try {
+    const creators = await User.find({ role: { $ne: "admin" } }).select("name email role").sort({ name: 1 }).limit(1000).lean();
+    res.json({ creators });
+  } catch (error) { next(error); }
+});
+
 router.get("/admin/summary", async (_req, res, next) => {
   try {
     const summary = await financeSummary();
