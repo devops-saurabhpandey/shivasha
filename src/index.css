@@ -471,3 +471,38 @@ body::before {
     transform: rotate(-7deg) scale(1.03);
   }
 }
+
+
+/* SHIVASHA CRM, MIS and E-commerce module layouts */
+.module-notice{margin:0 0 18px;padding:13px 15px;border:1px solid #f0d5a8;border-radius:12px;background:#fff7e8;color:#795016;font-size:13px;line-height:1.6}
+.module-grid{display:grid;grid-template-columns:minmax(260px,0.85fr) minmax(0,1.4fr);gap:18px;align-items:start;margin-bottom:18px}
+.module-grid>.panel,.module-grid .panel{min-width:0}
+.module-grid label{display:flex;flex-direction:column;gap:6px;margin:12px 0;color:#344054;font-size:13px;font-weight:650}
+.module-grid input,.module-grid select,.module-grid textarea,.panel-head select{width:100%;min-width:0;border:1px solid #d8deea;border-radius:9px;padding:10px 11px;background:#fff;color:#172033;font:inherit}
+.module-grid textarea{min-height:76px;resize:vertical}
+.module-row{display:flex;justify-content:space-between;align-items:center;gap:14px;padding:14px 0;border-bottom:1px solid #edf0f5}
+.module-row:last-child{border-bottom:0}
+.module-row>div{min-width:0}
+.module-row b,.module-row small{display:block}
+.module-row small{margin-top:5px;color:#667085;font-size:12px}
+.module-row p{margin:7px 0 0;color:#667085;font-size:13px}
+.module-row select{max-width:145px;border:1px solid #d8deea;border-radius:8px;padding:8px;background:#fff}
+.module-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:18px}
+.module-stats .panel{display:flex;flex-direction:column;gap:8px}
+.module-stats small{color:#667085}
+.module-stats strong{font-size:28px;color:#172033}
+.report-bar-row{display:grid;grid-template-columns:95px minmax(30px,1fr) 28px;gap:12px;align-items:center;margin:14px 0;font-size:13px}
+.report-bar{height:10px;border-radius:20px;background:#eef1f6;overflow:hidden}
+.report-bar i{display:block;height:100%;border-radius:20px;background:#d97706}
+.module-product-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px}
+.module-product{display:flex;flex-direction:column;align-items:flex-start;gap:8px;padding:16px;border:1px solid #e7eaf0;border-radius:13px;background:#fff}
+.module-product-icon{display:grid;place-items:center;width:42px;height:42px;border-radius:12px;background:#fff0d8;color:#9a5200;font-size:22px}
+.module-product small{color:#8b5e20}
+.module-product h3{margin:0;color:#172033;font-size:17px;overflow-wrap:anywhere}
+.module-product p{margin:0;color:#667085;font-size:13px;line-height:1.5;flex:1}
+.module-product>strong{font-size:20px;color:#172033}
+.module-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:5px}
+.module-actions button{font-size:12px;padding:8px 10px}
+.panel-head select{width:auto;max-width:150px}
+@media(max-width:800px){.module-grid{grid-template-columns:1fr}.module-stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:480px){.module-stats{gap:9px}.module-stats strong{font-size:24px}.module-row{align-items:flex-start;flex-direction:column}.module-row select{max-width:100%;width:100%}.report-bar-row{grid-template-columns:78px minmax(20px,1fr) 22px;gap:7px}}
