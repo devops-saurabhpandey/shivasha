@@ -35,7 +35,7 @@ export default function UpdateChecker() {
       if (response.status === 404) {
         setRelease(null);
         setState("current");
-        setDetails("No official update has been published yet.");
+        setDetails("No APK update has been published as a GitHub Release yet. Website changes may still update separately.");
         return;
       }
       if (!response.ok) throw new Error("Could not check updates right now.");
@@ -44,7 +44,7 @@ export default function UpdateChecker() {
       if (!apk || !isNewer(data.tag_name || data.name, CURRENT_VERSION)) {
         setRelease(null);
         setState("current");
-        setDetails("You are using the latest published version.");
+        setDetails("No newer APK release was found. Website updates are checked separately.");
         return;
       }
       setRelease({ ...data, apk });
