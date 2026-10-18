@@ -20,7 +20,7 @@ function Login({onLogin}) {
   const submit=async e=>{e.preventDefault();setMessage("");setLoading(true);try{const d=await apiFetch("/api/auth/"+mode,null,{method:"POST",body:JSON.stringify(form)});if(mode==="register"){setMode("login");setMessage("Account created. Now login.")}else{localStorage.setItem("shivasha_auth",JSON.stringify(d));onLogin(d)}}catch(e){setMessage(e.message)}finally{setLoading(false)}};
   const changeMode=next=>{setMode(next);setMessage("")};
   return <main className="login-page">
-    <div className="login-ornament login-ornament-top" aria-hidden="true">✦</div>
+    
     <section className="login-wrap">
       <header className="login-masthead">
         <div className="login-emblem" aria-hidden="true"><span>ॐ</span></div>
@@ -47,7 +47,7 @@ function Login({onLogin}) {
         <div className="login-or"><span></span>OR<span></span></div>
         <button className="switch-auth" onClick={()=>changeMode(mode==="login"?"register":"login")}>{mode==="login"?"Don't have an account?  Create a new account  ›":"Already have an account?  Login  ›"}</button>
       </div>
-      <footer className="login-footer"><span>✿</span><p>BETTER PEOPLE <b>•</b> STRONGER COMMUNITY <b>•</b> BRIGHTER FUTURE</p></footer>
+      <footer className="login-footer"><p>BETTER PEOPLE <b>•</b> STRONGER COMMUNITY <b>•</b> BRIGHTER FUTURE</p></footer>
     </section>
   </main>;
 }
