@@ -29,7 +29,7 @@ const findValue = (obj, names) => {
   if (!obj || typeof obj !== "object") return null;
   for (const name of names) {
     const key = Object.keys(obj).find(k => k.toLowerCase() === name.toLowerCase());
-    if (key && obj[key] != null && typeof obj[key] !== "object") return obj[key];
+    if (key && obj[key] != null) return obj[key];
   }
   return null;
 };
@@ -38,7 +38,7 @@ const formatValue = value => {
   if (typeof value === "string" || typeof value === "number") return String(value);
   if (Array.isArray(value)) return value.map(formatValue).join(", ");
   if (typeof value === "object") {
-    const name = value.nameHi || value.name_hi || value.hindi || value.name || value.label || value.value;
+    const name = value.nameHi || value.name_hi || value.hi || value.hindi || value.name || value.label || value.value;
     if (name && typeof name !== "object") return String(name);
     return Object.entries(value).filter(([,v]) => v != null && typeof v !== "object").map(([k,v]) => titleCase(k) + ": " + v).join(" · ") || "—";
   }
