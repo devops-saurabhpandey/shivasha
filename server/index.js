@@ -13,6 +13,7 @@ import messageRoutes from "./routes/messages.js";
 import adminRoutes from "./routes/admin.js";
 import contentRoutes from "./routes/content.js";
 import businessRoutes from "./routes/business.js";
+import creatorFinanceRoutes from "./routes/creatorFinance.js";
 
 dotenv.config();
 
@@ -82,6 +83,7 @@ app.use("/api/messages", messageRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/content", contentRoutes);
 app.use("/api/business", businessRoutes);
+app.use("/api/creator-finance", creatorFinanceRoutes);
 
 app.get("/api", (_req, res) => res.json({ message: "SHIVASHA API is running" }));
 
