@@ -1,4 +1,4 @@
-const VERSION = "shivasha-pwa-v1";
+const VERSION = "shivasha-pwa-v2";
 const APP_SHELL = ["./", "./manifest.webmanifest", "./images/shivasha-icon.svg"];
 
 self.addEventListener("install", (event) => {
@@ -44,11 +44,14 @@ self.addEventListener("fetch", (event) => {
   }
 
   if (url.pathname.includes("/assets/")) {
+    // Prefer the latest deployed asset; use the cached copy only when offline.
     event.respondWith(
-      caches.match(request).then((cached) => cached || fetch(request).then((response) => {
-        if (response.ok) caches.open(VERSION).then((cache) => cache.put(request, response.clone()));
-        return response;
-      }))
+      fetch(request)
+        .then((response) => {
+          if (response.ok) caches.open(VERSION).then((cache) => cache.put(request, response.clone()));
+          return response;
+        })
+        .catch(async () => (await caches.match(request)) || Response.error())
     );
   }
 });
