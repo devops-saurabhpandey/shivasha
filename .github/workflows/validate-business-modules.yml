@@ -39,5 +39,5 @@ jobs:
         with:
           node-version: 20
       - run: npm install
-      - run: node --check index.js
-      - run: node --check routes/business.js
+      - name: Check syntax for every backend JavaScript file
+        run: find . -type f -name '*.js' -print0 | xargs -0 -n1 node --check
