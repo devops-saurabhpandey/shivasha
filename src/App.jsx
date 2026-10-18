@@ -8,7 +8,18 @@ import ContentStudio from "./ContentStudio.jsx";
 const API_BASE = (import.meta.env.VITE_API_URL || "https://shivasha.onrender.com").replace(/\/$/, "");
 function apiFetch(path, auth, options = {}) {
   return fetch(API_BASE + path, {...options, headers: {"Content-Type":"application/json", ...(auth?.token ? {Authorization:"Bearer "+auth.token}:{}), ...(options.headers||{})}})
-    .then(async r => { const d=await r.json().catch(()=>({})); if(!r.ok) throw new Error(d.message||"API request failed"); return d; });
+    .then(async r => {
+      const raw = await r.text();
+      let data = {};
+      try { data = raw ? JSON.parse(raw) : {}; } catch { data = {}; }
+      if (!r.ok) throw new Error(data.message || `API request failed (${r.status}) at ${path}`);
+      if (raw && !Object.keys(data).length) throw new Error(`Unexpected API response at ${path}`);
+      return data;
+    })
+    .catch(error => {
+      if (error instanceof TypeError) throw new Error(`Cannot reach SHIVASHA API at ${path}. Check the connection and try again.`);
+      throw error;
+    });
 }
 export default function App() {
   const [auth,setAuth]=useState(()=>{try{return JSON.parse(localStorage.getItem("shivasha_auth"))||null}catch{return null}});
