@@ -162,3 +162,142 @@
   .login-card label input{min-height:52px}
 }
 @media(prefers-reduced-motion:reduce){.login-button,.auth-tab,.login-card label input{transition:none}}
+
+
+/* SHIVASHA classic black-and-gold login theme */
+.login-page{
+  min-height:100vh;
+  min-height:100svh;
+  display:grid;
+  place-items:center;
+  padding:24px 16px;
+  color:#f5f2e9;
+  background:
+    radial-gradient(ellipse at 50% 0%,rgba(181,130,39,.17),transparent 38%),
+    radial-gradient(ellipse at 0% 100%,rgba(151,103,29,.09),transparent 34%),
+    linear-gradient(145deg,#08090b 0%,#111214 48%,#050506 100%);
+  position:relative;
+  overflow:hidden;
+}
+.login-page:before,.login-page:after{
+  content:"";
+  position:fixed;
+  width:260px;height:260px;
+  border:1px solid rgba(211,168,76,.18);
+  border-radius:50%;
+  pointer-events:none;
+}
+.login-page:before{top:-190px;left:-120px;box-shadow:0 0 0 22px rgba(211,168,76,.025),0 0 0 48px rgba(211,168,76,.02)}
+.login-page:after{right:-150px;bottom:-190px;box-shadow:0 0 0 22px rgba(211,168,76,.025),0 0 0 48px rgba(211,168,76,.02)}
+.login-card{
+  position:relative;
+  z-index:1;
+  width:min(480px,100%);
+  padding:clamp(24px,5vw,38px);
+  color:#f5f2e9;
+  background:linear-gradient(145deg,rgba(24,24,25,.97),rgba(9,10,11,.98));
+  border:1px solid rgba(211,168,76,.34);
+  border-radius:24px;
+  box-shadow:0 28px 75px rgba(0,0,0,.5),inset 0 1px rgba(255,255,255,.035),0 0 35px rgba(173,125,38,.055);
+}
+.shivasha-logo{
+  display:grid;
+  place-items:center;
+  width:auto;height:auto;min-height:0;
+  margin:0 auto 18px;
+  padding:12px 18px;
+  border:1px solid rgba(214,171,77,.34);
+  border-radius:15px;
+  color:#e8c36c;
+  background:linear-gradient(145deg,#211b10,#111112);
+  box-shadow:0 0 24px rgba(204,157,54,.08);
+  font-size:clamp(17px,4vw,21px);
+  font-weight:800;
+  line-height:1.5;
+  text-align:center;
+}
+.login-brand{margin-bottom:18px;text-align:center}
+.login-brand b{
+  display:block;
+  color:#f8f5ee;
+  font-family:Georgia,"Times New Roman",serif;
+  font-size:clamp(30px,7vw,39px);
+  letter-spacing:4px;
+}
+.login-brand small{display:block;margin-top:6px;color:#a9abb1;font-size:14px;letter-spacing:.4px}
+.login-card .eyebrow{color:#d7b35d;text-align:center;letter-spacing:2px;font-size:10px}
+.auth-tabs{
+  display:flex;gap:5px;
+  margin:23px 0 27px;padding:5px;
+  background:#111214;
+  border:1px solid #343436;
+  border-radius:999px;
+}
+.auth-tab{
+  flex:1;min-width:0;
+  padding:13px 10px;
+  color:#b8bac0;
+  background:transparent;
+  border:1px solid transparent;
+  border-radius:999px;
+  font-size:15px;font-weight:650;
+  cursor:pointer;
+  transition:background .2s,border-color .2s,color .2s,box-shadow .2s;
+}
+.auth-tab.selected{
+  color:#f9e7b0;
+  background:linear-gradient(135deg,#282114,#151515);
+  border-color:#cba44c;
+  box-shadow:0 0 18px rgba(201,158,62,.13);
+}
+.login-card h1{
+  margin:0 0 10px;
+  color:#f7f5ef;
+  font-family:Georgia,"Times New Roman",serif;
+  font-size:clamp(30px,7vw,39px);
+  line-height:1.15;letter-spacing:-.5px;
+}
+.login-card .muted{margin:0 0 23px;color:#a4a7b0;font-size:16px;line-height:1.6}
+.login-card label{display:block;margin:16px 0;color:#e2d9c5;font-size:14px;font-weight:650}
+.login-card label input{
+  display:block;width:100%;min-height:54px;
+  margin-top:8px;padding:14px 15px;
+  color:#f5f2e9;background:#101113;
+  border:1px solid #3b3b3e;border-radius:12px;
+  font-size:16px;outline:none;
+  transition:border-color .2s,box-shadow .2s,background .2s;
+}
+.login-card label input::placeholder{color:#858892}
+.login-card label input:focus{
+  border-color:#cba44c;background:#151412;
+  box-shadow:0 0 0 3px rgba(203,164,76,.12);
+}
+.login-button{
+  display:block;width:100%;min-height:55px;
+  margin-top:23px;padding:13px 18px;
+  color:#fffdf7;background:linear-gradient(135deg,#191a1c,#050506);
+  border:1px solid #d2aa4e;border-radius:999px;
+  box-shadow:0 8px 24px rgba(0,0,0,.35),0 0 18px rgba(203,164,76,.09);
+  font-size:16px;font-weight:750;cursor:pointer;
+  transition:transform .2s,box-shadow .2s,border-color .2s;
+}
+.login-button:hover{transform:translateY(-1px);border-color:#f0cf79;box-shadow:0 10px 28px rgba(0,0,0,.42),0 0 23px rgba(203,164,76,.15)}
+.login-button:disabled{opacity:.65;cursor:wait;transform:none}
+.login-message{margin:14px 0 0;padding:11px 13px;border-radius:10px;background:#251717;color:#ffc2b8;border:1px solid #56302c}
+.switch-auth{
+  display:block;margin:22px auto 0;padding:4px;
+  color:#e6c36b;background:transparent;border:0;
+  font-size:14px;font-weight:650;cursor:pointer;
+}
+.switch-auth:hover{color:#ffe6a0;text-decoration:underline}
+@media(max-width:650px){
+ .login-page{padding:14px 12px;align-items:center}
+ .login-card{padding:25px 21px;border-radius:21px}
+ .shivasha-logo{margin-bottom:15px}
+ .auth-tabs{margin:19px 0 23px}
+ .login-card h1{font-size:clamp(29px,8vw,35px)}
+ .login-card .muted{font-size:15px}
+ .login-card label{margin:14px 0}
+ .login-card label input{min-height:52px}
+}
+@media(prefers-reduced-motion:reduce){.auth-tab,.login-card label input,.login-button{transition:none}}
