@@ -1,0 +1,44 @@
+name: Validate SHIVASHA business modules
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "src/**"
+      - "server/**"
+      - "package.json"
+      - ".github/workflows/validate-business-modules.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "src/**"
+      - "server/**"
+      - "package.json"
+      - ".github/workflows/validate-business-modules.yml"
+  workflow_dispatch:
+
+jobs:
+  frontend-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm install
+      - run: npm run build
+
+  backend-syntax:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: server
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install
+      - run: node --check index.js
+      - run: node --check routes/business.js
