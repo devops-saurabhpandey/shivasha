@@ -1,0 +1,53 @@
+name: SHIVASHA API Diagnostics
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/api-health-check.yml"
+      - "src/App.jsx"
+      - "server/index.js"
+
+permissions:
+  contents: read
+
+jobs:
+  api-health:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check Render API health
+        id: health
+        shell: bash
+        run: |
+          set -euo pipefail
+          URL="https://shivasha.onrender.com/api/health"
+          for attempt in 1 2 3 4 5; do
+            echo "Health check attempt $attempt/5"
+            CODE=$(curl --silent --show-error --location --max-time 30 --output /tmp/health.json --write-out "%{http_code}" "$URL" || true)
+            echo "HTTP status: ${CODE:-no-response}"
+            if [ "${CODE:-}" = "200" ] && grep -q '"status":"ok"' /tmp/health.json; then
+              cat /tmp/health.json
+              exit 0
+            fi
+            cat /tmp/health.json 2>/dev/null || true
+            sleep 10
+          done
+          echo "::error::Render API health endpoint did not return HTTP 200 with status=ok."
+          exit 1
+      - name: Check browser CORS for GitHub Pages origin
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --silent --show-error --location --max-time 30 --output /tmp/cors.txt --dump-header /tmp/cors-headers.txt \
+            --request OPTIONS "https://shivasha.onrender.com/api/posts" \
+            --header "Origin: https://devops-saurabhpandey.github.io" \
+            --header "Access-Control-Request-Method: GET" \
+            --header "Access-Control-Request-Headers: authorization,content-type"
+          cat /tmp/cors-headers.txt
+          if ! grep -qi '^access-control-allow-origin: \*' /tmp/cors-headers.txt && ! grep -qi '^access-control-allow-origin: https://devops-saurabhpandey.github.io' /tmp/cors-headers.txt; then
+            echo "::error::CORS response does not allow the GitHub Pages origin."
+            cat /tmp/cors.txt
+            exit 1
+          fi
+          echo "CORS allows the GitHub Pages origin."
