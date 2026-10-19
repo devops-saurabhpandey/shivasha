@@ -107,6 +107,7 @@ export default function SoftwareDirectory({ onOpenModule = () => {}, auth }) {
         </article>
       </div>
       <div className="software-plan-status" role="status"><b>{selectedPlan === "suite" ? "Business Suite मॉडल चुना गया" : selectedPlan === "individual" ? "अलग-अलग मॉड्यूल वाला मॉडल चुना गया" : "अपना पसंदीदा मॉडल चुनें"}</b><span>अभी कोई ऑर्डर, भुगतान या subscription नहीं बनाया जाता। कीमत, प्लान की शर्तें और सुरक्षित checkout बाद में जोड़े जाएँगे।</span></div>
+      <div className="software-contact-card"><div><b>SHIVASHA से सीधे संपर्क करें</b><span>Software plan enquiry और जानकारी के लिए कॉल करें।</span></div><a href="tel:+917392916676" aria-label="Call SHIVASHA at 7392916676">7392916676 · कॉल करें</a></div>
       {selectedPlan && <section className="software-enquiry-form" aria-labelledby="software-enquiry-title">
         <div className="software-section-heading"><div><span className="software-eyebrow">PLAN ENQUIRY</span><h3 id="software-enquiry-title">अपनी जरूरत बताएँ</h3><p>यह केवल संपर्क/रुचि की enquiry है। अभी कोई शुल्क या भुगतान नहीं लिया जाएगा।</p></div></div>
         {selectedPlan === "individual" && <fieldset className="software-module-choices"><legend>कौन-से modules चाहिए? *</legend>{moduleOptions.map(module => <label key={module.id}><input type="checkbox" checked={selectedModules.includes(module.id)} onChange={event => setSelectedModules(old => event.target.checked ? [...old, module.id] : old.filter(id => id !== module.id))}/>{module.label}</label>)}</fieldset>}
