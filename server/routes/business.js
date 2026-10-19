@@ -48,8 +48,8 @@ async function notifySoftwareEnquiryBySms(enquiry) {
   const templateId = process.env.MSG91_TEMPLATE_ID;
   const recipients = (process.env.SHIVASHA_ENQUIRY_SMS_TO || "")
     .split(",")
-    .map(value => value.replace(/\\D/g, ""))
-    .filter(value => /^91\\d{10}$/.test(value));
+    .map(value => value.replace(/\D/g, ""))
+    .filter(value => /^91\d{10}$/.test(value));
   if (!authKey || !templateId || recipients.length === 0) return "not_configured";
 
   const planLabel = enquiry.plan === "suite" ? "Business Suite" : "Individual";
