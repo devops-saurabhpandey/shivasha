@@ -31,6 +31,14 @@ const orderSchema = new mongoose.Schema({
 const Lead = mongoose.models.ShivashaCRMLead || mongoose.model("ShivashaCRMLead", leadSchema);
 const Product = mongoose.models.ShivashaBusinessProduct || mongoose.model("ShivashaBusinessProduct", productSchema);
 const Order = mongoose.models.ShivashaBusinessOrder || mongoose.model("ShivashaBusinessOrder", orderSchema);
+const softwareEnquirySchema = new mongoose.Schema({
+  customer: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true, index: true },
+  plan: { type: String, enum: ["individual", "suite"], required: true },
+  modules: [{ type: String, enum: ["social", "crm", "mis", "ecommerce", "creator"] }],
+  note: { type: String, trim: true, maxlength: 1000, default: "" },
+  status: { type: String, enum: ["Pending", "Contacted", "Approved", "Rejected"], default: "Pending", index: true }
+}, { timestamps: true });
+const SoftwareEnquiry = mongoose.models.ShivashaSoftwareEnquiry || mongoose.model("ShivashaSoftwareEnquiry", softwareEnquirySchema);
 const ownerId = req => req.user.id;
 
 router.get("/leads", async (req, res, next) => {
@@ -92,6 +100,27 @@ router.patch("/orders/:id", async (req, res, next) => {
     const order = await Order.findOneAndUpdate({ _id: req.params.id, owner: ownerId(req) }, { $set: { status } }, { new: true, runValidators: true });
     if (!order) return res.status(404).json({ message: "Order not found" });
     res.json({ order });
+  } catch (e) { next(e); }
+});
+
+router.get("/software-enquiries", async (req, res, next) => {
+  try {
+    const enquiries = await SoftwareEnquiry.find({ customer: ownerId(req) }).sort({ createdAt: -1 }).lean();
+    res.json({ enquiries });
+  } catch (e) { next(e); }
+});
+router.post("/software-enquiries", async (req, res, next) => {
+  try {
+    const plan = String(req.body?.plan || "");
+    const allowedModules = ["social", "crm", "mis", "ecommerce", "creator"];
+    const modules = Array.isArray(req.body?.modules) ? [...new Set(req.body.modules.map(String))] : [];
+    const note = String(req.body?.note || "").trim();
+    if (!["individual", "suite"].includes(plan)) return res.status(400).json({ message: "Choose an available plan model" });
+    if (modules.some(module => !allowedModules.includes(module))) return res.status(400).json({ message: "Invalid module selection" });
+    if (plan === "individual" && modules.length === 0) return res.status(400).json({ message: "Select at least one module" });
+    if (note.length > 1000) return res.status(400).json({ message: "Note must be 1000 characters or fewer" });
+    const enquiry = await SoftwareEnquiry.create({ customer: ownerId(req), plan, modules: plan === "suite" ? [] : modules, note });
+    res.status(201).json({ enquiry, message: "Plan enquiry submitted. No payment has been taken." });
   } catch (e) { next(e); }
 });
 
