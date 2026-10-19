@@ -9,7 +9,8 @@
       #shivasha-founder-card img{width:100%;height:100%;max-height:780px;object-fit:cover;object-position:top;border-radius:24px 0 0 24px;background:#eee}
       #shivasha-founder-copy{padding:30px 28px;align-self:center}
       #shivasha-founder-copy h2{font-size:25px;line-height:1.2;margin:0 0 6px;color:#111827}
-      #shivasha-founder-copy .role{color:#7c3aed;font-weight:700;font-size:12px;letter-spacing:1.2px;text-transform:uppercase;margin-bottom:18px}
+      #shivasha-founder-copy .role{color:#7c3aed;font-weight:700;font-size:12px;letter-spacing:1.2px;text-transform:uppercase;margin-bottom:8px}
+      #shivasha-founder-copy .founder-name{font-size:18px;font-weight:800;color:#111827;margin:0 0 18px}
       #shivasha-founder-copy p{font-size:14px;line-height:1.7;margin:0 0 13px}
       #shivasha-founder-copy .values{font-weight:700;color:#6d28d9;margin:16px 0}
       #shivasha-founder-close{position:absolute;right:12px;top:12px;border:0;border-radius:50%;width:38px;height:38px;background:#fff;color:#111827;font-size:24px;box-shadow:0 2px 12px #0002;cursor:pointer}
@@ -29,9 +30,10 @@
     overlay.innerHTML = `
       <section id="shivasha-founder-card">
         <button id="shivasha-founder-close" type="button" aria-label="Close">×</button>
-        <img src="/images/founder-chairman.jpg" alt="SHIVASHA Founder and Chairman poster" />
+        <img src="/shivasha/images/founder-chairman.jpg" alt="SHIVASHA Founder and Chairman poster" />
         <div id="shivasha-founder-copy">
           <div class="role">Founder &amp; Chairman</div>
+          <div class="founder-name">Saurabh Pandey</div>
           <h2>Welcome to SHIVASHA</h2>
           <p>Dear SHIVASHA Family,</p>
           <p>SHIVASHA is built with a vision to connect people through technology, create useful digital opportunities, and make digital experiences more accessible, secure, and transparent.</p>
@@ -42,6 +44,8 @@
         </div>
       </section>`;
     document.body.append(button, overlay);
+    const portrait = overlay.querySelector("img");
+    portrait.addEventListener("error", () => { portrait.style.display = "none"; });
     const close = () => { overlay.style.display = "none"; document.body.style.overflow = ""; };
     button.addEventListener("click", () => { overlay.style.display = "flex"; document.body.style.overflow = "hidden"; });
     overlay.querySelector("#shivasha-founder-close").addEventListener("click", close);
