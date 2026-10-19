@@ -1,9 +1,5 @@
 {
   "appId": "com.shivasha.next",
   "appName": "SHIVASHA",
-  "webDir": "dist",
-  "server": {
-    "url": "https://devops-saurabhpandey.github.io/shivasha/",
-    "cleartext": false
-  }
+  "webDir": "dist"
 }
