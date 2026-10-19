@@ -114,6 +114,11 @@ export default function SoftwareDirectory({ onOpenModule = () => {}, auth }) {
         {selectedPlan === "suite" && <div className="software-plan-note">Business Suite की final module list और pricing अभी तय नहीं है। यह request केवल आपकी रुचि दर्ज करेगी।</div>}
         <label className="software-enquiry-note">काम/जरूरत के बारे में (वैकल्पिक)<textarea value={enquiryNote} onChange={event => setEnquiryNote(event.target.value)} maxLength={1000} placeholder="आप SHIVASHA से क्या चाहते हैं? (अधिकतम 1000 अक्षर)"/></label>
         <button type="button" className="software-plan-select selected" disabled={submittingEnquiry} onClick={submitPlanEnquiry}>{submittingEnquiry ? "जमा हो रहा है…" : "Plan enquiry जमा करें"}</button>
+        <div className="software-whatsapp-contacts" aria-label="WhatsApp enquiry contacts">
+          <b>WhatsApp पर भी संपर्क करें</b>
+          <a href="https://wa.me/917392916676" target="_blank" rel="noopener noreferrer">7392916676 · WhatsApp</a>
+          <a href="https://wa.me/916387650085" target="_blank" rel="noopener noreferrer">6387650085 · WhatsApp</a>
+        </div>
         {enquiryMessage && <p className="software-enquiry-message" role="status">{enquiryMessage}</p>}
       </section>}
       <div className="software-plan-comparison">
