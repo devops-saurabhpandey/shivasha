@@ -70,6 +70,22 @@ export default function SoftwareDirectory() {
         </article>
       </div>
       <div className="software-plan-status" role="status"><b>{selectedPlan === "suite" ? "Business Suite मॉडल चुना गया" : selectedPlan === "individual" ? "अलग-अलग मॉड्यूल वाला मॉडल चुना गया" : "अपना पसंदीदा मॉडल चुनें"}</b><span>अभी कोई ऑर्डर, भुगतान या subscription नहीं बनाया जाता। कीमत, प्लान की शर्तें और सुरक्षित checkout बाद में जोड़े जाएँगे।</span></div>
+      <div className="software-plan-comparison">
+        <h4>दोनों मॉडल में क्या अंतर है?</h4>
+        <div className="software-comparison-scroll">
+          <table>
+            <thead><tr><th>सुविधा</th><th>अलग-अलग मॉड्यूल</th><th>Business Suite</th></tr></thead>
+            <tbody>
+              <tr><td>खरीद का तरीका</td><td>जरूरत के अनुसार module</td><td>एक संयुक्त पैकेज (प्रस्तावित)</td></tr>
+              <tr><td>Social, CRM, MIS, E-Commerce</td><td>अलग चयन</td><td>अंतिम शामिल modules की पुष्टि बाकी</td></tr>
+              <tr><td>Creator Studio</td><td>अलग चयन</td><td>शामिल होना अभी तय नहीं</td></tr>
+              <tr><td>मासिक / वार्षिक कीमत</td><td>अभी तय नहीं</td><td>अभी तय नहीं</td></tr>
+              <tr><td>ऑनलाइन भुगतान</td><td>अभी सक्रिय नहीं</td><td>अभी सक्रिय नहीं</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>यह तुलना planning preview है, बिक्री का प्रस्ताव या उपलब्ध सुविधाओं की गारंटी नहीं। कीमत, modules, renewal/cancellation नियम और भुगतान चालू करने से पहले इन्हें अंतिम रूप दिया जाएगा।</p>
+      </div>
     </section>
 
     <section className="partner-software">
