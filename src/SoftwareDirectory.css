@@ -11,3 +11,5 @@
 .software-plan-comparison th{background:#f5f8fb;color:#294663;font-weight:750}
 .software-plan-comparison td:first-child{font-weight:700;color:#34495e}
 .software-plan-comparison p{font-size:12px;line-height:1.6;color:var(--muted,#667085);margin:12px 0 0}
+
+.software-module-open{display:inline-flex;align-items:center;justify-content:center;margin-top:2px;padding:7px 11px;border:1px solid #245888;border-radius:9px;background:transparent;color:#245888;font:inherit;font-size:12px;font-weight:750;cursor:pointer}.software-module-open:focus-visible{outline:2px solid #245888;outline-offset:3px}
