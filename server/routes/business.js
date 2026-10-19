@@ -41,6 +41,55 @@ const softwareEnquirySchema = new mongoose.Schema({
 const SoftwareEnquiry = mongoose.models.ShivashaSoftwareEnquiry || mongoose.model("ShivashaSoftwareEnquiry", softwareEnquirySchema);
 const ownerId = req => req.user.id;
 
+// Optional MSG91 SMS notification. Enquiries are saved even if SMS is not configured
+// or the SMS provider is temporarily unavailable.
+async function notifySoftwareEnquiryBySms(enquiry) {
+  const authKey = process.env.MSG91_AUTH_KEY;
+  const templateId = process.env.MSG91_TEMPLATE_ID;
+  const recipients = (process.env.SHIVASHA_ENQUIRY_SMS_TO || "")
+    .split(",")
+    .map(value => value.replace(/\\D/g, ""))
+    .filter(value => /^91\\d{10}$/.test(value));
+  if (!authKey || !templateId || recipients.length === 0) return "not_configured";
+
+  const planLabel = enquiry.plan === "suite" ? "Business Suite" : "Individual";
+  const moduleLabels = {
+    social: "Social", crm: "CRM", mis: "MIS",
+    ecommerce: "E-Commerce", creator: "Creator Studio"
+  };
+  const modules = enquiry.modules.map(module => moduleLabels[module] || module).join(", ") || "Suite";
+  try {
+    const response = await fetch("https://control.msg91.com/api/v5/flow", {
+      method: "POST",
+      headers: {
+        accept: "application/json",
+        authkey: authKey,
+        "content-type": "application/json"
+      },
+      body: JSON.stringify({
+        template_id: templateId,
+        short_url: "0",
+        recipients: recipients.map(mobiles => ({
+          mobiles,
+          VAR1: planLabel,
+          VAR2: modules,
+          VAR3: String(enquiry._id).slice(-8)
+        }))
+      }),
+      signal: AbortSignal.timeout(8000)
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok || result.type === "error") {
+      console.error("SHIVASHA enquiry SMS provider returned an error (details withheld).");
+      return "failed";
+    }
+    return "sent";
+  } catch {
+    console.error("SHIVASHA enquiry SMS notification failed (details withheld).");
+    return "failed";
+  }
+}
+
 router.get("/leads", async (req, res, next) => {
   try { res.json({ leads: await Lead.find({ owner: ownerId(req) }).sort({ createdAt: -1 }).lean() }); } catch (e) { next(e); }
 });
@@ -120,7 +169,12 @@ router.post("/software-enquiries", async (req, res, next) => {
     if (plan === "individual" && modules.length === 0) return res.status(400).json({ message: "Select at least one module" });
     if (note.length > 1000) return res.status(400).json({ message: "Note must be 1000 characters or fewer" });
     const enquiry = await SoftwareEnquiry.create({ customer: ownerId(req), plan, modules: plan === "suite" ? [] : modules, note });
-    res.status(201).json({ enquiry, message: "Plan enquiry submitted. No payment has been taken." });
+    const notificationStatus = await notifySoftwareEnquiryBySms(enquiry);
+    res.status(201).json({
+      enquiry,
+      notificationStatus,
+      message: "Plan enquiry submitted. No payment has been taken."
+    });
   } catch (e) { next(e); }
 });
 
