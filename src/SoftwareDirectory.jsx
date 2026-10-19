@@ -2,11 +2,11 @@ import React, { useMemo, useState } from "react";
 import "./SoftwareDirectory.css";
 
 const SHIVASHA_PRODUCTS = [
-  { id: "social", icon: "🌐", name: "SHIVASHA Social", description: "Community feed, posts and social features.", status: "App module — check current availability" },
-  { id: "crm", icon: "🤝", name: "SHIVASHA CRM", description: "Customer and relationship management module.", status: "App module — check current availability" },
-  { id: "mis", icon: "📊", name: "SHIVASHA MIS Reports", description: "Business reporting and management information module.", status: "App module — check current availability" },
-  { id: "ecommerce", icon: "🛒", name: "SHIVASHA E-Commerce", description: "E-commerce module for product and store workflows.", status: "App module — check current availability" },
-  { id: "creator", icon: "🎬", name: "SHIVASHA Creator Studio", description: "Content tools and creator-related features.", status: "App module — check current availability" },
+  { id: "social", icon: "🌐", name: "SHIVASHA Social", description: "Community feed, posts, profiles and social features.", status: "उपलब्ध — Social module" },
+  { id: "crm", icon: "🤝", name: "SHIVASHA CRM", description: "अपने leads, customers और sales follow-ups manage करें.", status: "उपलब्ध — CRM module" },
+  { id: "mis", icon: "📊", name: "SHIVASHA MIS Reports", description: "CRM, product catalogue और recorded orders की account-level reports देखें.", status: "उपलब्ध — account-level reports" },
+  { id: "ecommerce", icon: "🛒", name: "SHIVASHA E-Commerce", description: "Products list करें और order enquiries manage करें; online payment अभी उपलब्ध नहीं है.", status: "उपलब्ध — catalogue & order enquiries" },
+  { id: "creator", icon: "🎬", name: "SHIVASHA Creator Studio", description: "Content Studio खोलकर creator tools इस्तेमाल करें.", status: "उपलब्ध — Creator Studio module" },
   { id: "suite", icon: "🏢", name: "SHIVASHA Business Suite", description: "A planned combined package for eligible business modules.", status: "Coming Soon" },
   { id: "accounting", icon: "🧾", name: "SHIVASHA Accounting", description: "Accounting, billing and GST workflows.", status: "Planned — under development" },
   { id: "hr", icon: "👥", name: "SHIVASHA HR & Payroll", description: "Employee, attendance and payroll workflows.", status: "Planned — under development" },
@@ -51,9 +51,9 @@ export default function SoftwareDirectory({ onOpenModule = () => {} }) {
     <div className="software-hero"><div><span className="software-eyebrow">SHIVASHA SOFTWARE HUB</span><h2>Software की दुनिया, एक जगह</h2><p>SHIVASHA के अपने modules और दूसरे providers के software — दोनों विकल्प एक जगह खोजें।</p></div><div className="software-hero-icon" aria-hidden="true">🧩</div></div>
 
     <section className="shivasha-products">
-      <div className="software-section-heading"><div><span className="software-eyebrow">OUR PRODUCTS</span><h3>SHIVASHA के अपने सॉफ्टवेयर</h3><p>अलग-अलग मॉड्यूल चुनें; संयुक्त Business Suite की सुविधा अभी तैयार की जा रही है।</p></div><a className="software-open-app" href={APP_URL} target="_blank" rel="noopener noreferrer">SHIVASHA खोलें ↗</a></div>
+      <div className="software-section-heading"><div><span className="software-eyebrow">OUR PRODUCTS</span><h3>SHIVASHA के अपने सॉफ्टवेयर</h3><p>अपने SHIVASHA modules सीधे ऐप में खोलें। अलग-अलग module और संयुक्त Business Suite दोनों बिक्री मॉडल की योजना है।</p></div><a className="software-open-app" href={APP_URL} target="_blank" rel="noopener noreferrer">SHIVASHA खोलें ↗</a></div>
       <div className="shivasha-product-grid">{SHIVASHA_PRODUCTS.map(product => <article className="shivasha-product-card" key={product.id}><span className="shivasha-product-icon" aria-hidden="true">{product.icon}</span><h4>{product.name}</h4><p>{product.description}</p><span className={product.status.startsWith("Planned") || product.status === "Coming Soon" ? "shivasha-status planned" : "shivasha-status"}>{product.status}</span>{!product.status.startsWith("Planned") && product.status !== "Coming Soon" && (MODULE_TARGETS[product.id] ? <button type="button" className="software-module-open" onClick={() => onOpenModule(MODULE_TARGETS[product.id])}>मॉड्यूल खोलें ↗</button> : <a href={APP_URL} target="_blank" rel="noopener noreferrer">App देखें ↗</a>)}</article>)}</div>
-      <div className="software-plan-note"><b>दोनों खरीद मॉडल का लक्ष्य:</b> अलग-अलग module plans और एक combined Business Suite. अभी कोई SHIVASHA price, checkout या paid subscription सक्रिय होने का दावा नहीं है। खरीद शुरू करने से पहले feature availability और pricing प्रकाशित की जाएगी।</div>
+      <div className="software-plan-note"><b>ध्यान दें:</b> SHIVASHA के अपने modules ऐप के अंदर खुलते हैं। अलग-अलग module और combined Business Suite बिक्री मॉडल प्रस्तावित हैं, लेकिन अभी कीमत, checkout, online payment या paid subscription सक्रिय नहीं है। E-Commerce में फिलहाल product catalogue और order enquiry है—यह payment gateway नहीं है।</div>
     </section>
 
     <section className="software-plan-builder" aria-labelledby="software-plan-title">
@@ -90,7 +90,7 @@ export default function SoftwareDirectory({ onOpenModule = () => {} }) {
     </section>
 
     <section className="partner-software">
-      <div className="software-section-heading"><div><span className="software-eyebrow">PARTNER / EXTERNAL PRODUCTS</span><h3>दूसरे सॉफ्टवेयर और आधिकारिक खरीद लिंक</h3><p>ये बाहरी providers के उत्पाद हैं; उनकी कीमतें और शर्तें उन्हीं की वेबसाइट पर तय होती हैं।</p></div></div>
+      <div className="software-section-heading"><div><span className="software-eyebrow">PARTNER / EXTERNAL PRODUCTS</span><h3>दूसरे सॉफ्टवेयर और आधिकारिक खरीद लिंक</h3><p>यह SHIVASHA की अपनी सुविधा नहीं है। इन products के लिए आप संबंधित provider की official website पर जाएँगे; खरीद, भुगतान और support provider के जिम्मे होंगे।</p></div></div>
       <div className="software-controls"><label className="software-search"><span aria-hidden="true">⌕</span><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Software या काम खोजें…"/></label><select aria-label="Filter software category" value={category} onChange={e=>setCategory(e.target.value)}>{CATEGORIES.map(c=><option key={c}>{c}</option>)}</select><label className="software-free-filter"><input type="checkbox" checked={freeOnly} onChange={e=>setFreeOnly(e.target.checked)}/> Free option वाले</label></div>
       <div className="software-results-heading"><h3>Software categories</h3><span>{visible.length} categories</span></div>
       {visible.length ? <div className="software-grid">{visible.map(item=><article className="software-card" key={item.id}><div className="software-card-top"><span className="software-icon" aria-hidden="true">{item.icon}</span><span className="software-category">{item.category}</span></div><h4>{item.name}</h4><p>{item.purpose}</p><div className="software-product-list">{item.products.map(product=><div className="software-product" key={product.name}><div><b>{product.name}</b><small>{product.type}</small></div><a href={product.url} target="_blank" rel="noopener noreferrer">{product.label} ↗</a></div>)}</div></article>)}</div> : <div className="software-empty">कोई matching software नहीं मिला। दूसरा शब्द या category चुनें।</div>}
