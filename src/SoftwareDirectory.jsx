@@ -33,8 +33,9 @@ const PARTNER_SOFTWARE = [
 
 const CATEGORIES = ["All categories", ...new Set(PARTNER_SOFTWARE.map(x => x.category))];
 const APP_URL = "https://devops-saurabhpandey.github.io/shivasha/";
+const MODULE_TARGETS = { social: "home", crm: "crm", mis: "mis", ecommerce: "ecommerce", creator: "content-studio" };
 
-export default function SoftwareDirectory() {
+export default function SoftwareDirectory({ onOpenModule = () => {} }) {
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("All categories");
   const [freeOnly, setFreeOnly] = useState(false);
@@ -51,7 +52,7 @@ export default function SoftwareDirectory() {
 
     <section className="shivasha-products">
       <div className="software-section-heading"><div><span className="software-eyebrow">OUR PRODUCTS</span><h3>SHIVASHA के अपने सॉफ्टवेयर</h3><p>अलग-अलग मॉड्यूल चुनें; संयुक्त Business Suite की सुविधा अभी तैयार की जा रही है।</p></div><a className="software-open-app" href={APP_URL} target="_blank" rel="noopener noreferrer">SHIVASHA खोलें ↗</a></div>
-      <div className="shivasha-product-grid">{SHIVASHA_PRODUCTS.map(product => <article className="shivasha-product-card" key={product.id}><span className="shivasha-product-icon" aria-hidden="true">{product.icon}</span><h4>{product.name}</h4><p>{product.description}</p><span className={product.status.startsWith("Planned") || product.status === "Coming Soon" ? "shivasha-status planned" : "shivasha-status"}>{product.status}</span>{!product.status.startsWith("Planned") && product.status !== "Coming Soon" && <a href={APP_URL} target="_blank" rel="noopener noreferrer">App देखें ↗</a>}</article>)}</div>
+      <div className="shivasha-product-grid">{SHIVASHA_PRODUCTS.map(product => <article className="shivasha-product-card" key={product.id}><span className="shivasha-product-icon" aria-hidden="true">{product.icon}</span><h4>{product.name}</h4><p>{product.description}</p><span className={product.status.startsWith("Planned") || product.status === "Coming Soon" ? "shivasha-status planned" : "shivasha-status"}>{product.status}</span>{!product.status.startsWith("Planned") && product.status !== "Coming Soon" && (MODULE_TARGETS[product.id] ? <button type="button" className="software-module-open" onClick={() => onOpenModule(MODULE_TARGETS[product.id])}>मॉड्यूल खोलें ↗</button> : <a href={APP_URL} target="_blank" rel="noopener noreferrer">App देखें ↗</a>)}</article>)}</div>
       <div className="software-plan-note"><b>दोनों खरीद मॉडल का लक्ष्य:</b> अलग-अलग module plans और एक combined Business Suite. अभी कोई SHIVASHA price, checkout या paid subscription सक्रिय होने का दावा नहीं है। खरीद शुरू करने से पहले feature availability और pricing प्रकाशित की जाएगी।</div>
     </section>
 
