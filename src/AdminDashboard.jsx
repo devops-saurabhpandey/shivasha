@@ -17,6 +17,10 @@ export default function AdminDashboard({ auth }) {
   const [stats, setStats] = useState(null);
   const [statsLoading, setStatsLoading] = useState(true);
   const [statsError, setStatsError] = useState("");
+  const [softwareEnquiries, setSoftwareEnquiries] = useState([]);
+  const [enquiryError, setEnquiryError] = useState("");
+  const [enquiryLoading, setEnquiryLoading] = useState(true);
+
 
   useEffect(() => {
     let cancelled = false;
@@ -28,6 +32,14 @@ export default function AdminDashboard({ auth }) {
         if (!cancelled) setStats(data);
       }).catch(err => { if (!cancelled) setStatsError(err.message); })
       .finally(() => { if (!cancelled) setStatsLoading(false); });
+
+    fetch(API_BASE + "/api/admin/software-enquiries", { headers })
+      .then(async response => {
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.message || "Unable to load software enquiries");
+        if (!cancelled) setSoftwareEnquiries(data.enquiries || []);
+      }).catch(err => { if (!cancelled) setEnquiryError(err.message); })
+      .finally(() => { if (!cancelled) setEnquiryLoading(false); });
 
     fetch(API_BASE + "/api/users/admin/reports", { headers })
       .then(async response => {
@@ -76,6 +88,35 @@ export default function AdminDashboard({ auth }) {
             </div>
           </article>)}
         </div> : <div className="panel empty">No reports to review.</div>}
+    </section>
+    <section className="content">
+      <div className="feed-head"><div><h2>Software Plan Enquiries</h2><p>Customer interest in individual SHIVASHA modules and Business Suite. These are enquiries, not paid orders.</p></div><b>{softwareEnquiries.filter(item => item.status === "Pending").length} pending</b></div>
+      {enquiryError && <div className="api-error">{enquiryError}</div>}
+      {enquiryLoading ? <div className="panel empty">Loading software enquiries…</div> :
+        softwareEnquiries.length ? <div className="panel">
+          {softwareEnquiries.map(item => <article className="notification-item" key={item._id}>
+            <div className="notification-copy" style={{ width: "100%" }}>
+              <b>{item.plan === "suite" ? "SHIVASHA Business Suite" : "Individual modules"}</b>
+              <small>Customer: {item.customer?.name || "Unknown"} · {item.customer?.email || "No email"}</small>
+              <small>Modules: {item.plan === "suite" ? "Business Suite request (module package not yet finalised)" : (item.modules || []).join(", ") || "None selected"}</small>
+              {item.note && <p>{item.note}</p>}
+              <small>Submitted: {new Date(item.createdAt).toLocaleString()} · Status: {item.status}</small>
+              <label style={{ display: "inline-flex", alignItems: "center", gap: 8, marginTop: 8 }}>Update status
+                <select value={item.status} onChange={async e => {
+                  const status = e.target.value;
+                  try {
+                    const response = await fetch(API_BASE + "/api/admin/software-enquiries/" + item._id, { method: "PATCH", headers: { ...headers, "Content-Type": "application/json" }, body: JSON.stringify({ status }) });
+                    const data = await response.json().catch(() => ({}));
+                    if (!response.ok) throw new Error(data.message || "Unable to update enquiry");
+                    setSoftwareEnquiries(old => old.map(row => row._id === item._id ? data.enquiry : row));
+                  } catch (error) { setEnquiryError(error.message); }
+                }}>
+                  <option>Pending</option><option>Contacted</option><option>Approved</option><option>Rejected</option>
+                </select>
+              </label>
+            </div>
+          </article>)}
+        </div> : <div className="panel empty">No software plan enquiries yet.</div>}
     </section>
     <CreatorFinanceAdmin auth={auth} />
   </>;

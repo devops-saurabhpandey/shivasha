@@ -27,6 +27,30 @@ router.patch("/reports/:id", async (req, res) => {
   res.json({ report });
 });
 
+router.get("/software-enquiries", async (_req, res, next) => {
+  try {
+    const SoftwareEnquiry = mongoose.models.ShivashaSoftwareEnquiry;
+    if (!SoftwareEnquiry) return res.json({ enquiries: [] });
+    const enquiries = await SoftwareEnquiry.find().populate("customer", "name email").sort({ createdAt: -1 }).lean();
+    res.json({ enquiries });
+  } catch (error) { next(error); }
+});
+
+router.patch("/software-enquiries/:id", async (req, res, next) => {
+  try {
+    const status = String(req.body?.status || "");
+    if (!["Pending", "Contacted", "Approved", "Rejected"].includes(status)) {
+      return res.status(400).json({ message: "Invalid software enquiry status" });
+    }
+    const SoftwareEnquiry = mongoose.models.ShivashaSoftwareEnquiry;
+    if (!SoftwareEnquiry) return res.status(404).json({ message: "Software enquiries are not initialized" });
+    const enquiry = await SoftwareEnquiry.findByIdAndUpdate(req.params.id, { $set: { status } }, { new: true, runValidators: true })
+      .populate("customer", "name email");
+    if (!enquiry) return res.status(404).json({ message: "Software enquiry not found" });
+    res.json({ enquiry });
+  } catch (error) { next(error); }
+});
+
 router.get("/stats", async (_req, res, next) => {
   try {
     const [users, posts, openReports, allReports] = await Promise.all([
