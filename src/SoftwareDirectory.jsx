@@ -38,6 +38,7 @@ export default function SoftwareDirectory() {
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("All categories");
   const [freeOnly, setFreeOnly] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState("");
   const visible = useMemo(() => PARTNER_SOFTWARE.filter(item => {
     const searchable = (item.name + " " + item.purpose + " " + item.category + " " + item.products.map(p => p.name).join(" ")).toLowerCase();
     return (category === "All categories" || item.category === category) &&
@@ -52,6 +53,23 @@ export default function SoftwareDirectory() {
       <div className="software-section-heading"><div><span className="software-eyebrow">OUR PRODUCTS</span><h3>SHIVASHA के अपने सॉफ्टवेयर</h3><p>अलग-अलग मॉड्यूल चुनें; संयुक्त Business Suite की सुविधा अभी तैयार की जा रही है।</p></div><a className="software-open-app" href={APP_URL} target="_blank" rel="noopener noreferrer">SHIVASHA खोलें ↗</a></div>
       <div className="shivasha-product-grid">{SHIVASHA_PRODUCTS.map(product => <article className="shivasha-product-card" key={product.id}><span className="shivasha-product-icon" aria-hidden="true">{product.icon}</span><h4>{product.name}</h4><p>{product.description}</p><span className={product.status.startsWith("Planned") || product.status === "Coming Soon" ? "shivasha-status planned" : "shivasha-status"}>{product.status}</span>{!product.status.startsWith("Planned") && product.status !== "Coming Soon" && <a href={APP_URL} target="_blank" rel="noopener noreferrer">App देखें ↗</a>}</article>)}</div>
       <div className="software-plan-note"><b>दोनों खरीद मॉडल का लक्ष्य:</b> अलग-अलग module plans और एक combined Business Suite. अभी कोई SHIVASHA price, checkout या paid subscription सक्रिय होने का दावा नहीं है। खरीद शुरू करने से पहले feature availability और pricing प्रकाशित की जाएगी।</div>
+    </section>
+
+    <section className="software-plan-builder" aria-labelledby="software-plan-title">
+      <div className="software-section-heading"><div><span className="software-eyebrow">PLAN SELECTOR PREVIEW</span><h3 id="software-plan-title">अपना SHIVASHA प्लान चुनें</h3><p>दोनों मॉडल की रूपरेखा तैयार है। कीमत और checkout सक्रिय होने तक यह केवल चयन का preview है।</p></div></div>
+      <div className="software-plan-options">
+        <article className="software-plan-option">
+          <span className="software-plan-badge">FLEXIBLE</span><h4>अलग-अलग मॉड्यूल</h4><p>केवल वही SHIVASHA मॉड्यूल चुनें जिसकी आपके काम में जरूरत है।</p>
+          <ul><li>Social</li><li>CRM</li><li>MIS Reports</li><li>E-Commerce</li><li>Creator Studio</li></ul>
+          <button type="button" onClick={() => setSelectedPlan("individual")} className={selectedPlan === "individual" ? "software-plan-select selected" : "software-plan-select"}>{selectedPlan === "individual" ? "चुना गया ✓" : "यह मॉडल चुनें"}</button>
+        </article>
+        <article className="software-plan-option featured">
+          <span className="software-plan-badge">ALL-IN-ONE</span><h4>SHIVASHA Business Suite</h4><p>योग्य बिज़नेस मॉड्यूल को एक संयुक्त पैकेज में लेने का प्रस्ताव।</p>
+          <ul><li>एक संयुक्त प्लान</li><li>मॉड्यूल के अनुसार access</li><li>Business workflow का एक स्थान</li><li>वास्तविक उपलब्धता की पुष्टि आवश्यक</li></ul>
+          <button type="button" onClick={() => setSelectedPlan("suite")} className={selectedPlan === "suite" ? "software-plan-select selected" : "software-plan-select"}>{selectedPlan === "suite" ? "चुना गया ✓" : "यह मॉडल चुनें"}</button>
+        </article>
+      </div>
+      <div className="software-plan-status" role="status"><b>{selectedPlan === "suite" ? "Business Suite मॉडल चुना गया" : selectedPlan === "individual" ? "अलग-अलग मॉड्यूल वाला मॉडल चुना गया" : "अपना पसंदीदा मॉडल चुनें"}</b><span>अभी कोई ऑर्डर, भुगतान या subscription नहीं बनाया जाता। कीमत, प्लान की शर्तें और सुरक्षित checkout बाद में जोड़े जाएँगे।</span></div>
     </section>
 
     <section className="partner-software">
