@@ -13,3 +13,12 @@
 .software-plan-comparison p{font-size:12px;line-height:1.6;color:var(--muted,#667085);margin:12px 0 0}
 
 .software-module-open{display:inline-flex;align-items:center;justify-content:center;margin-top:2px;padding:7px 11px;border:1px solid #245888;border-radius:9px;background:transparent;color:#245888;font:inherit;font-size:12px;font-weight:750;cursor:pointer}.software-module-open:focus-visible{outline:2px solid #245888;outline-offset:3px}
+
+.software-enquiry-form{margin:22px 0;padding:22px;border:1px solid var(--border,#dbe2ea);border-radius:18px;background:var(--card,#fff)}
+.software-module-choices{display:flex;flex-wrap:wrap;gap:12px 18px;margin:18px 0;padding:16px;border:1px solid var(--border,#dbe2ea);border-radius:12px}
+.software-module-choices legend{padding:0 6px;font-weight:800}
+.software-module-choices label{display:flex;align-items:center;gap:8px;font-size:14px}
+.software-enquiry-note{display:flex;flex-direction:column;gap:8px;margin:16px 0;font-weight:700}
+.software-enquiry-note textarea{min-height:92px;resize:vertical;padding:12px;border:1px solid var(--border,#dbe2ea);border-radius:10px;font:inherit;font-weight:400}
+.software-enquiry-form button:disabled{opacity:.65;cursor:wait}
+.software-enquiry-message{margin:14px 0 0;padding:12px;border-radius:10px;background:#edf7ed;color:#205a29;line-height:1.5}
