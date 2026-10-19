@@ -1,4 +1,5 @@
 import express from "express";
+import mongoose from "mongoose";
 import User from "../models/User.js";
 import Post from "../models/Post.js";
 import Report from "../models/Report.js";
@@ -26,11 +27,36 @@ router.patch("/reports/:id", async (req, res) => {
   res.json({ report });
 });
 
-router.get("/stats", async (_req, res) => {
-  const [users, posts, openReports, allReports] = await Promise.all([
-    User.countDocuments(), Post.countDocuments(), Report.countDocuments({ status: "open" }), Report.countDocuments()
-  ]);
-  res.json({ users, posts, openReports, allReports });
+router.get("/stats", async (_req, res, next) => {
+  try {
+    const [users, posts, openReports, allReports] = await Promise.all([
+      User.countDocuments(), Post.countDocuments(), Report.countDocuments({ status: "open" }), Report.countDocuments()
+    ]);
+
+    // Business models are registered by routes/business.js. Keep this endpoint
+    // useful even if the business module has not been initialized in a test.
+    const Lead = mongoose.models.ShivashaCRMLead;
+    const Product = mongoose.models.ShivashaBusinessProduct;
+    const Order = mongoose.models.ShivashaBusinessOrder;
+    const [crmLeads, activeProducts, businessOrders, orderTotals] = await Promise.all([
+      Lead ? Lead.countDocuments() : 0,
+      Product ? Product.countDocuments({ active: true }) : 0,
+      Order ? Order.countDocuments() : 0,
+      Order ? Order.aggregate([
+        { $match: { status: { $ne: "Cancelled" } } },
+        { $group: { _id: null, recordedOrderValue: { $sum: "$price" }, completedOrderValue: { $sum: { $cond: [{ $eq: ["$status", "Completed"] }, "$price", 0] } } } }
+      ]) : []
+    ]);
+    res.json({
+      users, posts, openReports, allReports,
+      business: {
+        crmLeads, activeProducts, orders: businessOrders,
+        recordedOrderValue: orderTotals[0]?.recordedOrderValue || 0,
+        completedOrderValue: orderTotals[0]?.completedOrderValue || 0,
+        valueDisclaimer: "Order values are not verified payments or received revenue."
+      }
+    });
+  } catch (error) { next(error); }
 });
 
 router.delete("/posts/:id", async (req, res) => {
