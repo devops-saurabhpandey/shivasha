@@ -35,11 +35,47 @@ const CATEGORIES = ["All categories", ...new Set(PARTNER_SOFTWARE.map(x => x.cat
 const APP_URL = "https://devops-saurabhpandey.github.io/shivasha/";
 const MODULE_TARGETS = { social: "home", crm: "crm", mis: "mis", ecommerce: "ecommerce", creator: "content-studio" };
 
-export default function SoftwareDirectory({ onOpenModule = () => {} }) {
+export default function SoftwareDirectory({ onOpenModule = () => {}, auth }) {
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("All categories");
   const [freeOnly, setFreeOnly] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState("");
+  const [selectedModules, setSelectedModules] = useState([]);
+  const [enquiryNote, setEnquiryNote] = useState("");
+  const [submittingEnquiry, setSubmittingEnquiry] = useState(false);
+  const [enquiryMessage, setEnquiryMessage] = useState("");
+  const moduleOptions = [
+    { id: "social", label: "SHIVASHA Social" },
+    { id: "crm", label: "SHIVASHA CRM" },
+    { id: "mis", label: "SHIVASHA MIS Reports" },
+    { id: "ecommerce", label: "SHIVASHA E-Commerce" },
+    { id: "creator", label: "Creator Studio" }
+  ];
+  const submitPlanEnquiry = async () => {
+    if (!selectedPlan) return;
+    if (selectedPlan === "individual" && selectedModules.length === 0) {
+      setEnquiryMessage("कृपया कम-से-कम एक मॉड्यूल चुनें।");
+      return;
+    }
+    setSubmittingEnquiry(true);
+    setEnquiryMessage("");
+    try {
+      const response = await fetch("https://shivasha.onrender.com/api/business/software-enquiries", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: "Bearer " + (auth?.token || "") },
+        body: JSON.stringify({ plan: selectedPlan, modules: selectedModules, note: enquiryNote })
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.message || "Enquiry submit नहीं हो सकी।");
+      setEnquiryMessage("आपकी plan enquiry दर्ज हो गई है। अभी कोई भुगतान नहीं हुआ है।");
+      setEnquiryNote("");
+    } catch (error) {
+      setEnquiryMessage(error.message || "Enquiry submit नहीं हो सकी। Login करके फिर कोशिश करें।");
+    } finally {
+      setSubmittingEnquiry(false);
+    }
+  };
+
   const visible = useMemo(() => PARTNER_SOFTWARE.filter(item => {
     const searchable = (item.name + " " + item.purpose + " " + item.category + " " + item.products.map(p => p.name).join(" ")).toLowerCase();
     return (category === "All categories" || item.category === category) &&
@@ -71,6 +107,14 @@ export default function SoftwareDirectory({ onOpenModule = () => {} }) {
         </article>
       </div>
       <div className="software-plan-status" role="status"><b>{selectedPlan === "suite" ? "Business Suite मॉडल चुना गया" : selectedPlan === "individual" ? "अलग-अलग मॉड्यूल वाला मॉडल चुना गया" : "अपना पसंदीदा मॉडल चुनें"}</b><span>अभी कोई ऑर्डर, भुगतान या subscription नहीं बनाया जाता। कीमत, प्लान की शर्तें और सुरक्षित checkout बाद में जोड़े जाएँगे।</span></div>
+      {selectedPlan && <section className="software-enquiry-form" aria-labelledby="software-enquiry-title">
+        <div className="software-section-heading"><div><span className="software-eyebrow">PLAN ENQUIRY</span><h3 id="software-enquiry-title">अपनी जरूरत बताएँ</h3><p>यह केवल संपर्क/रुचि की enquiry है। अभी कोई शुल्क या भुगतान नहीं लिया जाएगा।</p></div></div>
+        {selectedPlan === "individual" && <fieldset className="software-module-choices"><legend>कौन-से modules चाहिए? *</legend>{moduleOptions.map(module => <label key={module.id}><input type="checkbox" checked={selectedModules.includes(module.id)} onChange={event => setSelectedModules(old => event.target.checked ? [...old, module.id] : old.filter(id => id !== module.id))}/>{module.label}</label>)}</fieldset>}
+        {selectedPlan === "suite" && <div className="software-plan-note">Business Suite की final module list और pricing अभी तय नहीं है। यह request केवल आपकी रुचि दर्ज करेगी।</div>}
+        <label className="software-enquiry-note">काम/जरूरत के बारे में (वैकल्पिक)<textarea value={enquiryNote} onChange={event => setEnquiryNote(event.target.value)} maxLength={1000} placeholder="आप SHIVASHA से क्या चाहते हैं? (अधिकतम 1000 अक्षर)"/></label>
+        <button type="button" className="software-plan-select selected" disabled={submittingEnquiry} onClick={submitPlanEnquiry}>{submittingEnquiry ? "जमा हो रहा है…" : "Plan enquiry जमा करें"}</button>
+        {enquiryMessage && <p className="software-enquiry-message" role="status">{enquiryMessage}</p>}
+      </section>}
       <div className="software-plan-comparison">
         <h4>दोनों मॉडल में क्या अंतर है?</h4>
         <div className="software-comparison-scroll">
