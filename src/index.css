@@ -562,3 +562,35 @@ body::before {
 .calendar-muhurat-item b{font-size:13px;color:#246447;text-align:right}
 .calendar-shubh-muhurat .calendar-source{display:block;margin-top:10px}
 @media(max-width:640px){.calendar-muhurat-item{align-items:flex-start;flex-direction:column;gap:4px}.calendar-muhurat-item b{text-align:left}}
+
+/* SHIVASHA AI-assisted business and company law help */
+.business-ai-page{max-width:1120px;margin:0 auto;padding-bottom:34px}
+.business-ai-hero{display:flex;align-items:center;gap:18px;padding:26px;border-radius:18px;border:1px solid #e8d6b3;background:linear-gradient(125deg,#171923,#2b2c32);color:#fff;box-shadow:0 12px 30px #15151512}
+.business-ai-icon{display:grid;place-items:center;flex:0 0 62px;width:62px;height:62px;border-radius:17px;background:#f4d28b;color:#302318;font-size:31px}
+.business-ai-kicker{font-size:10px;font-weight:850;letter-spacing:1.5px;color:#bb873b}
+.business-ai-hero h2{margin:6px 0 7px;font-size:clamp(23px,4vw,32px);color:#fff}
+.business-ai-hero p{margin:0;max-width:700px;color:#e1e2e5;font-size:13px;line-height:1.7}
+.business-ai-notice{margin:16px 0;padding:14px 16px;border:1px solid #efd5a4;border-radius:12px;background:#fff7e7;color:#704b18;font-size:13px;line-height:1.75}
+.business-ai-layout{display:grid;grid-template-columns:minmax(260px,.85fr) minmax(0,1.15fr);gap:17px;align-items:start}
+.business-ai-form,.business-ai-topic,.business-ai-result{padding:21px}
+.business-ai-form label{display:flex;flex-direction:column;gap:7px;margin:14px 0;color:#344054;font-size:13px;font-weight:700}
+.business-ai-form input,.business-ai-form select,.business-ai-form textarea,.business-ai-prompt textarea{width:100%;min-width:0;border:1px solid #d8deea;border-radius:10px;padding:11px 12px;background:#fff;color:#172033;font:inherit;line-height:1.55}
+.business-ai-form textarea,.business-ai-prompt textarea{resize:vertical}
+.business-ai-submit{width:100%;margin-top:6px}
+.business-ai-topic-icon{display:grid;place-items:center;width:48px;height:48px;border-radius:14px;background:#fff0d5;color:#7e4b13;font-size:24px}
+.business-ai-topic h3,.business-ai-result h3{margin:14px 0 8px;color:#172033;font-size:21px}
+.business-ai-topic>p,.business-ai-result>p{color:#667085;font-size:13px;line-height:1.7}
+.business-ai-topic h4{margin:20px 0 10px;color:#7e4b13}
+.business-ai-topic ul,.business-ai-result ol{padding-left:22px;margin:0}
+.business-ai-topic li,.business-ai-result li{padding:0 0 12px 3px;color:#3b4657;font-size:13px;line-height:1.75}
+.business-ai-links{display:flex;flex-wrap:wrap;gap:8px}
+.business-ai-links a{padding:9px 11px;border:1px solid #e3d3b8;border-radius:9px;background:#fffaf1;color:#75451b;text-decoration:none;font-size:12px;font-weight:750}
+.business-ai-links a:hover{background:#f9ebd1}
+.business-ai-result{margin-top:17px}
+.business-ai-prompt{display:grid;gap:8px;margin-top:16px}
+.business-ai-prompt small{color:#667085;font-size:12px;line-height:1.6}
+.business-ai-bottom{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:18px;padding:16px;border:1px solid #e5e7eb;border-radius:14px;background:#fff}
+.business-ai-bottom>b{margin-right:4px;color:#344054;font-size:12px}
+.business-ai-bottom button{border:1px solid #e0e4eb;border-radius:999px;background:#fff;padding:8px 11px;color:#344054;font-size:12px;cursor:pointer}
+.business-ai-bottom button.active{border-color:#292a30;background:#292a30;color:#fff}
+@media(max-width:760px){.business-ai-layout{grid-template-columns:1fr}.business-ai-hero{align-items:flex-start;padding:20px;gap:13px}.business-ai-icon{flex-basis:48px;width:48px;height:48px;font-size:25px}.business-ai-form,.business-ai-topic,.business-ai-result{padding:17px}}
