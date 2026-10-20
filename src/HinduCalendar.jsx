@@ -81,7 +81,8 @@ const formatTime = value => {
   if (match) return match[1];
   return text;
 };
-\nconst getFestivalList = json => {
+
+const getFestivalList = json => {
   const data = getPayload(json);
   if (Array.isArray(data)) return data;
   for (const key of ["festivals", "occurrences", "items", "vrats", "events"]) if (Array.isArray(data?.[key])) return data[key];
