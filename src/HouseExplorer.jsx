@@ -34,6 +34,63 @@ const PHASES = [
   ["7", "Global Expansion", "Localization, international integrations, compliance and scale."]
 ];
 
+
+const EDUCATION_SUBJECTS = ["Mathematics", "Science", "English", "Hindi", "Social Science", "Computer Science"];
+const PRACTICE_QUESTIONS = [
+  { subject: "Mathematics", question: "What is 12 × 8?", options: ["84", "96", "108", "88"], answer: 1, explain: "12 × 8 = 96." },
+  { subject: "Science", question: "Which gas do green plants absorb during photosynthesis?", options: ["Oxygen", "Nitrogen", "Carbon dioxide", "Hydrogen"], answer: 2, explain: "Plants absorb carbon dioxide and use light energy during photosynthesis." },
+  { subject: "English", question: "Choose the correctly spelled word.", options: ["Enviroment", "Environment", "Envirnoment", "Environmant"], answer: 1, explain: "Environment is the correct spelling." },
+  { subject: "Hindi", question: "‘जल’ का समानार्थी शब्द कौन-सा है?", options: ["अग्नि", "वायु", "नीर", "आकाश"], answer: 2, explain: "‘नीर’ जल का समानार्थी शब्द है।" },
+  { subject: "Social Science", question: "Which document is the supreme law of India?", options: ["The Constitution", "A school textbook", "A newspaper", "A census report"], answer: 0, explain: "The Constitution of India is the supreme law of the country." },
+  { subject: "Computer Science", question: "What does CPU commonly stand for?", options: ["Computer Power Utility", "Central Processing Unit", "Core Program Upload", "Central Print Unit"], answer: 1, explain: "CPU stands for Central Processing Unit." }
+];
+
+function EducationResources() {
+  const [board, setBoard] = useState("CBSE");
+  const [grade, setGrade] = useState("Class 10");
+  const [subject, setSubject] = useState("Mathematics");
+  const [bookType, setBookType] = useState("Textbooks");
+  const [testSubject, setTestSubject] = useState("Mathematics");
+  const [questionIndex, setQuestionIndex] = useState(0);
+  const [answers, setAnswers] = useState({});
+  const matchingQuestions = PRACTICE_QUESTIONS.filter(q => q.subject === testSubject);
+  const currentQuestion = matchingQuestions[questionIndex];
+  const completed = currentQuestion && Object.prototype.hasOwnProperty.call(answers, currentQuestion.subject);
+  const restartTest = nextSubject => { setTestSubject(nextSubject || testSubject); setQuestionIndex(0); setAnswers({}); };
+  const sourceUrl = board === "CBSE"
+    ? (bookType === "Textbooks" ? "https://ncert.nic.in/textbook.php" : "https://www.cbse.gov.in/")
+    : "https://cisce.org/";
+  const resourceDescription = board === "CBSE"
+    ? (bookType === "Textbooks" ? "Open the NCERT textbook portal and choose the relevant class and subject." : "Check CBSE curriculum, syllabus, academic resources and official notices.")
+    : "Check the official CISCE site for current curriculum, regulations and applicable prescribed-resource information.";
+  return <div className="education-resource-suite">
+    <section className="education-books" aria-labelledby="education-books-title">
+      <div className="education-resource-heading"><span className="house-kicker">SHIVASHA EDUTECH · RESOURCE DIRECTORY</span><h3 id="education-books-title">Books & study resources</h3><p>Filter by board, class, subject and resource type. Official sources are prioritised; prescribed books can change by academic year.</p></div>
+      <div className="education-catalogue-filters">
+        <label>Board<select value={board} onChange={e=>setBoard(e.target.value)}><option>CBSE</option><option>ICSE</option><option>ISC</option></select></label>
+        <label>Class<select value={grade} onChange={e=>setGrade(e.target.value)}>{Array.from({length:12},(_,i)=><option key={i+1}>Class {i+1}</option>)}</select></label>
+        <label>Subject<select value={subject} onChange={e=>setSubject(e.target.value)}>{EDUCATION_SUBJECTS.map(s=><option key={s}>{s}</option>)}</select></label>
+        <label>Resource type<select value={bookType} onChange={e=>setBookType(e.target.value)}><option>Textbooks</option><option>Workbooks</option><option>Reference Books</option><option>Exam Preparation</option><option>Digital Learning</option></select></label>
+      </div>
+      <article className="education-resource-result">
+        <div className="education-resource-result-icon">📚</div><div className="education-resource-result-copy"><span className="education-board-tag">{board} · {grade} · {subject}</span><h4>{bookType}</h4><p>{resourceDescription} Shivasha currently links to official resource portals; it does not yet maintain a verified title-by-title inventory for every class.</p><a href={sourceUrl} target="_blank" rel="noopener noreferrer">Open official resource ↗</a></div>
+      </article>
+      <div className="education-book-list">
+        <article><span>01</span><div><strong>Textbooks</strong><p>Official textbooks and board-prescribed learning materials.</p></div></article>
+        <article><span>02</span><div><strong>Workbooks & practice books</strong><p>Chapter exercises, worksheets and answer practice; verify the edition before purchase.</p></div></article>
+        <article><span>03</span><div><strong>Reference books</strong><p>Supplementary explanations for additional practice, matched to the current syllabus.</p></div></article>
+        <article><span>04</span><div><strong>Exam preparation</strong><p>Official sample/specimen papers and revision resources where available.</p></div></article>
+      </div>
+      <p className="education-books-note">Book listing safeguards: show title, author/publisher, edition/year, board, class, subject and source. Do not upload or redistribute copyrighted books without permission.</p>
+    </section>
+    <section className="education-practice" aria-labelledby="education-practice-title">
+      <div className="education-resource-heading"><span className="house-kicker">LEARN BY DOING</span><h3 id="education-practice-title">Quick Practice Test</h3><p>Try a short sample question by subject. This is a prototype quiz, not an official board exam or a class-specific assessment yet.</p></div>
+      <div className="education-practice-toolbar"><label>Subject<select value={testSubject} onChange={e=>restartTest(e.target.value)}>{EDUCATION_SUBJECTS.map(s=><option key={s}>{s}</option>)}</select></label><span>Question {questionIndex+1} of {matchingQuestions.length}</span></div>
+      {currentQuestion && <div className="education-question-card"><h4>{currentQuestion.question}</h4><div className="education-answer-options">{currentQuestion.options.map((option,i)=><button type="button" key={option} disabled={completed} className={completed&&i===currentQuestion.answer?"correct":completed&&answers[currentQuestion.subject]===i?"incorrect":""} onClick={()=>setAnswers(prev=>({...prev,[currentQuestion.subject]:i}))}>{String.fromCharCode(65+i)}. {option}</button>)}</div>{completed&&<div className={answers[currentQuestion.subject]===currentQuestion.answer?"education-answer-feedback correct":"education-answer-feedback incorrect"} role="status">{answers[currentQuestion.subject]===currentQuestion.answer?"Correct!":"Not quite."} {currentQuestion.explain}</div>}<div className="education-practice-actions">{completed&&questionIndex<matchingQuestions.length-1&&<button type="button" className="primary" onClick={()=>setQuestionIndex(i=>i+1)}>Next question →</button>}{completed&&questionIndex===matchingQuestions.length-1&&<button type="button" className="primary" onClick={()=>restartTest()}>Try again ↻</button>}</div></div>}
+    </section>
+  </div>;
+}
+
 export default function HouseExplorer() {
   const [selectedCategory, setSelectedCategory] = useState("dharma");
   const [selected, setSelected] = useState(1);
@@ -86,16 +143,7 @@ export default function HouseExplorer() {
         <article className="education-board-card cbse"><span className="education-board-tag">NATIONAL CURRICULUM</span><h3>CBSE Board</h3><p>Central Board of Secondary Education</p><ul><li>Classes 1–12</li><li>NCERT textbooks and syllabus resources</li><li>Subject-wise revision and practice</li></ul><a href="https://www.cbse.gov.in/" target="_blank" rel="noreferrer">Official CBSE website ↗</a><a href="https://ncert.nic.in/textbook.php" target="_blank" rel="noreferrer">NCERT textbook portal ↗</a></article>
         <article className="education-board-card icse"><span className="education-board-tag">CISCE CURRICULUM</span><h3>ICSE / ISC</h3><p>Indian Certificate of Secondary Education / ISC</p><ul><li>ICSE Classes 1–10 resources</li><li>ISC Classes 11–12 resources</li><li>Subject-wise prescribed and reference books</li></ul><a href="https://cisce.org/" target="_blank" rel="noreferrer">Official CISCE website ↗</a></article>
       </div>
-      <div className="education-books">
-        <div><h3>Related books & study resources</h3><p>Book directory categories for students and parents. The exact prescribed books can vary by class, subject and academic year.</p></div>
-        <div className="education-book-list">
-          <article><span>01</span><div><strong>Textbooks</strong><p>NCERT books for CBSE; current CISCE-prescribed books for ICSE/ISC.</p></div></article>
-          <article><span>02</span><div><strong>Workbooks & practice books</strong><p>Chapter exercises, worksheets, sample questions and answer practice.</p></div></article>
-          <article><span>03</span><div><strong>Reference books</strong><p>Subject-wise supplementary explanations for Mathematics, Science, English, Social Science and languages.</p></div></article>
-          <article><span>04</span><div><strong>Exam preparation</strong><p>Revision guides, specimen papers, previous-year papers where officially available, and mock tests.</p></div></article>
-          <article><span>05</span><div><strong>Digital learning</strong><p>Official syllabus, learning outcomes, curriculum updates and free educational resources.</p></div></article>
-        </div>
-      </div>
+      <EducationResources />
       <section className="education-videos" aria-labelledby="education-videos-title">
         <div className="education-videos-heading"><span className="house-kicker">WATCH · LEARN · PRACTISE</span><h3 id="education-videos-title">Related Educational Videos</h3><p>Find chapter explanations, concept lessons, revision classes and exam-preparation videos relevant to the chosen board and class.</p></div>
         <div className="education-video-filters">
