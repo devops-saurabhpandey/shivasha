@@ -61,6 +61,7 @@ function EducationQuizApi({auth,apiBase,board,grade,subject}) {
   return ()=>controller.abort();
  },[auth?.token,apiBase,board,grade,subject]);
  const loadHistory=async()=>{
+  if(!auth?.token||!apiBase)return;
   try{const r=await fetch(apiBase+"/api/education/quiz/attempts/me",{headers:{Authorization:"Bearer "+auth.token}});const d=await r.json();if(!r.ok)throw new Error(d.message||"Could not load test history");setHistory(d.attempts||[]);}
   catch(e){setMessage(e.message);}
  };
@@ -147,7 +148,7 @@ function EducationResources({ auth, apiBase }) {
       <p className="education-books-note">Book listing safeguards: show title, author/publisher, edition/year, board, class, subject and source. Do not upload or redistribute copyrighted books without permission.</p>
     </section>
     {auth?.user?.role === "admin" && <EducationAdminPanel auth={auth} apiBase={apiBase} />}
-    <EducationQuizApi auth={auth} apiBase={apiBase} board={board} grade={grade} subject={testSubject} />
+    <EducationQuizApi auth={auth} apiBase={apiBase} board={board} grade={grade} subject={subject} />
     <section className="education-practice" aria-labelledby="education-practice-title">
       <div className="education-resource-heading"><span className="house-kicker">LEARN BY DOING</span><h3 id="education-practice-title">Quick Practice Test</h3><p>Try a short sample question by subject. This is a prototype quiz, not an official board exam or a class-specific assessment yet.</p></div>
       <div className="education-practice-toolbar"><label>Subject<select value={testSubject} onChange={e=>restartTest(e.target.value)}>{EDUCATION_SUBJECTS.map(s=><option key={s}>{s}</option>)}</select></label><span>Question {questionIndex+1} of {matchingQuestions.length}</span></div>
