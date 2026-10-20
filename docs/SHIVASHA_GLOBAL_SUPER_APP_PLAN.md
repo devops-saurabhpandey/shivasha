@@ -207,3 +207,10 @@ Each entry should support: board, class/grade, subject, language, title, author,
 - Display a reminder to verify the latest board syllabus and prescribed book list for the current academic year.
 - Do not host or distribute copyrighted textbooks without permission. Prefer official/legal sources, publisher pages and authorized sellers.
 - The current House Explorer board cards are a **navigation prototype**. A searchable book catalogue, class/subject filtering, database persistence and seller integrations require separate implementation and testing.
+
+
+### Related educational video discovery
+- Add board, class and subject filters for lesson explanations, concept animations, revision, practical demonstrations and exam preparation.
+- Search results should match the selected CBSE, ICSE or ISC board and class wherever possible.
+- The current Education House prototype opens YouTube search results for the selected board/class/subject. It does not yet curate, verify or embed individual videos.
+- Before featuring specific videos in-app, review source reliability, syllabus match, age appropriateness, accessibility/captions and usage permissions. Later versions may use approved video links or a supported player integration.
