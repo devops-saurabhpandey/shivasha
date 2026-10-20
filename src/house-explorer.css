@@ -6,3 +6,28 @@
 
 
 .purushartha-hero-visual{width:min(100%,330px);aspect-ratio:1;position:relative;margin:auto;display:grid;place-items:center}.purushartha-orbit{position:absolute;inset:12%;border:1px solid rgba(255,255,255,.3);border-radius:50%;box-shadow:0 0 0 24px rgba(255,255,255,.035),0 0 0 48px rgba(255,255,255,.025)}.purushartha-orbit-center{position:absolute;width:96px;height:96px;border-radius:50%;background:#fff;color:#172033;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;box-shadow:0 5px 25px rgba(0,0,0,.2)}.purushartha-orbit-center b{font-size:35px}.purushartha-orbit-center small{font-size:8px;font-weight:900;letter-spacing:1.5px}.purushartha-orbit-item{position:absolute;width:112px;height:112px;border:1px solid rgba(255,255,255,.22);border-radius:22px;background:rgba(255,255,255,.09);backdrop-filter:blur(5px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:#fff}.purushartha-orbit-item span{font-size:25px;color:#e5c78c}.purushartha-orbit-item b{font-size:20px}.purushartha-orbit-item small{font-size:8px;letter-spacing:1px;color:#d2d9e5}.purushartha-orbit-item.dharma{top:0;left:calc(50% - 56px)}.purushartha-orbit-item.artha{right:0;top:calc(50% - 56px)}.purushartha-orbit-item.kaam{bottom:0;left:calc(50% - 56px)}.purushartha-orbit-item.moksh{left:0;top:calc(50% - 56px)}@media(max-width:900px){.purushartha-hero-visual{width:260px}}@media(max-width:480px){.purushartha-hero-visual{width:230px}.purushartha-orbit-item{width:91px;height:91px;border-radius:18px}.purushartha-orbit-item.dharma{left:calc(50% - 45.5px)}.purushartha-orbit-item.artha{top:calc(50% - 45.5px)}.purushartha-orbit-item.kaam{left:calc(50% - 45.5px)}.purushartha-orbit-item.moksh{top:calc(50% - 45.5px)}.purushartha-orbit-center{width:76px;height:76px}}
+
+
+/* Education House: board and school-book directory */
+.education-board-panel{margin-top:22px;padding:24px;border:1px solid #dfe7f2;border-radius:18px;background:linear-gradient(180deg,#f8fbff,#fff)}
+.education-panel-heading h2{margin:7px 0;font-size:25px;color:#172033}
+.education-panel-heading>p,.education-books>div:first-child>p{max-width:760px;color:#69768a;font-size:13px;line-height:1.65}
+.education-board-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:15px;margin-top:18px}
+.education-board-card{padding:20px;border:1px solid #e0e6ef;border-radius:15px;background:#fff}
+.education-board-card.cbse{border-top:4px solid #3276bd}
+.education-board-card.icse{border-top:4px solid #8a5ac2}
+.education-board-tag{font-size:9px;letter-spacing:1.2px;font-weight:900;color:#768196}
+.education-board-card h3{margin:8px 0 3px;font-size:21px;color:#172033}
+.education-board-card>p{margin:0;color:#737e91;font-size:12px}
+.education-board-card ul{padding-left:18px;color:#4b586b;font-size:12px;line-height:1.9}
+.education-board-card a{display:block;width:fit-content;margin-top:10px;color:#235da4;font-size:12px;font-weight:800;text-decoration:none}
+.education-board-card a:hover{text-decoration:underline}
+.education-books{margin-top:24px}
+.education-books h3{margin:0 0 5px;font-size:19px;color:#172033}
+.education-book-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:14px}
+.education-book-list article{display:flex;gap:12px;padding:14px;border:1px solid #e5e9f0;border-radius:12px;background:#fff}
+.education-book-list article>span{flex:0 0 29px;height:29px;display:grid;place-items:center;border-radius:9px;background:#edf4ff;color:#356cb3;font-size:10px;font-weight:900}
+.education-book-list strong{font-size:13px;color:#172033}
+.education-book-list p{margin:4px 0 0;color:#737e91;font-size:11px;line-height:1.6}
+.education-books-note{margin:16px 0 0;padding:12px 14px;border-radius:10px;background:#fff7e6;color:#795b24;font-size:11px;line-height:1.65}
+@media(max-width:680px){.education-board-panel{padding:16px}.education-board-grid,.education-book-list{grid-template-columns:1fr}.education-panel-heading h2{font-size:22px}.education-board-card{padding:16px}}
