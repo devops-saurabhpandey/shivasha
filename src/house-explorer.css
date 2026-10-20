@@ -107,3 +107,18 @@
 @media(max-width:480px){.education-catalogue-entry{align-items:flex-start;flex-direction:column;gap:8px}.education-catalogue-entry>a{white-space:normal}}
 
 .education-api-quiz{margin-top:22px}.education-api-quiz .education-answer-options button.selected{border-color:#2457b7;background:#edf4ff;color:#173f88}.education-api-quiz .education-live-catalogue-heading button{border:1px solid #d6deea;border-radius:8px;padding:6px 10px;background:#fff;cursor:pointer}.education-api-quiz .education-live-catalogue>p{font-size:13px;line-height:1.6;margin:9px 0}
+
+/* Admin-only Edutech question authoring */
+.education-admin-form{margin:14px 0;align-items:start}
+.education-admin-form label{display:flex;flex-direction:column;gap:6px;font-size:12px;font-weight:750;color:#334155}
+.education-admin-form input,.education-admin-form textarea,.education-admin-form select,.education-live-catalogue-heading select{width:100%;box-sizing:border-box;border:1px solid #d6deea;border-radius:9px;padding:10px;background:#fff;color:#172033;font:inherit}
+.education-admin-form textarea{resize:vertical;line-height:1.5}
+.education-admin-form .education-admin-wide{grid-column:1/-1}
+.education-admin-form>button{justify-self:start}
+.education-admin-form button:disabled{opacity:.6;cursor:wait}
+.education-admin-actions{display:flex;gap:8px;align-items:center}
+.education-admin-actions button{border:1px solid #d6deea;border-radius:8px;padding:8px 11px;cursor:pointer}
+.education-admin-actions .primary{background:#233f87;color:white;border:0}
+.education-admin-panel{margin:20px 0;border:1px solid #dbe5f3}
+.education-admin-panel .education-live-catalogue-heading select{width:auto;max-width:150px}
+@media(max-width:480px){.education-admin-actions{flex-wrap:wrap}.education-admin-form .education-admin-wide{grid-column:1}}
