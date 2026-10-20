@@ -1,5 +1,7 @@
 import React, { useMemo, useState } from "react";
 
+const API_BASE = (import.meta.env.VITE_API_URL || "https://shivasha.onrender.com").replace(/\/$/, "");
+
 const topics = [
   {id:"startup",name:"Start a business / company",icon:"🏢",summary:"Choose a structure and map the first registrations.",steps:["Compare proprietorship, partnership, LLP and private limited company before deciding.","Check name availability and the appropriate registration route; company/LLP incorporation is handled through MCA.","Assess PAN/TAN, bank account, accounting records and tax registrations applicable to the chosen structure.","Check local Shops & Establishments, trade licence, professional tax and sector-specific permissions where applicable."],links:[["Ministry of Corporate Affairs","https://www.mca.gov.in/"],["Udyam Registration","https://udyamregistration.gov.in/"]]},
   {id:"msme",name:"MSME / Udyam registration",icon:"🧾",summary:"Understand Udyam registration and basic MSME records.",steps:["Check the current MSME classification and eligibility criteria from the official Udyam portal.","Keep PAN, Aadhaar and business details ready; follow the official portal's verification process.","Use only the official government portal; avoid agents claiming guaranteed registration.","Keep business activity, bank, GST and contact details consistent across records."],links:[["Official Udyam portal","https://udyamregistration.gov.in/"]]},
@@ -20,12 +22,33 @@ export default function BusinessAIHelp(){
  const [structure,setStructure]=useState("Not decided");
  const [question,setQuestion]=useState("");
  const [result,setResult]=useState(null);
+ const [chat,setChat]=useState([]);
+ const [answering,setAnswering]=useState(false);
+ const [chatError,setChatError]=useState("");
  const selected=useMemo(()=>topics.find(t=>t.id===topic)||topics[0],[topic]);
  const generate=()=>setResult({topic:selected,question:question.trim(),business:business.trim()||"My business",stateName:stateName.trim()||"India",structure});
- const copyPrompt=async()=>{const text="Act as a careful Indian business-law information assistant. Give general information, not a legal opinion. Explain in simple English and Hindi. Clearly state what facts are missing, distinguish central and state rules, check current law and official sources, and do not invent deadlines or guarantees. Business: "+(business||"Not provided")+"; State: "+(stateName||"Not provided")+"; Entity type: "+structure+"; Topic: "+selected.name+"; Question: "+(question||"Please provide a practical compliance checklist and questions to ask a CA/CS/lawyer.")+". Cite official government sources and mention that a qualified Indian professional should verify the final position.";try{await navigator.clipboard.writeText(text);setResult(v=>({...v,copied:true,prompt:text}))}catch{setResult(v=>({...v,copied:false,prompt:text}))}};
- return <section className="content business-ai-page">
+ const askAI=async(textOverride)=>{
+  const prompt=(textOverride??question).trim(); if(!prompt||answering)return;
+  const history=[...chat]; setChat(prev=>[...prev,{role:"user",content:prompt}]); setQuestion(""); setAnswering(true); setChatError("");
+  try{
+   const response=await fetch(API_BASE+"/api/business-ai/ask",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({question:prompt,history:history.slice(-8),business:business.trim()||"Not provided",state:stateName.trim()||"India",structure,topic:selected.name})});
+   const data=await response.json().catch(()=>({})); if(!response.ok)throw new Error(data.message||data.error||"AI answer service is not available right now.");
+   setChat(prev=>[...prev,{role:"assistant",content:data.answer||"No answer returned.",sources:Array.isArray(data.sources)?data.sources:[]}]);
+  }catch(e){setChatError(e.message||"Unable to get an AI answer. Please try again.");}finally{setAnswering(false);}
+};
+const resetChat=()=>{setChat([]);setChatError("");setQuestion("");};
+return <section className="content business-ai-page">
   <div className="business-ai-hero"><div className="business-ai-icon">⚖</div><div><span className="business-ai-kicker">SHIVASHA BUSINESS DESK</span><h2>AI Business & Company Law Help</h2><p>Business setup, company compliance, tax, contracts, employees, trademarks and app laws — in one place.</p></div></div>
   <div className="business-ai-notice"><b>Important:</b> This is a guided information tool, not a live AI lawyer and not legal/tax advice. Laws, thresholds and due dates change. Verify your situation with official sources and a qualified CA, CS or lawyer before filing or making a legal decision.</div>
+
+  <div className="panel business-ai-chat">
+   <div className="panel-head"><div><h3>Ask Business AI</h3><p>Ask in English or Hindi about your company, business or legal compliance.</p></div><button className="secondary" onClick={resetChat} disabled={!chat.length&&!chatError}>New chat</button></div>
+   <div className="business-ai-suggestions"><span>Try asking:</span>{["How do I register a company in India?","Does my business need GST registration?","What compliance should a private limited company track?","Shivasha app ke liye privacy policy mein kya hona chahiye?"].map(q=><button key={q} onClick={()=>askAI(q)} disabled={answering}>{q}</button>)}</div>
+   <div className="business-ai-messages" aria-live="polite">{chat.length===0&&<div className="business-ai-chat-empty"><span>✦</span><b>Your business AI assistant</b><p>Ask a question to get a tailored answer, practical next steps and official resources.</p></div>}{chat.map((m,i)=><article key={i} className={"business-ai-message "+m.role}><b>{m.role==="user"?"You":"SHIVASHA Business AI"}</b><p>{m.content}</p>{m.sources?.length>0&&<div className="business-ai-answer-sources"><b>Resources</b>{m.sources.map((s,j)=><a key={j} href={s.url} target="_blank" rel="noreferrer">{s.title||s.url} ↗</a>)}</div>}</article>)}{answering&&<article className="business-ai-message assistant"><b>SHIVASHA Business AI</b><p>Preparing your answer…</p></article>}</div>
+   {chatError&&<div className="business-ai-notice" role="alert">{chatError}</div>}
+   <form className="business-ai-ask-form" onSubmit={e=>{e.preventDefault();askAI()}}><textarea rows="3" value={question} onChange={e=>setQuestion(e.target.value)} placeholder="Type your business or legal question here…" aria-label="Ask a business law question"/><button className="primary" type="submit" disabled={answering||!question.trim()}>{answering?"Thinking…":"Ask AI →"}</button></form>
+   <small className="business-ai-chat-disclaimer">AI-generated information may be incomplete or outdated. Verify legal obligations and deadlines with official sources and a qualified professional. Do not submit passwords, Aadhaar numbers or confidential documents.</small>
+  </div>
   <div className="business-ai-layout">
    <div className="panel business-ai-form"><div className="panel-head"><h3>Tell us about your business</h3></div>
     <label>Business / company name<input value={business} onChange={e=>setBusiness(e.target.value)} placeholder="e.g. Shivasha"/></label>
