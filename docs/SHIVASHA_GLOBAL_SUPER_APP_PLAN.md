@@ -265,3 +265,10 @@ Each entry should support: board, class/grade, subject, language, title, author,
 - Updated the Edutech checklist to load and save through the authenticated API instead of browser local storage.
 - The checklist is now account-linked when the API/database are configured. Parent/guardian access is not implemented; do not expose another student's progress without an explicit relationship and authorization model.
 - Build, database integration and live deployment remain unverified.
+
+
+### Student weekly progress dashboard (2026-10-21)
+- Added a last-seven-days summary for completed tests, questions answered and average score, plus a suggestion to focus on the lowest-average subject represented in recent history.
+- The report uses the signed-in student's latest 50 attempts returned by the existing self-only history API; it is not a complete all-time analytics report.
+- Parent/guardian access remains out of scope until a verified relationship and authorization flow is implemented.
+- Frontend build and live deployment remain unverified.
