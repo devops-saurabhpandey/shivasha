@@ -17,6 +17,7 @@ import businessAIRoutes from "./routes/businessAI.js";
 import newsRoutes from "./routes/news.js";
 import creatorFinanceRoutes from "./routes/creatorFinance.js";
 import calendarRoutes from "./routes/calendar.js";
+import liveVideoRoutes from "./routes/liveVideos.js";
 
 dotenv.config();
 
@@ -150,6 +151,7 @@ app.use("/api/business-ai", businessAIRoutes);
 app.use("/api/news", newsRoutes);
 app.use("/api/creator-finance", creatorFinanceRoutes);
 app.use("/api/calendar", calendarRoutes);
+app.use("/api/live-videos", liveVideoRoutes);
 
 app.get("/api", (_req, res) => res.json({ message: "SHIVASHA API is running" }));
 
