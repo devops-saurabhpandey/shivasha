@@ -243,3 +243,10 @@ Each entry should support: board, class/grade, subject, language, title, author,
 - Admins can move a published question back to Draft, then edit it, republish it, or delete it.
 - Added GitHub Actions workflow `.github/workflows/ci.yml`: frontend production build and backend JavaScript syntax checks on pushes, pull requests, and manual dispatch.
 - The workflow has been committed but has not yet run in GitHub Actions; its status must be checked after GitHub starts the job.
+
+
+### Education House daily study goals (2026-10-21)
+- Added a configurable daily question target (5, 10, 15, or 20 questions) to the student practice dashboard.
+- Shows today's saved question attempts and progress toward the target for the selected board, class, and subject.
+- Goal preference is stored in the current browser's local storage; it is not synced across devices or accounts.
+- Progress depends on saved test attempts. Build, browser verification, and live deployment remain unverified.
