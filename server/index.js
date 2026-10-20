@@ -13,6 +13,7 @@ import messageRoutes from "./routes/messages.js";
 import adminRoutes from "./routes/admin.js";
 import contentRoutes from "./routes/content.js";
 import businessRoutes from "./routes/business.js";
+import businessAIRoutes from "./routes/businessAI.js";
 import creatorFinanceRoutes from "./routes/creatorFinance.js";
 import calendarRoutes from "./routes/calendar.js";
 
@@ -84,6 +85,7 @@ app.use("/api/messages", messageRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/content", contentRoutes);
 app.use("/api/business", businessRoutes);
+app.use("/api/business-ai", businessAIRoutes);
 app.use("/api/creator-finance", creatorFinanceRoutes);
 app.use("/api/calendar", calendarRoutes);
 
