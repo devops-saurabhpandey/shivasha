@@ -257,3 +257,11 @@ Each entry should support: board, class/grade, subject, language, title, author,
 - Chapter revision suggestion is based on saved answer accuracy for the currently selected board, class, and subject; if no chapter data exists, it suggests reviewing the current subject's lesson.
 - Checklist completion is saved in the current browser for the current date and selection; it is not yet synced to a student account or across devices.
 - Recommendations are learning aids, not a guarantee of curriculum coverage. Build and live deployment remain unverified.
+
+
+### Account-linked study plan persistence (2026-10-21)
+- Added an EducationStudyPlan model scoped to the authenticated student, board, grade, subject and local calendar date.
+- Added authenticated GET/PUT endpoints for retrieving and saving the daily checklist. The API accepts only the three expected task IDs and stores completion server-side.
+- Updated the Edutech checklist to load and save through the authenticated API instead of browser local storage.
+- The checklist is now account-linked when the API/database are configured. Parent/guardian access is not implemented; do not expose another student's progress without an explicit relationship and authorization model.
+- Build, database integration and live deployment remain unverified.
