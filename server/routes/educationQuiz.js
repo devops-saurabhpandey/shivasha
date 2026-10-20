@@ -20,6 +20,18 @@ router.get("/questions", requireAuth, async (req, res, next) => {
     res.json({questions,total:questions.length});
   } catch(e){next(e);}
 });
+router.get("/admin/questions", requireAuth, async (req,res,next) => {
+  try {
+    if(!await admin(req)) return res.status(403).json({message:"Admin access required."});
+    const board=String(req.query.board||"");
+    const filter={};
+    if(boards.includes(board)) filter.board=board;
+    if(req.query.published==="true") filter.published=true;
+    if(req.query.published==="false") filter.published=false;
+    const questions=await EducationQuestion.find(filter).select("board grade subject chapter question options explanation sourceUrl published createdAt").sort({createdAt:-1}).limit(100).lean();
+    res.json({questions,total:questions.length});
+  } catch(e){next(e);}
+});
 router.post("/questions", requireAuth, async (req,res,next) => {
   try {
     if(!await admin(req)) return res.status(403).json({message:"Admin access required."});
