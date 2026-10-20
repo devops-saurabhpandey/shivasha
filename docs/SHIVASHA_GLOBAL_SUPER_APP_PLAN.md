@@ -237,3 +237,9 @@ Each entry should support: board, class/grade, subject, language, title, author,
 - The Education Admin Panel now supports editing drafts, publishing reviewed questions, and deleting questions.
 - Student quiz history now includes completed-test count, average score, and best score cards based on the user's most recent 50 stored attempts.
 - Still required: verify actual admin account role, add content, run build/API tests, and confirm the Render deployment. These have not been claimed as verified.
+
+### Edutech admin workflow and continuous integration (2026-10-20)
+- Repaired the EducationAdminPanel source to remove malformed inserted escape sequences and keep newline-separated answer options working.
+- Admins can move a published question back to Draft, then edit it, republish it, or delete it.
+- Added GitHub Actions workflow `.github/workflows/ci.yml`: frontend production build and backend JavaScript syntax checks on pushes, pull requests, and manual dispatch.
+- The workflow has been committed but has not yet run in GitHub Actions; its status must be checked after GitHub starts the job.
