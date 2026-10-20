@@ -64,6 +64,20 @@ export default function EducationAdminPanel({ auth, apiBase }) {
     } catch (error) { setMessage(error.message); }
   }
 
+  async function unpublishQuestion(id) {
+    try {
+      const response = await fetch(apiBase + "/api/education/quiz/questions/" + id + "/publish", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: "Bearer " + auth.token },
+        body: JSON.stringify({ published: false })
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || "Unpublish failed");
+      setMessage("Question moved back to draft. You can edit it now.");
+      await load();
+    } catch (error) { setMessage(error.message); }
+  }
+
   async function submit(event) {
     event.preventDefault();
     setMessage("");
@@ -111,7 +125,7 @@ export default function EducationAdminPanel({ auth, apiBase }) {
       {!rows.length && <p className="education-catalogue-empty">No questions match this filter yet.</p>}
       {rows.map(question => <article className="education-catalogue-entry" key={question._id}>
         <div><span className={question.published ? "education-verified-tag" : "education-unverified-tag"}>{question.published ? "Published" : "Draft"}</span><h5>{question.board} · Class {question.grade} · {question.subject}</h5><p><strong>{question.chapter}:</strong> {question.question}</p><small>{question.options?.length || 0} options · {question.sourceUrl ? "Source linked" : "No source URL"}</small></div>
-        <div className="education-admin-actions">{!question.published && <><button type="button" onClick={() => editQuestion(question)}>Edit</button><button type="button" className="primary" onClick={() => publishQuestion(question._id)}>Publish</button></>}<button type="button" onClick={() => removeQuestion(question._id)}>Delete</button></div>
+        <div className="education-admin-actions">{!question.published ? <><button type="button" onClick={() => editQuestion(question)}>Edit</button><button type="button" className="primary" onClick={() => publishQuestion(question._id)}>Publish</button></> : <button type="button" onClick={() => unpublishQuestion(question._id)}>Move to draft</button>}<button type="button" onClick={() => removeQuestion(question._id)}>Delete</button></div>
       </article>)}
     </div>
   </section>;
