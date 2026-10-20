@@ -100,7 +100,7 @@ router.delete("/admin/entries/:id", async (req, res, next) => {
     if (!mongoose.isValidObjectId(id)) return res.status(400).json({ message: "Invalid finance record ID." });
     const entry = await CreatorFinanceEntry.findById(id);
     if (!entry) return res.status(404).json({ message: "Finance record not found." });
-    const testLabel = /\\b(test|testing|demo|sample|dummy|sandbox)\\b/i;
+    const testLabel = /\b(test|testing|demo|sample|dummy|sandbox)\b/i;
     if (!testLabel.test(entry.description || "") && !testLabel.test(entry.reference || "")) {
       return res.status(400).json({ message: "Only records explicitly labelled test, demo, sample, dummy, or sandbox can be deleted." });
     }
