@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 
-const API_BASE = (import.meta.env.VITE_API_URL || "https://shivasha.onrender.com").replace(/\\/$/, "");
+const API_BASE = (import.meta.env.VITE_API_URL || "https://shivasha.onrender.com").replace(/\/$/, "");
 
 export default function LiveStudio({ socket, me, auth }) {
   const [rooms, setRooms] = useState([]);
