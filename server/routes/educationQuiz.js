@@ -28,7 +28,7 @@ router.get("/admin/questions", requireAuth, async (req,res,next) => {
     if(boards.includes(board)) filter.board=board;
     if(req.query.published==="true") filter.published=true;
     if(req.query.published==="false") filter.published=false;
-    const questions=await EducationQuestion.find(filter).select("board grade subject chapter question options explanation sourceUrl published createdAt").sort({createdAt:-1}).limit(100).lean();
+    const questions=await EducationQuestion.find(filter).select("board grade subject chapter question options answerIndex explanation sourceUrl published createdAt").sort({createdAt:-1}).limit(100).lean();
     res.json({questions,total:questions.length});
   } catch(e){next(e);}
 });
