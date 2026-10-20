@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import "./house-explorer.css";
 
 const HOUSES = [
@@ -45,7 +45,7 @@ const PRACTICE_QUESTIONS = [
   { subject: "Computer Science", question: "What does CPU commonly stand for?", options: ["Computer Power Utility", "Central Processing Unit", "Core Program Upload", "Central Print Unit"], answer: 1, explain: "CPU stands for Central Processing Unit." }
 ];
 
-function EducationResources() {
+function EducationResources({ auth, apiBase }) {
   const [board, setBoard] = useState("CBSE");
   const [grade, setGrade] = useState("Class 10");
   const [subject, setSubject] = useState("Mathematics");
@@ -53,6 +53,21 @@ function EducationResources() {
   const [testSubject, setTestSubject] = useState("Mathematics");
   const [questionIndex, setQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState({});
+  const [catalogueResources, setCatalogueResources] = useState([]);
+  const [catalogueLoading, setCatalogueLoading] = useState(false);
+  const [catalogueMessage, setCatalogueMessage] = useState("");
+  useEffect(() => {
+    if (!auth?.token || !apiBase) return;
+    const controller = new AbortController();
+    const params = new URLSearchParams({ board, grade: String(Number(grade.replace("Class ", ""))), subject, type: bookType });
+    setCatalogueLoading(true);
+    fetch(`${apiBase}/api/education/resources?${params.toString()}`, { headers: { Authorization: `Bearer ${auth.token}` }, signal: controller.signal })
+      .then(async response => { const data = await response.json(); if (!response.ok) throw new Error(data.message || "Could not load catalogue"); return data; })
+      .then(data => { setCatalogueResources(data.resources || []); setCatalogueMessage(data.message || ""); })
+      .catch(error => { if (error.name !== "AbortError") setCatalogueMessage(error.message || "Could not load catalogue"); })
+      .finally(() => { if (!controller.signal.aborted) setCatalogueLoading(false); });
+    return () => controller.abort();
+  }, [auth?.token, apiBase, board, grade, subject, bookType]);
   const matchingQuestions = PRACTICE_QUESTIONS.filter(q => q.subject === testSubject);
   const currentQuestion = matchingQuestions[questionIndex];
   const completed = currentQuestion && Object.prototype.hasOwnProperty.call(answers, currentQuestion.subject);
@@ -75,6 +90,14 @@ function EducationResources() {
       <article className="education-resource-result">
         <div className="education-resource-result-icon">📚</div><div className="education-resource-result-copy"><span className="education-board-tag">{board} · {grade} · {subject}</span><h4>{bookType}</h4><p>{resourceDescription} Shivasha currently links to official resource portals; it does not yet maintain a verified title-by-title inventory for every class.</p><a href={sourceUrl} target="_blank" rel="noopener noreferrer">Open official resource ↗</a></div>
       </article>
+      <div className="education-live-catalogue" aria-live="polite">
+        <div className="education-live-catalogue-heading"><h4>Matching catalogue entries</h4><span>{catalogueLoading ? "Loading…" : `${catalogueResources.length} found`}</span></div>
+        {catalogueMessage && !catalogueResources.length && <p className="education-catalogue-empty">{catalogueMessage}</p>}
+        {catalogueResources.map(resource => <article className="education-catalogue-entry" key={resource._id}>
+          <div><span className={resource.verified ? "education-verified-tag" : "education-unverified-tag"}>{resource.verified ? "✓ Verified source" : "Pending verification"}</span><h5>{resource.title}</h5><p>{[resource.author, resource.publisher, resource.edition, resource.language].filter(Boolean).join(" · ")}</p><small>{resource.board} · Class {resource.grade} · {resource.subject} · {resource.resourceType}</small></div>
+          <a href={resource.sourceUrl} target="_blank" rel="noopener noreferrer">View source ↗</a>
+        </article>)}
+      </div>
       <div className="education-book-list">
         <article><span>01</span><div><strong>Textbooks</strong><p>Official textbooks and board-prescribed learning materials.</p></div></article>
         <article><span>02</span><div><strong>Workbooks & practice books</strong><p>Chapter exercises, worksheets and answer practice; verify the edition before purchase.</p></div></article>
@@ -91,7 +114,7 @@ function EducationResources() {
   </div>;
 }
 
-export default function HouseExplorer() {
+export default function HouseExplorer({ auth, apiBase }) {
   const [selectedCategory, setSelectedCategory] = useState("dharma");
   const [selected, setSelected] = useState(1);
   const [query, setQuery] = useState("");
@@ -143,7 +166,7 @@ export default function HouseExplorer() {
         <article className="education-board-card cbse"><span className="education-board-tag">NATIONAL CURRICULUM</span><h3>CBSE Board</h3><p>Central Board of Secondary Education</p><ul><li>Classes 1–12</li><li>NCERT textbooks and syllabus resources</li><li>Subject-wise revision and practice</li></ul><a href="https://www.cbse.gov.in/" target="_blank" rel="noreferrer">Official CBSE website ↗</a><a href="https://ncert.nic.in/textbook.php" target="_blank" rel="noreferrer">NCERT textbook portal ↗</a></article>
         <article className="education-board-card icse"><span className="education-board-tag">CISCE CURRICULUM</span><h3>ICSE / ISC</h3><p>Indian Certificate of Secondary Education / ISC</p><ul><li>ICSE Classes 1–10 resources</li><li>ISC Classes 11–12 resources</li><li>Subject-wise prescribed and reference books</li></ul><a href="https://cisce.org/" target="_blank" rel="noreferrer">Official CISCE website ↗</a></article>
       </div>
-      <EducationResources />
+      <EducationResources auth={auth} apiBase={apiBase} />
       <section className="education-videos" aria-labelledby="education-videos-title">
         <div className="education-videos-heading"><span className="house-kicker">WATCH · LEARN · PRACTISE</span><h3 id="education-videos-title">Related Educational Videos</h3><p>Find chapter explanations, concept lessons, revision classes and exam-preparation videos relevant to the chosen board and class.</p></div>
         <div className="education-video-filters">
