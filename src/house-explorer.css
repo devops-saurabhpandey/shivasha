@@ -50,3 +50,42 @@
 .education-video-topics>div span{padding:7px 10px;border:1px solid #e0e7f1;border-radius:20px;background:#fff;color:#536176;font-size:10px}
 .education-video-note{margin:15px 0 0;color:#69768a;font-size:11px;line-height:1.65}
 @media(max-width:600px){.education-videos{padding:15px}.education-video-filters{grid-template-columns:1fr}.education-video-actions{flex-direction:column}.education-video-actions button{width:100%}}
+
+/* Education House: resource catalogue and practice quiz */
+
+.education-resource-suite{display:grid;gap:22px;margin-top:22px}
+.education-resource-heading{margin-bottom:16px}
+.education-resource-heading h3{font-size:23px;letter-spacing:-.4px;margin:8px 0}
+.education-resource-heading>p{color:var(--muted,#64748b);font-size:13px;line-height:1.65;max-width:760px}
+.education-catalogue-filters{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:18px 0}
+.education-catalogue-filters label,.education-practice-toolbar label{display:grid;gap:7px;font-size:12px;font-weight:750;color:var(--text,#253047)}
+.education-catalogue-filters select,.education-practice-toolbar select{width:100%;min-width:0;border:1px solid #d7deea;border-radius:10px;padding:11px 10px;background:#fff;color:#263248;font:inherit}
+.education-resource-result{display:flex;align-items:flex-start;gap:15px;border:1px solid #dbe5f3;border-radius:15px;background:linear-gradient(135deg,#f8fbff,#fff);padding:19px}
+.education-resource-result-icon{display:grid;place-items:center;flex:0 0 48px;height:48px;border-radius:13px;background:#e5edff;font-size:23px}
+.education-resource-result-copy{min-width:0}
+.education-resource-result-copy h4{font-size:18px;margin:9px 0 5px}
+.education-resource-result-copy p{font-size:13px;line-height:1.65;color:#5c687b;margin:0 0 10px}
+.education-resource-result-copy a{font-size:13px;font-weight:800;color:#2457b7;text-decoration:none}
+.education-book-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:15px}
+.education-book-list article{display:flex;gap:12px;padding:14px;border:1px solid #e2e8f0;border-radius:12px;background:#fff}
+.education-book-list article>span{font-size:11px;font-weight:850;color:#64748b}
+.education-book-list strong{font-size:13px}
+.education-book-list p{font-size:12px;line-height:1.55;color:#64748b;margin:5px 0 0}
+.education-practice{padding:22px;border:1px solid #dbe5f3;border-radius:18px;background:#f8faff}
+.education-practice-toolbar{display:flex;align-items:end;justify-content:space-between;gap:14px;margin:16px 0}
+.education-practice-toolbar label{width:min(100%,280px)}
+.education-practice-toolbar>span{font-size:12px;font-weight:800;color:#596780;padding-bottom:12px}
+.education-question-card{border:1px solid #e1e7f0;border-radius:14px;padding:18px;background:#fff}
+.education-question-card h4{font-size:17px;line-height:1.5;margin:0 0 14px}
+.education-answer-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.education-answer-options button{padding:12px;text-align:left;border:1px solid #d9e1ed;border-radius:10px;background:#fff;color:#263248;font:inherit;font-size:13px;cursor:pointer}
+.education-answer-options button:hover:not(:disabled){border-color:#6888d6;background:#f6f8ff}
+.education-answer-options button.correct{border-color:#6bc69b;background:#eafaf1;color:#16643d}
+.education-answer-options button.incorrect{border-color:#e7a0a0;background:#fff0f0;color:#a52c2c}
+.education-answer-feedback{margin-top:13px;padding:11px 12px;border-radius:9px;font-size:13px;line-height:1.55}
+.education-answer-feedback.correct{background:#eafaf1;color:#16643d}
+.education-answer-feedback.incorrect{background:#fff0f0;color:#a52c2c}
+.education-practice-actions{display:flex;justify-content:flex-end;margin-top:14px}
+.education-practice-actions button{border:0;border-radius:10px;padding:11px 15px;background:#233f87;color:#fff;font-weight:800;cursor:pointer}
+@media(max-width:760px){.education-catalogue-filters{grid-template-columns:repeat(2,minmax(0,1fr))}.education-book-list{grid-template-columns:1fr}}
+@media(max-width:480px){.education-catalogue-filters,.education-answer-options{grid-template-columns:1fr}.education-practice{padding:15px}.education-resource-result{padding:14px;gap:10px}.education-resource-result-icon{flex-basis:38px;height:38px;font-size:19px}.education-practice-toolbar{align-items:stretch;flex-direction:column}.education-practice-toolbar label{width:100%}.education-practice-toolbar>span{padding:0}}
