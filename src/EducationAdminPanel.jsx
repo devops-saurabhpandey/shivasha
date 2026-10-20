@@ -1,2 +1,28 @@
-import React from "react";
-export default function EducationAdminPanel(){return <section className="education-practice"><h3>Shivasha Edutech Admin</h3><p>Question bank administration.</p></section>;}
+import React,{useCallback,useEffect,useState} from "react";
+const BOARDS=["CBSE","ICSE","ISC"];
+const SUBJECTS=["Mathematics","Science","Physics","Chemistry","Biology","English","Hindi","Social Science","History","Geography","Computer Science"];
+export default function EducationAdminPanel({auth,apiBase}){
+const [form,setForm]=useState({board:"CBSE",grade:"10",subject:"Mathematics",chapter:"",question:"",options:"",answerIndex:"0",explanation:"",sourceUrl:""});
+const [rows,setRows]=useState([]),[filter,setFilter]=useState("all"),[message,setMessage]=useState(""),[busy,setBusy]=useState(false);
+const load=useCallback(async()=>{if(!auth?.token||!apiBase)return;try{const p=new URLSearchParams();if(filter!=="all")p.set("published",filter);const r=await fetch(apiBase+"/api/education/quiz/admin/questions?"+p,{headers:{Authorization:"Bearer "+auth.token}});const d=await r.json();if(!r.ok)throw Error(d.message||"Could not load questions");setRows(d.questions||[])}catch(e){setMessage(e.message)}},[auth?.token,apiBase,filter]);
+useEffect(()=>{load()},[load]);
+const change=(k,v)=>setForm(s=>({...s,[k]:v}));
+async function publish(id){try{const r=await fetch(apiBase+"/api/education/quiz/questions/"+id+"/publish",{method:"PATCH",headers:{"Content-Type":"application/json",Authorization:"Bearer "+auth.token},body:JSON.stringify({published:true})});const d=await r.json();if(!r.ok)throw Error(d.message||"Publish failed");setMessage("Question published for students.");await load()}catch(e){setMessage(e.message)}}
+async function submit(e){e.preventDefault();setMessage("");const options=form.options.split("\n").map(x=>x.trim()).filter(Boolean);if(options.length<2||options.length>6){setMessage("Enter 2–6 options, one per line.");return}setBusy(true);try{const r=await fetch(apiBase+"/api/education/quiz/questions",{method:"POST",headers:{"Content-Type":"application/json",Authorization:"Bearer "+auth.token},body:JSON.stringify({...form,grade:Number(form.grade),options,answerIndex:Number(form.answerIndex)})});const d=await r.json();if(!r.ok)throw Error(d.message||"Save failed");setMessage("Question saved as a draft. Review before publishing.");setForm(s=>({...s,chapter:"",question:"",options:"",explanation:"",sourceUrl:""}));await load()}catch(e){setMessage(e.message)}finally{setBusy(false)}}
+return <section className="education-practice education-admin-panel"><div className="education-resource-heading"><span className="house-kicker">ADMIN WORKSPACE · SHIVASHA EDUTECH</span><h3>Question bank manager</h3><p>Create draft MCQs and publish reviewed questions for students. Server-side access checks still apply.</p></div>
+<form className="education-catalogue-filters education-admin-form" onSubmit={submit}>
+<label>Board<select value={form.board} onChange={e=>change("board",e.target.value)}>{BOARDS.map(x=><option key={x}>{x}</option>)}</select></label>
+<label>Class<select value={form.grade} onChange={e=>change("grade",e.target.value)}>{Array.from({length:12},(_,i)=><option key={i+1} value={i+1}>Class {i+1}</option>)}</select></label>
+<label>Subject<select value={form.subject} onChange={e=>change("subject",e.target.value)}>{SUBJECTS.map(x=><option key={x}>{x}</option>)}</select></label>
+<label>Chapter<input required maxLength="160" value={form.chapter} onChange={e=>change("chapter",e.target.value)}/></label>
+<label className="education-admin-wide">Question<textarea required maxLength="2000" rows="3" value={form.question} onChange={e=>change("question",e.target.value)}/></label>
+<label className="education-admin-wide">Options, one per line<textarea required rows="5" value={form.options} onChange={e=>change("options",e.target.value)} placeholder={"Option A\nOption B\nOption C\nOption D"}/></label>
+<label>Correct option<select value={form.answerIndex} onChange={e=>change("answerIndex",e.target.value)}>{[0,1,2,3,4,5].map(i=><option key={i} value={i}>{String.fromCharCode(65+i)}</option>)}</select></label>
+<label>Source URL<input type="url" value={form.sourceUrl} onChange={e=>change("sourceUrl",e.target.value)}/></label>
+<label className="education-admin-wide">Explanation<textarea rows="2" maxLength="2000" value={form.explanation} onChange={e=>change("explanation",e.target.value)}/></label>
+<button className="primary" disabled={busy}>{busy?"Saving…":"Save as draft"}</button></form>
+{message&&<p role="status" className="education-answer-feedback">{message}</p>}
+<div className="education-live-catalogue"><div className="education-live-catalogue-heading"><h4>Manage questions</h4><select value={filter} onChange={e=>setFilter(e.target.value)}><option value="all">All statuses</option><option value="false">Drafts</option><option value="true">Published</option></select></div>
+{rows.length===0&&<p className="education-catalogue-empty">No questions match this filter yet.</p>}
+{rows.map(q=><article className="education-catalogue-entry" key={q._id}><div><span className={q.published?"education-verified-tag":"education-unverified-tag"}>{q.published?"Published":"Draft"}</span><h5>{q.board} · Class {q.grade} · {q.subject}</h5><p><strong>{q.chapter}:</strong> {q.question}</p><small>{q.options?.length||0} options · {q.sourceUrl?"Source linked":"No source URL"}</small></div>{!q.published&&<button type="button" className="primary" onClick={()=>publish(q._id)}>Publish</button>}</article>)}</div></section>;
+}
