@@ -45,6 +45,45 @@ const PRACTICE_QUESTIONS = [
   { subject: "Computer Science", question: "What does CPU commonly stand for?", options: ["Computer Power Utility", "Central Processing Unit", "Core Program Upload", "Central Print Unit"], answer: 1, explain: "CPU stands for Central Processing Unit." }
 ];
 
+function EducationQuizApi({auth,apiBase,board,grade,subject}) {
+ const [items,setItems]=useState([]),[picked,setPicked]=useState({}),[result,setResult]=useState(null),[history,setHistory]=useState([]),[message,setMessage]=useState(""),[loading,setLoading]=useState(false);
+ useEffect(()=>{
+  if(!auth?.token||!apiBase)return;
+  const controller=new AbortController();
+  const params=new URLSearchParams({board,grade:String(Number(String(grade).replace("Class ",""))),subject});
+  setLoading(true);setItems([]);setPicked({});setResult(null);
+  fetch(apiBase+"/api/education/quiz/questions?"+params,{headers:{Authorization:"Bearer "+auth.token},signal:controller.signal})
+   .then(async r=>{const d=await r.json();if(!r.ok)throw new Error(d.message||"Quiz load failed");return d;})
+   .then(d=>{setItems(d.questions||[]);setMessage(d.questions?.length?"":"No reviewed questions published for this selection yet.");})
+   .catch(e=>{if(e.name!=="AbortError")setMessage(e.message);})
+   .finally(()=>{if(!controller.signal.aborted)setLoading(false);});
+  return ()=>controller.abort();
+ },[auth?.token,apiBase,board,grade,subject]);
+ const loadHistory=async()=>{
+  try{const r=await fetch(apiBase+"/api/education/quiz/attempts/me",{headers:{Authorization:"Bearer "+auth.token}});const d=await r.json();if(!r.ok)throw new Error(d.message||"Could not load test history");setHistory(d.attempts||[]);}
+  catch(e){setMessage(e.message);}
+ };
+ useEffect(()=>{loadHistory();},[auth?.token,apiBase]);
+ const submit=async()=>{
+  setMessage("");
+  const answers=items.filter(q=>Number.isInteger(picked[q._id])).map(q=>({questionId:q._id,selectedIndex:picked[q._id]}));
+  if(!answers.length){setMessage("Please answer at least one question.");return;}
+  try{
+   const r=await fetch(apiBase+"/api/education/quiz/attempts",{method:"POST",headers:{"Content-Type":"application/json",Authorization:"Bearer "+auth.token},body:JSON.stringify({board,grade:Number(String(grade).replace("Class ","")),subject,answers})});
+   const d=await r.json();if(!r.ok)throw new Error(d.message||"Could not save test");setResult(d.attempt);await loadHistory();
+  }catch(e){setMessage(e.message);}
+ };
+ return <section className="education-practice education-api-quiz" aria-labelledby="education-live-quiz-title">
+  <div className="education-resource-heading"><span className="house-kicker">SHIVASHA EDUTECH · QUESTION BANK</span><h3 id="education-live-quiz-title">Board-aligned practice test</h3><p>Questions here appear only after an administrator reviews and publishes them. Select board, class and subject above to filter the bank.</p></div>
+  {loading&&<p role="status">Loading published questions…</p>}
+  {!loading&&message&&<p className="education-catalogue-empty" role="status">{message}</p>}
+  {items.map((q,i)=><article className="education-question-card" key={q._id}><small>Question {i+1} · {q.chapter}</small><h4>{q.question}</h4><div className="education-answer-options">{q.options.map((option,n)=><button key={n} type="button" className={picked[q._id]===n?"selected":""} disabled={Boolean(result)} onClick={()=>setPicked(p=>({...p,[q._id]:n}))}>{String.fromCharCode(65+n)}. {option}</button>)}</div>{result&&q.explanation&&<p className="education-answer-feedback">{q.explanation}</p>}</article>)}
+  {items.length>0&&!result&&<button type="button" className="primary" onClick={submit}>Submit test & save result</button>}
+  {result&&<div className="education-answer-feedback correct" role="status">Test saved: {result.correctCount}/{result.totalQuestions} correct · Score {result.scorePercent}%</div>}
+  <div className="education-live-catalogue"><div className="education-live-catalogue-heading"><h4>My recent test results</h4><button type="button" onClick={loadHistory}>Refresh</button></div>{history.length?history.slice(0,5).map(a=><p key={a._id}>{a.board} · Class {a.grade} · {a.subject} — <strong>{a.scorePercent}%</strong> ({a.correctCount}/{a.totalQuestions}) <small>{new Date(a.createdAt).toLocaleDateString()}</small></p>):<p className="education-catalogue-empty">Your saved test results will appear here.</p>}</div>
+ </section>;
+}
+
 function EducationResources({ auth, apiBase }) {
   const [board, setBoard] = useState("CBSE");
   const [grade, setGrade] = useState("Class 10");
@@ -106,6 +145,7 @@ function EducationResources({ auth, apiBase }) {
       </div>
       <p className="education-books-note">Book listing safeguards: show title, author/publisher, edition/year, board, class, subject and source. Do not upload or redistribute copyrighted books without permission.</p>
     </section>
+    <EducationQuizApi auth={auth} apiBase={apiBase} board={board} grade={grade} subject={testSubject} />
     <section className="education-practice" aria-labelledby="education-practice-title">
       <div className="education-resource-heading"><span className="house-kicker">LEARN BY DOING</span><h3 id="education-practice-title">Quick Practice Test</h3><p>Try a short sample question by subject. This is a prototype quiz, not an official board exam or a class-specific assessment yet.</p></div>
       <div className="education-practice-toolbar"><label>Subject<select value={testSubject} onChange={e=>restartTest(e.target.value)}>{EDUCATION_SUBJECTS.map(s=><option key={s}>{s}</option>)}</select></label><span>Question {questionIndex+1} of {matchingQuestions.length}</span></div>
