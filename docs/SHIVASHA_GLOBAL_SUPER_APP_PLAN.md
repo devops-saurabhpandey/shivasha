@@ -230,3 +230,10 @@ Each entry should support: board, class/grade, subject, language, title, author,
 - Authenticated endpoints cover published question listing, admin-only draft question creation/publish/delete, student attempt submission, and the current student's recent attempt history.
 - House 5 Edutech now includes a live question-bank test panel and saved score history.
 - No questions are preloaded; an administrator must create and publish reviewed questions. A dedicated admin authoring screen, automated tests, production build, and live deployment verification remain outstanding.
+
+### Education House admin editing and student progress (2026-10-20)
+- Added an admin-only question listing endpoint that returns the correct-answer index only to authorized administrators.
+- Added draft editing through PATCH /api/education/quiz/questions/:id; published questions are intentionally not editable through this endpoint.
+- The Education Admin Panel now supports editing drafts, publishing reviewed questions, and deleting questions.
+- Student quiz history now includes completed-test count, average score, and best score cards based on the user's most recent 50 stored attempts.
+- Still required: verify actual admin account role, add content, run build/API tests, and confirm the Render deployment. These have not been claimed as verified.
