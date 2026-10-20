@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 
-export default function LiveStudio({ socket, me }) {
+export default function LiveStudio({ socket, me, auth }) {
   const [rooms, setRooms] = useState([]);
   const [title, setTitle] = useState("");
   const [stream, setStream] = useState(null);
@@ -11,6 +11,13 @@ export default function LiveStudio({ socket, me }) {
   const [error, setError] = useState("");
   const [muted, setMuted] = useState(false);
   const [cameraOff, setCameraOff] = useState(false);
+  const [saveState, setSaveState] = useState("");
+  const [savedVideos, setSavedVideos] = useState([]);
+  const [libraryLoading, setLibraryLoading] = useState(false);
+  const recorderRef = useRef(null);
+  const chunksRef = useRef([]);
+  const recordStartedRef = useRef(0);
+  const titleRef = useRef("");
   const localVideo = useRef(null);
   const remoteVideo = useRef(null);
   const peers = useRef(new Map());
@@ -89,6 +96,37 @@ export default function LiveStudio({ socket, me }) {
     try {
       const media = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: true });
       streamRef.current = media; setStream(media);
+      chunksRef.current = [];
+      titleRef.current = title.trim() || (me?.name || "SHIVASHA member") + "'s Live";
+      setSaveState("");
+      if (typeof MediaRecorder !== "undefined") {
+        const mimeType = ["video/webm;codecs=vp9,opus", "video/webm;codecs=vp8,opus", "video/webm", "video/mp4"].find(type => MediaRecorder.isTypeSupported?.(type));
+        const recorder = new MediaRecorder(media, mimeType ? { mimeType } : undefined);
+        recorder.ondataavailable = event => { if (event.data?.size) chunksRef.current.push(event.data); };
+        recorder.onstop = async () => {
+          const blob = new Blob(chunksRef.current, { type: recorder.mimeType || "video/webm" });
+          chunksRef.current = [];
+          if (!blob.size) { setSaveState("No video data was captured, so nothing was saved."); return; }
+          if (blob.size > 150 * 1024 * 1024) { setSaveState("Recording exceeds 150 MB. It was not uploaded; try a shorter live video."); return; }
+          if (!auth?.token) { setSaveState("Please log in again to save this live video."); return; }
+          setSaveState("Saving live video… keep this page open.");
+          try {
+            const form = new FormData();
+            const ext = (blob.type || "").includes("mp4") ? "mp4" : "webm";
+            form.append("video", blob, "shivasha-live-" + Date.now() + "." + ext);
+            form.append("title", titleRef.current || "SHIVASHA Live");
+            form.append("durationSeconds", String(Math.max(1, Math.round((Date.now() - recordStartedRef.current) / 1000))));
+            const response = await fetch(API_BASE + "/api/live-videos/upload", { method: "POST", headers: { Authorization: "Bearer " + auth.token }, body: form });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.message || "Video save failed");
+            setSavedVideos(prev => [data.video, ...prev]);
+            setSaveState("Live video saved successfully in My Live Videos.");
+          } catch (error) { setSaveState("Could not save recording: " + error.message); }
+        };
+        recorder.start(1000);
+        recorderRef.current = recorder;
+        recordStartedRef.current = Date.now();
+      } else { setSaveState("This browser does not support live recording."); }
       if (localVideo.current) localVideo.current.srcObject = media;
       const room = { id: "live-" + (crypto.randomUUID?.() || Date.now().toString(36)), title: title.trim() || (me?.name || "SHIVASHA member") + "'s Live", hostId: me?._id || me?.id, hostName: me?.name || "SHIVASHA member", viewers: 0, startedAt: new Date().toISOString() };
       roomRef.current = room.id; setChat([]); setIsLive(true);
@@ -123,17 +161,29 @@ export default function LiveStudio({ socket, me }) {
   }
   function react(emoji) { if (roomRef.current && socket) socket.emit("live:reaction", { roomId: roomRef.current, emoji }); }
 
+  async function deleteSavedVideo(video) {
+    if (!window.confirm("Permanently delete this saved live video?")) return;
+    try {
+      const response = await fetch(API_BASE + "/api/live-videos/" + video._id, { method: "DELETE", headers: { Authorization: "Bearer " + auth.token } });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || "Delete failed");
+      setSavedVideos(prev => prev.filter(item => item._id !== video._id));
+      setSaveState("Saved live video deleted.");
+    } catch (error) { setSaveState("Could not delete video: " + error.message); }
+  }
+
   return <section className="content live-studio">
     <div className="live-hero"><div><span className="live-kicker">SHIVASHA LIVE</span><h2>Go Live. Connect in Real Time.</h2><p>Broadcast with your camera, interact with viewers, and share live moments with your community.</p></div><div className="live-hero-icon">◉</div></div>
-    {error && <div className="login-message" role="alert">{error}</div>}
+    {error && <div className="login-message" role="alert">{error}</div>}\n    {saveState && <div className="login-message" role="status">{saveState}</div>}
     <div className="live-layout">
       <div className="live-main">
         <div className="live-video-card">
-          {(isLive || watching) ? <><div className="live-video-wrap"><video ref={isLive ? localVideo : remoteVideo} autoPlay playsInline muted={isLive || muted} /><span className="live-badge">● {isLive ? "YOU ARE LIVE" : "LIVE"}</span><span className="live-viewers">👁 {rooms.find(x=>x.id===(watching?.id||roomRef.current))?.viewers ?? 0} watching</span></div><div className="live-controls">{isLive ? <><button className="secondary" onClick={()=>{const next=!muted;setMuted(next);streamRef.current?.getAudioTracks().forEach(t=>t.enabled=!next)}}>{muted?"🔇 Unmute":"🎙 Mute"}</button><button className="secondary" onClick={()=>{const next=!cameraOff;setCameraOff(next);streamRef.current?.getVideoTracks().forEach(t=>t.enabled=!next)}}>{cameraOff?"📷 Camera on":"📷 Camera off"}</button><button className="live-stop" onClick={()=>stopLocal()}>End Live</button></> : <><button className="secondary" onClick={()=>react("❤️")}>❤️</button><button className="secondary" onClick={()=>react("👏")}>👏</button><button className="secondary" onClick={()=>react("🔥")}>🔥</button><button className="live-stop" onClick={leaveLive}>Leave Live</button></>}</div></> : <div className="live-placeholder"><span>◉</span><h3>Your live broadcast starts here</h3><p>Start a live video using your phone or computer camera.</p></div>}
+          {(isLive || watching) ? <><div className="live-video-wrap"><video ref={isLive ? localVideo : remoteVideo} autoPlay playsInline muted={isLive || muted} /><span className="live-badge">● {isLive ? "YOU ARE LIVE" : "LIVE"}</span><span className="live-viewers">👁 {rooms.find(x=>x.id===(watching?.id||roomRef.current))?.viewers ?? 0} watching</span></div><div className="live-controls">{isLive ? <><button className="secondary" onClick={()=>{const next=!muted;setMuted(next);streamRef.current?.getAudioTracks().forEach(t=>t.enabled=!next)}}>{muted?"🔇 Unmute":"🎙 Mute"}</button><button className="secondary" onClick={()=>{const next=!cameraOff;setCameraOff(next);streamRef.current?.getVideoTracks().forEach(t=>t.enabled=!next)}}>{cameraOff?"📷 Camera on":"📷 Camera off"}</button><button className="live-stop" onClick={()=>stopLocal()}>End Live &amp; Save</button></> : <><button className="secondary" onClick={()=>react("❤️")}>❤️</button><button className="secondary" onClick={()=>react("👏")}>👏</button><button className="secondary" onClick={()=>react("🔥")}>🔥</button><button className="live-stop" onClick={leaveLive}>Leave Live</button></>}</div></> : <div className="live-placeholder"><span>◉</span><h3>Your live broadcast starts here</h3><p>Start a live video using your phone or computer camera.</p></div>}
         </div>
         {!isLive && !watching && <div className="panel live-start-panel"><h3>Start a live video</h3><label>Live title<input value={title} onChange={e=>setTitle(e.target.value)} maxLength={90} placeholder="What are you going live about?"/></label><button className="live-start" onClick={startLive}>🔴 Go Live</button><small>Camera and microphone permission are required. Keep the tab open while broadcasting.</small></div>}
         {(isLive || watching) && <div className="panel live-chat-panel"><div className="panel-head"><h3>Live comments</h3><span>{chat.length} messages/reactions</span></div><div className="live-chat-list">{chat.map((m,i)=><div className={m.system?"live-chat-system":"live-chat-message"} key={m.id||m._id||i}>{!m.system&&<b>{m.name||"Member"}: </b>}{m.text}</div>)}</div><form className="live-chat-form" onSubmit={sendChat}><input value={draft} onChange={e=>setDraft(e.target.value)} maxLength={300} placeholder="Write a comment…" /><button className="primary">Send</button></form></div>}
       </div>
+      <div className="panel live-library"><div className="panel-head"><h3>My Live Videos</h3><button className="secondary" onClick={async()=>{setLibraryLoading(true);try{const r=await fetch(API_BASE+"/api/live-videos",{headers:{Authorization:"Bearer "+auth?.token}});const d=await r.json();if(!r.ok)throw new Error(d.message||"Could not refresh videos");setSavedVideos(d.videos||[])}catch(e){setSaveState(e.message)}finally{setLibraryLoading(false)}}}>Refresh</button></div><p className="live-library-note">Your finished broadcasts appear here after upload completes.</p>{libraryLoading?<p className="empty">Loading saved videos…</p>:savedVideos.length?savedVideos.map(video=><article className="live-saved-video" key={video._id}><video controls preload="metadata" src={video.videoUrl} /><div className="live-saved-meta"><b>{video.title}</b><small>{new Date(video.createdAt).toLocaleString()} · {Math.round((video.bytes||0)/1024/1024*10)/10} MB</small><div><a href={video.videoUrl} target="_blank" rel="noreferrer">Open video</a><button className="live-delete" onClick={()=>deleteSavedVideo(video)}>Delete</button></div></div></article>):<div className="empty">No saved live videos yet. End a broadcast to save it here.</div>}</div>
       <aside className="live-sidebar"><div className="panel"><div className="panel-head"><h3>Live now</h3><button className="secondary" onClick={()=>socket?.emit("live:list")}>Refresh</button></div>{rooms.filter(x=>x.id!==roomRef.current).length ? rooms.filter(x=>x.id!==roomRef.current).map(room=><article className="live-room" key={room.id}><div className="live-room-dot">●</div><div><b>{room.title}</b><small>{room.hostName} · {room.viewers||0} watching</small></div><button className="primary" onClick={()=>joinLive(room)}>Watch</button></article>) : <div className="empty">No other live broadcasts right now. Start one and invite your community.</div>}</div><div className="live-safety-note"><b>Live safety</b><p>Broadcast only content you have the right to share. End the stream before leaving this page.</p></div></aside>
     </div>
   </section>;
