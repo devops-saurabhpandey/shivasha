@@ -129,3 +129,9 @@
 .education-progress-summary strong{font-size:25px;color:#233f87}
 .education-admin-actions button{background:#fff}
 @media(max-width:480px){.education-progress-summary{gap:7px}.education-progress-summary article{padding:10px}.education-progress-summary strong{font-size:21px}.education-progress-summary small{font-size:10px}}
+
+
+.education-progress-track{height:8px;max-width:420px;margin-top:10px;overflow:hidden;border-radius:999px;background:#e8edf5}
+.education-progress-track span{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#4169e1,#2aa889);transition:width .25s ease}
+.education-progress-track:focus-visible{outline:2px solid #244fc1;outline-offset:3px}
+@media(max-width:600px){.education-progress-track{max-width:100%}}
