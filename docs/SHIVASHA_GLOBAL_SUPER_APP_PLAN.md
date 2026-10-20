@@ -206,7 +206,9 @@ Each entry should support: board, class/grade, subject, language, title, author,
 - Let a student choose board → class → subject → resource type.
 - Display a reminder to verify the latest board syllabus and prescribed book list for the current academic year.
 - Do not host or distribute copyrighted textbooks without permission. Prefer official/legal sources, publisher pages and authorized sellers.
-- The Education House now includes a client-side resource directory prototype with board, class, subject and resource-type filters, plus official-source links. It does not yet contain a verified title-by-title inventory, database persistence, prices, availability or seller integrations.
+- The Education House frontend sends board, class, subject and resource-type filters to the authenticated `/api/education/resources` endpoint. MongoDB-backed catalogue records support title, author, publisher, edition, language, academic year, ISBN, source URL, optional price/currency, copyright status and verification state.
+- Education catalogue API supports filtered reads, admin-only record creation, admin verification toggles and admin deletion. New entries start unverified and should be reviewed before being labelled verified.
+- The database catalogue is empty until an administrator adds records; the UI still links to official resource portals as a fallback. Pricing/seller availability integrations and the student quiz bank remain future work.
 
 
 ### Related educational video discovery
