@@ -19,6 +19,7 @@ import creatorFinanceRoutes from "./routes/creatorFinance.js";
 import calendarRoutes from "./routes/calendar.js";
 import liveVideoRoutes from "./routes/liveVideos.js";
 import educationRoutes from "./routes/education.js";
+import educationQuizRoutes from "./routes/educationQuiz.js";
 
 dotenv.config();
 
