@@ -142,3 +142,13 @@
 .education-daily-goal select{border:1px solid #cbd5e1;border-radius:8px;padding:7px 9px;background:white;color:#172554}
 .education-daily-goal p{margin:12px 0 8px}
 .education-daily-goal>small{display:block;margin-top:9px;color:#64748b;line-height:1.5}
+
+.education-study-plan{margin:18px 0;padding:16px;border:1px solid #dbe5f3;border-radius:14px;background:#fff}
+.education-study-plan>p{color:#64748b;font-size:14px}
+.education-study-task{display:flex;align-items:flex-start;gap:11px;padding:12px 0;border-top:1px solid #edf1f7;cursor:pointer}
+.education-study-task input{width:18px;height:18px;margin-top:2px;accent-color:#233f87;flex:0 0 auto}
+.education-study-task>span{display:flex;flex-direction:column;gap:4px}
+.education-study-task strong{color:#1e293b}
+.education-study-task small{color:#64748b;line-height:1.5}
+.education-study-task.completed strong{text-decoration:line-through;color:#64748b}
+.education-study-plan .education-live-catalogue-heading{gap:10px;flex-wrap:wrap}
