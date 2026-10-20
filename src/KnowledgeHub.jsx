@@ -63,7 +63,8 @@ export default function KnowledgeHub({section = "science"}) {
       finally{if(!cancelled)setNewsLoading(false);}
     };
     loadNews();
-    return()=>{cancelled=true;};
+    const refreshTimer=setInterval(loadNews,5*60*1000);
+    return()=>{cancelled=true;clearInterval(refreshTimer);};
   },[section]);
   const topics = useMemo(() => data.topics.filter(item => (item.title+" "+item.description+" "+item.category+" "+item.links.map(x=>x[0]).join(" ")).toLowerCase().includes(query.trim().toLowerCase())),[data,query]);
   return <section className="content knowledge-hub">
