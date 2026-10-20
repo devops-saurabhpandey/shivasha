@@ -96,6 +96,20 @@ export default function HouseExplorer() {
           <article><span>05</span><div><strong>Digital learning</strong><p>Official syllabus, learning outcomes, curriculum updates and free educational resources.</p></div></article>
         </div>
       </div>
+      <section className="education-videos" aria-labelledby="education-videos-title">
+        <div className="education-videos-heading"><span className="house-kicker">WATCH · LEARN · PRACTISE</span><h3 id="education-videos-title">Related Educational Videos</h3><p>Find chapter explanations, concept lessons, revision classes and exam-preparation videos relevant to the chosen board and class.</p></div>
+        <div className="education-video-filters">
+          <label>Board<select id="education-video-board" defaultValue="CBSE"><option value="CBSE">CBSE</option><option value="ICSE">ICSE</option><option value="ISC">ISC</option></select></label>
+          <label>Class<select id="education-video-class" defaultValue="Class 10">{Array.from({length:12},(_,i)=><option key={i+1} value={`Class ${i+1}`}>{`Class ${i+1}`}</option>)}</select></label>
+          <label>Subject<select id="education-video-subject" defaultValue="Mathematics"><option>Mathematics</option><option>Science</option><option>Physics</option><option>Chemistry</option><option>Biology</option><option>English</option><option>Hindi</option><option>Social Science</option><option>History</option><option>Geography</option><option>Computer Science</option></select></label>
+        </div>
+        <div className="education-video-actions">
+          <button type="button" onClick={() => { const board=document.getElementById("education-video-board").value; const grade=document.getElementById("education-video-class").value; const subject=document.getElementById("education-video-subject").value; window.open("https://www.youtube.com/results?search_query="+encodeURIComponent(board+" "+grade+" "+subject+" chapter explanation"),"_blank","noopener,noreferrer"); }}>▶ Find chapter lessons</button>
+          <button type="button" className="secondary" onClick={() => { const board=document.getElementById("education-video-board").value; const grade=document.getElementById("education-video-class").value; const subject=document.getElementById("education-video-subject").value; window.open("https://www.youtube.com/results?search_query="+encodeURIComponent(board+" "+grade+" "+subject+" revision sample paper exam preparation"),"_blank","noopener,noreferrer"); }}>✦ Revision & exam preparation</button>
+        </div>
+        <div className="education-video-topics"><span>Explore video types</span><div><span>Chapter explanations</span><span>Concept animations</span><span>Revision lessons</span><span>Sample-paper solutions</span><span>Practical demonstrations</span></div></div>
+        <p className="education-video-note">These buttons open YouTube search results based on the selected board, class and subject. Videos are not yet individually curated or embedded inside Shivasha; review channel quality and syllabus alignment before featuring specific videos.</p>
+      </section>
       <p className="education-books-note">Shivasha should show board, class, subject, book title, author/publisher, edition/year and official or seller source for each listing. Verify the current syllabus and prescribed list before recommending a book; avoid uploading copyrighted books without permission.</p>
     </section>}
 
