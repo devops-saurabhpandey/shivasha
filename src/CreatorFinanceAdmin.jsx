@@ -52,7 +52,7 @@ export default function CreatorFinanceAdmin({ auth }) {
     run(() => request(`/api/creator-finance/admin/entries/${item._id}`, { method: "DELETE" }), "Test finance record deleted.");
   };
 
-  const isTestRecord = item => /\\b(test|testing|demo|sample|dummy|sandbox)\\b/i.test(item.description || "") || /\\b(test|testing|demo|sample|dummy|sandbox)\\b/i.test(item.reference || "");
+  const isTestRecord = item => /\b(test|testing|demo|sample|dummy|sandbox)\b/i.test(item.description || "") || /\b(test|testing|demo|sample|dummy|sandbox)\b/i.test(item.reference || "");
 
   const submitEntry = e => { e.preventDefault(); run(async () => {
     await request("/api/creator-finance/admin/entries", { method: "POST", body: JSON.stringify(entry) });
