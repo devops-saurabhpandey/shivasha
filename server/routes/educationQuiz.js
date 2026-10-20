@@ -69,18 +69,18 @@ router.post("/attempts", requireAuth, async(req,res,next)=>{
     if(!boards.includes(board)||!Number.isInteger(grade)||grade<1||grade>12||!subjects.includes(subject)||!answers.length||answers.length>50) return res.status(400).json({message:"Submit a valid test."});
     const ids=answers.map(a=>String(a.questionId||""));
     if(ids.some(id=>!mongoose.isValidObjectId(id))||new Set(ids).size!==ids.length) return res.status(400).json({message:"Invalid or repeated question IDs."});
-    const qs=await EducationQuestion.find({_id:{$in:ids},board,grade,subject,published:true}).select("answerIndex options");
+    const qs=await EducationQuestion.find({_id:{$in:ids},board,grade,subject,published:true}).select("answerIndex options chapter");
     if(qs.length!==ids.length) return res.status(400).json({message:"One or more questions are unavailable."});
     const map=new Map(qs.map(q=>[String(q._id),q]));
-    const checked=answers.map(a=>{const q=map.get(String(a.questionId)),n=Number(a.selectedIndex);return Number.isInteger(n)&&n>=0&&n<q.options.length?{question:q._id,selectedIndex:n,correct:n===q.answerIndex}:null;});
+    const checked=answers.map(a=>{const q=map.get(String(a.questionId)),n=Number(a.selectedIndex);return Number.isInteger(n)&&n>=0&&n<q.options.length?{question:q._id,chapter:q.chapter||"Uncategorized",selectedIndex:n,correct:n===q.answerIndex}:null;});
     if(checked.some(a=>!a)) return res.status(400).json({message:"Choose a valid option for every answer."});
     const correctCount=checked.filter(a=>a.correct).length,scorePercent=Math.round(correctCount/checked.length*100);
     const attempt=await EducationAttempt.create({student:req.user.id,board,grade,subject,answers:checked,totalQuestions:checked.length,correctCount,scorePercent});
-    res.status(201).json({attempt:{_id:attempt._id,board,grade,subject,totalQuestions:checked.length,correctCount,scorePercent,createdAt:attempt.createdAt,answers:checked.map(a=>({questionId:String(a.question),correct:a.correct,selectedIndex:a.selectedIndex}))}});
+    res.status(201).json({attempt:{_id:attempt._id,board,grade,subject,totalQuestions:checked.length,correctCount,scorePercent,createdAt:attempt.createdAt,answers:checked.map(a=>({questionId:String(a.question),chapter:a.chapter,correct:a.correct,selectedIndex:a.selectedIndex}))}});
   }catch(e){next(e);}
 });
 router.get("/attempts/me",requireAuth,async(req,res,next)=>{
-  try{const attempts=await EducationAttempt.find({student:req.user.id}).select("board grade subject totalQuestions correctCount scorePercent createdAt").sort({createdAt:-1}).limit(50).lean();res.json({attempts});}catch(e){next(e);}
+  try{const attempts=await EducationAttempt.find({student:req.user.id}).select("board grade subject answers totalQuestions correctCount scorePercent createdAt").sort({createdAt:-1}).limit(50).lean();res.json({attempts});}catch(e){next(e);}
 });
 router.delete("/questions/:id",requireAuth,async(req,res,next)=>{
   try{if(!await admin(req))return res.status(403).json({message:"Admin access required."});if(!mongoose.isValidObjectId(req.params.id))return res.status(400).json({message:"Invalid question ID."});const q=await EducationQuestion.findByIdAndDelete(req.params.id);if(!q)return res.status(404).json({message:"Question not found."});res.json({success:true,id:req.params.id});}catch(e){next(e);}
