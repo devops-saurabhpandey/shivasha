@@ -632,3 +632,22 @@ body::before {
 .knowledge-note{margin-top:20px;padding:16px 18px;border-left:3px solid #b58a4a;border-radius:0 12px 12px 0;background:#faf7f0}
 .knowledge-note b{font-size:12px;color:#5d4525}.knowledge-note p{margin:5px 0 0;color:#667085;font-size:12px;line-height:1.75}
 @media(max-width:700px){.knowledge-hero{align-items:flex-start;padding:20px;gap:14px}.knowledge-hero-icon{flex-basis:52px;width:52px;height:52px;border-radius:15px;font-size:25px}.knowledge-grid{grid-template-columns:1fr}.knowledge-card{padding:18px}.knowledge-card>p{min-height:0}.knowledge-toolbar{align-items:stretch;flex-direction:column}.knowledge-search{max-width:none}.knowledge-language{align-self:flex-start}}
+
+
+/* Live news feed for SHIVASHA knowledge sections */
+.knowledge-live{margin-top:24px;padding:22px;border:1px solid #e5e8ee;border-radius:18px;background:#fff;box-shadow:0 6px 20px #10182808}
+.knowledge-live-head{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:16px}
+.knowledge-live-head h3{margin:5px 0 4px;color:#25262b;font-size:22px}
+.knowledge-live-head p{margin:0;color:#778091;font-size:12px}
+.knowledge-live-head .secondary{flex-shrink:0;padding:10px 13px;border:1px solid #dfe3ea;border-radius:10px;background:#fff;color:#282a30;font-weight:750;cursor:pointer}
+.knowledge-feed-status{padding:17px;border:1px dashed #d9dee7;border-radius:12px;color:#737c8b;font-size:13px;line-height:1.7}
+.knowledge-news-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.knowledge-news-item{min-width:0;padding:15px;border:1px solid #eceef2;border-radius:13px;background:#fdfdfd}
+.knowledge-news-meta{display:flex;flex-wrap:wrap;justify-content:space-between;gap:6px;margin-bottom:10px;color:#8b6a3b;font-size:10px;font-weight:800}
+.knowledge-news-meta span+span{color:#858c98;font-weight:500}
+.knowledge-news-item>a{display:block;color:#25262b;text-decoration:none;font-size:14px;line-height:1.55;font-weight:800}
+.knowledge-news-item>a:hover{color:#946a2e}
+.knowledge-news-item>a span{color:#9a7a4d}
+.knowledge-news-item>p{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;margin:9px 0 0;color:#687181;font-size:12px;line-height:1.7}
+.knowledge-updated{display:block;margin-top:14px;color:#8a929e;font-size:10px}
+@media(max-width:700px){.knowledge-live{padding:16px}.knowledge-live-head{align-items:flex-start}.knowledge-live-head h3{font-size:19px}.knowledge-news-list{grid-template-columns:1fr}}
