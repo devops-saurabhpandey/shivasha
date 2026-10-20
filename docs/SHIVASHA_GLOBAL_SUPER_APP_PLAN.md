@@ -223,3 +223,10 @@ Each entry should support: board, class/grade, subject, language, title, author,
 - Added MongoDB schemas for a reviewed Education Question Bank (`EducationQuestion`) and Student Test Attempts (`EducationAttempt`).
 - These schemas define board/class/subject/chapter questions, answer options, explanations, publish state and per-student score history.
 - Important: the corresponding question-bank and attempt API routes, admin authoring workflow, frontend integration and tests are not yet complete. Do not treat quiz persistence as production-ready until those steps are implemented and verified.
+
+
+### Quiz API and frontend status (2026-10-20)
+- Quiz API router added at `/api/education/quiz` and registered in `server/index.js`.
+- Authenticated endpoints cover published question listing, admin-only draft question creation/publish/delete, student attempt submission, and the current student's recent attempt history.
+- House 5 Edutech now includes a live question-bank test panel and saved score history.
+- No questions are preloaded; an administrator must create and publish reviewed questions. A dedicated admin authoring screen, automated tests, production build, and live deployment verification remain outstanding.
