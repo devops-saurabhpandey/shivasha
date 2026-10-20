@@ -31,3 +31,22 @@
 .education-book-list p{margin:4px 0 0;color:#737e91;font-size:11px;line-height:1.6}
 .education-books-note{margin:16px 0 0;padding:12px 14px;border-radius:10px;background:#fff7e6;color:#795b24;font-size:11px;line-height:1.65}
 @media(max-width:680px){.education-board-panel{padding:16px}.education-board-grid,.education-book-list{grid-template-columns:1fr}.education-panel-heading h2{font-size:22px}.education-board-card{padding:16px}}
+
+
+/* Education House: board/class/subject-based video discovery */
+.education-videos{margin-top:25px;padding:20px;border:1px solid #dfe7f2;border-radius:15px;background:#f5f8ff}
+.education-videos-heading h3{margin:7px 0;font-size:20px;color:#172033}
+.education-videos-heading>p{max-width:760px;color:#69768a;font-size:12px;line-height:1.65}
+.education-video-filters{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:16px}
+.education-video-filters label{display:flex;flex-direction:column;gap:6px;color:#4b586b;font-size:11px;font-weight:800}
+.education-video-filters select{width:100%;min-width:0;padding:11px;border:1px solid #d8e0ec;border-radius:10px;background:#fff;color:#172033;font:inherit;font-size:12px}
+.education-video-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:15px}
+.education-video-actions button{padding:11px 15px;border:1px solid #265fa8;border-radius:10px;background:#265fa8;color:#fff;font:inherit;font-size:12px;font-weight:850;cursor:pointer}
+.education-video-actions button.secondary{background:#fff;color:#265fa8}
+.education-video-actions button:hover{filter:brightness(.96)}
+.education-video-topics{margin-top:18px}
+.education-video-topics>span{font-size:11px;font-weight:850;color:#4b586b}
+.education-video-topics>div{display:flex;flex-wrap:wrap;gap:7px;margin-top:9px}
+.education-video-topics>div span{padding:7px 10px;border:1px solid #e0e7f1;border-radius:20px;background:#fff;color:#536176;font-size:10px}
+.education-video-note{margin:15px 0 0;color:#69768a;font-size:11px;line-height:1.65}
+@media(max-width:600px){.education-videos{padding:15px}.education-video-filters{grid-template-columns:1fr}.education-video-actions{flex-direction:column}.education-video-actions button{width:100%}}
