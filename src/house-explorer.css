@@ -105,3 +105,5 @@
 .education-verified-tag{background:#eafaf1;color:#16643d}
 .education-unverified-tag{background:#fff7e6;color:#8a5b08}
 @media(max-width:480px){.education-catalogue-entry{align-items:flex-start;flex-direction:column;gap:8px}.education-catalogue-entry>a{white-space:normal}}
+
+.education-api-quiz{margin-top:22px}.education-api-quiz .education-answer-options button.selected{border-color:#2457b7;background:#edf4ff;color:#173f88}.education-api-quiz .education-live-catalogue-heading button{border:1px solid #d6deea;border-radius:8px;padding:6px 10px;background:#fff;cursor:pointer}.education-api-quiz .education-live-catalogue>p{font-size:13px;line-height:1.6;margin:9px 0}
