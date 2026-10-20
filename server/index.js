@@ -29,6 +29,7 @@ app.use(cors({ origin: allowedOrigins }));
 app.use(express.json());
 
 const onlineUsers = new Map();
+const liveRooms = new Map();
 
 const io = new Server(httpServer, {
   cors: { origin: allowedOrigins, methods: ["GET", "POST"] }
@@ -52,6 +53,65 @@ io.on("connection", socket => {
   socket.emit("realtime:ready", { userId });
   socket.emit("presence:list", { userIds: [...onlineUsers.keys()] });
   socket.broadcast.emit("presence:online", { userId });
+
+  socket.on("live:list", () => {
+    socket.emit("live:list", { rooms: [...liveRooms.values()].map(({ hostSocketId, ...room }) => room) });
+  });
+  socket.on("live:start", (payload = {}) => {
+    const id = String(payload.id || "");
+    const title = String(payload.title || "SHIVASHA Live").slice(0, 90);
+    if (!id.startsWith("live-") || liveRooms.has(id)) return;
+    const room = { id, title, hostId: userId, hostName: String(payload.hostName || "SHIVASHA member").slice(0, 80), viewers: 0, startedAt: new Date().toISOString(), hostSocketId: socket.id };
+    liveRooms.set(id, room);
+    socket.join("live:" + id);
+    const { hostSocketId, ...publicRoom } = room;
+    io.emit("live:started", publicRoom);
+    io.emit("live:list", { rooms: [...liveRooms.values()].map(({ hostSocketId, ...item }) => item) });
+  });
+  socket.on("live:join", ({ roomId } = {}) => {
+    const room = liveRooms.get(String(roomId || ""));
+    if (!room || room.hostSocketId === socket.id) return;
+    socket.join("live:" + room.id);
+    room.viewers = io.sockets.adapter.rooms.get("live:" + room.id)?.size - 1 || 0;
+    io.to(room.hostSocketId).emit("live:viewer-join", { roomId: room.id, viewerSocketId: socket.id });
+    io.to("live:" + room.id).emit("live:viewers", { roomId: room.id, viewers: room.viewers });
+  });
+  socket.on("live:leave", ({ roomId } = {}) => {
+    const id = String(roomId || "");
+    socket.leave("live:" + id);
+    const room = liveRooms.get(id);
+    if (room) {
+      room.viewers = Math.max((io.sockets.adapter.rooms.get("live:" + id)?.size || 1) - 1, 0);
+      io.to("live:" + id).emit("live:viewers", { roomId: id, viewers: room.viewers });
+    }
+  });
+  socket.on("live:stop", ({ roomId } = {}) => {
+    const id = String(roomId || "");
+    const room = liveRooms.get(id);
+    if (!room || room.hostSocketId !== socket.id) return;
+    liveRooms.delete(id);
+    io.to("live:" + id).emit("live:stopped", { roomId: id });
+    io.in("live:" + id).socketsLeave("live:" + id);
+    io.emit("live:list", { rooms: [...liveRooms.values()].map(({ hostSocketId, ...item }) => item) });
+  });
+  socket.on("live:signal", ({ roomId, to, signal } = {}) => {
+    const id = String(roomId || "");
+    if (!liveRooms.has(id) || !socket.rooms.has("live:" + id) || typeof to !== "string" || !signal || !["offer", "answer", "ice"].includes(signal.type)) return;
+    if (!io.sockets.adapter.rooms.get("live:" + id)?.has(to)) return;
+    io.to(to).emit("live:signal", { roomId: id, from: socket.id, signal });
+  });
+  socket.on("live:chat", ({ roomId, text } = {}) => {
+    const id = String(roomId || "");
+    const room = liveRooms.get(id);
+    const clean = typeof text === "string" ? text.trim().slice(0, 300) : "";
+    if (!room || !clean || !socket.rooms.has("live:" + id)) return;
+    io.to("live:" + id).emit("live:chat", { id: Date.now() + Math.random(), roomId: id, name: userId === room.hostId ? room.hostName : "Member " + userId.slice(-5), text: clean, createdAt: new Date().toISOString() });
+  });
+  socket.on("live:reaction", ({ roomId, emoji } = {}) => {
+    const id = String(roomId || "");
+    if (!liveRooms.has(id) || !socket.rooms.has("live:" + id) || !["❤️", "👏", "🔥"].includes(emoji)) return;
+    io.to("live:" + id).emit("live:reaction", { roomId: id, emoji });
+  });
 
   socket.on("presence:heartbeat", () => socket.emit("presence:pong", { at: Date.now() }));
   socket.on("typing:start", ({ conversationId } = {}) => { if (conversationId) socket.to("conversation:" + conversationId).emit("typing:start", { userId, conversationId }); });
