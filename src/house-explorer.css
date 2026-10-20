@@ -122,3 +122,10 @@
 .education-admin-panel{margin:20px 0;border:1px solid #dbe5f3}
 .education-admin-panel .education-live-catalogue-heading select{width:auto;max-width:150px}
 @media(max-width:480px){.education-admin-actions{flex-wrap:wrap}.education-admin-form .education-admin-wide{grid-column:1}}
+
+.education-progress-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:18px 0}
+.education-progress-summary article{display:flex;flex-direction:column;gap:6px;padding:15px;border:1px solid #dbe5f3;border-radius:12px;background:#fff}
+.education-progress-summary small{font-size:11px;color:#64748b;font-weight:750}
+.education-progress-summary strong{font-size:25px;color:#233f87}
+.education-admin-actions button{background:#fff}
+@media(max-width:480px){.education-progress-summary{gap:7px}.education-progress-summary article{padding:10px}.education-progress-summary strong{font-size:21px}.education-progress-summary small{font-size:10px}}
