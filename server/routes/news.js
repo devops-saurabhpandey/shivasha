@@ -14,7 +14,7 @@ const FEEDS = {
   "current-affairs": [
     {name:"PIB India",url:"https://pib.gov.in/RssMain.aspx?ModId=6&Lang=1&Regid=3",category:"India"},
     {name:"UN News",url:"https://news.un.org/feed/subscribe/en/news/all/rss.xml",category:"World"},
-    {name:"RBI",url:"https://www.rbi.org.in/Scripts/BS_PressReleaseDisplay.aspx",category:"Economy"}
+    {name:"RBI",url:"https://www.rbi.org.in/pressreleases_rss.xml",category:"Economy"}
   ]
 };
 
