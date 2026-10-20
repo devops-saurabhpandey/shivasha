@@ -1,4 +1,6 @@
-import React, { useEffect, useRef, useState } from "react";\n\nconst API_BASE = (import.meta.env.VITE_API_URL || "https://shivasha.onrender.com").replace(/\\/$/, "");
+import React, { useEffect, useRef, useState } from "react";
+
+const API_BASE = (import.meta.env.VITE_API_URL || "https://shivasha.onrender.com").replace(/\\/$/, "");
 
 export default function LiveStudio({ socket, me, auth }) {
   const [rooms, setRooms] = useState([]);
@@ -23,6 +25,16 @@ export default function LiveStudio({ socket, me, auth }) {
   const peers = useRef(new Map());
   const streamRef = useRef(null);
   const roomRef = useRef(null);
+
+  useEffect(() => {
+    if (!auth?.token) return;
+    setLibraryLoading(true);
+    fetch(API_BASE + "/api/live-videos", { headers: { Authorization: "Bearer " + auth.token } })
+      .then(async r => { const d = await r.json(); if (!r.ok) throw new Error(d.message || "Could not load saved videos"); return d; })
+      .then(d => setSavedVideos(d.videos || []))
+      .catch(e => setSaveState(e.message))
+      .finally(() => setLibraryLoading(false));
+  }, [auth?.token]);
 
   useEffect(() => {
     if (!socket) return;
