@@ -155,6 +155,7 @@ app.use("/api/creator-finance", creatorFinanceRoutes);
 app.use("/api/calendar", calendarRoutes);
 app.use("/api/live-videos", liveVideoRoutes);
 app.use("/api/education", educationRoutes);
+app.use("/api/education/quiz", educationQuizRoutes);
 
 app.get("/api", (_req, res) => res.json({ message: "SHIVASHA API is running" }));
 
