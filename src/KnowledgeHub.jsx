@@ -1,4 +1,6 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
+
+const API_BASE = (import.meta.env.VITE_API_URL || "https://shivasha.onrender.com").replace(/\\/$/, "");
 
 const SECTIONS = {
   science: {
@@ -44,6 +46,25 @@ export default function KnowledgeHub({section = "science"}) {
   const [query,setQuery] = useState("");
   const [expanded,setExpanded] = useState("");
   const [language,setLanguage] = useState("English");
+  const [news,setNews] = useState([]);
+  const [newsLoading,setNewsLoading] = useState(false);
+  const [newsError,setNewsError] = useState("");
+  const [updatedAt,setUpdatedAt] = useState("");
+  useEffect(()=>{
+    let cancelled=false;
+    const loadNews=async()=>{
+      setNewsLoading(true);setNewsError("");
+      try{
+        const response=await fetch(API_BASE+"/api/news?section="+encodeURIComponent(section));
+        const data=await response.json();
+        if(!response.ok) throw new Error(data.message||"Could not load latest updates");
+        if(!cancelled){setNews(data.items||[]);setUpdatedAt(data.updatedAt||"");}
+      }catch(error){if(!cancelled)setNewsError(error.message||"News is temporarily unavailable");}
+      finally{if(!cancelled)setNewsLoading(false);}
+    };
+    loadNews();
+    return()=>{cancelled=true;};
+  },[section]);
   const topics = useMemo(() => data.topics.filter(item => (item.title+" "+item.description+" "+item.category+" "+item.links.map(x=>x[0]).join(" ")).toLowerCase().includes(query.trim().toLowerCase())),[data,query]);
   return <section className="content knowledge-hub">
     <div className={"knowledge-hero knowledge-"+section}>
@@ -80,6 +101,14 @@ export default function KnowledgeHub({section = "science"}) {
       </article>)}
     </div>
     {topics.length===0&&<div className="knowledge-empty"><span>⌕</span><h3>No matching topics</h3><p>Try another keyword.</p></div>}
-    <div className="knowledge-note"><b>Editorial note</b><p>SHIVASHA links to external trusted resources. This section does not yet provide an automatically updated live news feed. Check the source and publication date before sharing time-sensitive claims.</p></div>
+    <section className="knowledge-live">
+      <div className="knowledge-live-head"><div><span className="knowledge-eyebrow">LATEST UPDATES</span><h3>Live {section==="current-affairs"?"Current Affairs":section==="technology"?"Technology":"Science"} Feed</h3><p>Recent items from external publisher feeds.</p></div><button className="secondary" onClick={()=>{setNewsError("");setNewsLoading(true);fetch(API_BASE+"/api/news?section="+encodeURIComponent(section)).then(async r=>{const d=await r.json();if(!r.ok)throw new Error(d.message||"Refresh failed");setNews(d.items||[]);setUpdatedAt(d.updatedAt||"");}).catch(e=>setNewsError(e.message)).finally(()=>setNewsLoading(false));}}>↻ Refresh</button></div>
+      {newsLoading&&news.length===0?<div className="knowledge-feed-status">Loading latest updates…</div>:null}
+      {newsError&&<div className="knowledge-feed-status">{newsError}. Some publisher feeds may be temporarily unavailable.</div>}
+      {!newsLoading&&news.length===0&&!newsError&&<div className="knowledge-feed-status">No live items are available right now. Try refreshing in a moment.</div>}
+      {news.length>0&&<div className="knowledge-news-list">{news.map((item,index)=><article className="knowledge-news-item" key={item.url+index}><div className="knowledge-news-meta"><span>{item.source}</span><span>{item.date&&Number.isFinite(Date.parse(item.date))?new Date(item.date).toLocaleString([],{dateStyle:"medium",timeStyle:"short"}):"Latest update"}</span></div><a href={item.url} target="_blank" rel="noopener noreferrer">{item.title}<span aria-hidden="true"> ↗</span></a>{item.description&&<p>{item.description}</p>}</article>)}</div>}
+      {updatedAt&&<small className="knowledge-updated">Feed checked {new Date(updatedAt).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})}. External feed availability may vary.</small>}
+    </section>
+    <div className="knowledge-note"><b>Editorial note</b><p>News is fetched from external RSS/Atom feeds and may be delayed or unavailable. Always open the original publisher link and verify the publication date before relying on time-sensitive information.</p></div>
   </section>;
 }
