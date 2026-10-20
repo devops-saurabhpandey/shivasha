@@ -3,6 +3,7 @@ import mongoose from "mongoose";
 import EducationQuestion from "../models/EducationQuestion.js";
 import EducationAttempt from "../models/EducationAttempt.js";
 import EducationStudyPlan from "../models/EducationStudyPlan.js";
+import EducationStudentProfile from "../models/EducationStudentProfile.js";
 import User from "../models/User.js";
 import { requireAuth } from "../middleware/auth.js";
 
@@ -85,6 +86,26 @@ router.get("/attempts/me",requireAuth,async(req,res,next)=>{
 });
 router.delete("/questions/:id",requireAuth,async(req,res,next)=>{
   try{if(!await admin(req))return res.status(403).json({message:"Admin access required."});if(!mongoose.isValidObjectId(req.params.id))return res.status(400).json({message:"Invalid question ID."});const q=await EducationQuestion.findByIdAndDelete(req.params.id);if(!q)return res.status(404).json({message:"Question not found."});res.json({success:true,id:req.params.id});}catch(e){next(e);}
+});
+
+
+router.get("/profile/me", requireAuth, async (req,res,next) => {
+  try {
+    const profile=await EducationStudentProfile.findOne({student:req.user.id}).lean();
+    res.json({profile:profile?{board:profile.board,grade:profile.grade,subject:profile.subject,dailyQuestionGoal:profile.dailyQuestionGoal,updatedAt:profile.updatedAt}:null});
+  } catch(e) { next(e); }
+});
+router.put("/profile/me", requireAuth, async (req,res,next) => {
+  try {
+    const b=req.body||{}, board=String(b.board||""), grade=Number(b.grade), subject=String(b.subject||""), goal=Number(b.dailyQuestionGoal||10);
+    if(!boards.includes(board)||!Number.isInteger(grade)||grade<1||grade>12||!subjects.includes(subject)||![5,10,15,20].includes(goal)) return res.status(400).json({message:"Select a valid board, class, subject and daily goal."});
+    const profile=await EducationStudentProfile.findOneAndUpdate(
+      {student:req.user.id},
+      {$set:{board,grade,subject,dailyQuestionGoal:goal}},
+      {new:true,upsert:true,runValidators:true,setDefaultsOnInsert:true}
+    ).lean();
+    res.json({profile:{board:profile.board,grade:profile.grade,subject:profile.subject,dailyQuestionGoal:profile.dailyQuestionGoal,updatedAt:profile.updatedAt},message:"Student profile saved to your account."});
+  } catch(e) { next(e); }
 });
 
 router.get("/study-plan/me", requireAuth, async (req, res, next) => {
