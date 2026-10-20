@@ -45,7 +45,43 @@ const formatValue = value => {
   return String(value);
 };
 const getPayload = json => json?.data ?? json?.result ?? json;
-const getFestivalList = json => {
+
+const findArrays = (obj, wanted, out = []) => {
+  if (!obj || typeof obj !== "object") return out;
+  for (const [key, value] of Object.entries(obj)) {
+    if (wanted.some(name => key.toLowerCase().replace(/[_-]/g, "") === name.toLowerCase().replace(/[_-]/g, "")) && Array.isArray(value)) out.push(...value);
+    if (value && typeof value === "object") findArrays(value, wanted, out);
+  }
+  return out;
+};
+const getShubhPeriods = panchang => {
+  const raw = findArrays(panchang, ["choghadiya", "dayChoghadiya", "nightChoghadiya", "day_choghadiya", "night_choghadiya"]);
+  const seen = new Set();
+  return raw.filter(item => {
+    if (!item || typeof item !== "object") return false;
+    const name = String(findValue(item, ["name", "type", "label", "muhurat", "quality"]) || "");
+    const good = /amrit|labh|shubh|char|auspicious|good/i.test(name);
+    const start = findValue(item, ["start", "startTime", "start_time", "from"]);
+    const end = findValue(item, ["end", "endTime", "end_time", "to"]);
+    if (!good || !start || !end) return false;
+    const key = name + "|" + start + "|" + end;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  }).map(item => ({
+    name: formatValue(findValue(item, ["nameHi", "name_hi", "hi", "hindi", "name", "type", "label", "muhurat", "quality"])),
+    start: formatTime(findValue(item, ["start", "startTime", "start_time", "from"])),
+    end: formatTime(findValue(item, ["end", "endTime", "end_time", "to"]))
+  }));
+};
+const formatTime = value => {
+  if (value == null) return "—";
+  const text = String(value);
+  const match = text.match(/T(\\d{2}:\\d{2})/);
+  if (match) return match[1];
+  return text;
+};
+\nconst getFestivalList = json => {
   const data = getPayload(json);
   if (Array.isArray(data)) return data;
   for (const key of ["festivals", "occurrences", "items", "vrats", "events"]) if (Array.isArray(data?.[key])) return data[key];
@@ -123,7 +159,7 @@ export default function HinduCalendar() {
     ["चंद्र मास", findValue(panchang, ["lunarMonth", "amanta", "purnimanta"])]
   ].filter(([,value]) => value != null) : [];
 
-  const selectedCity = CITIES.find(c => c.value === city)?.label || city;
+  const selectedCity = CITIES.find(c => c.value === city)?.label || city;\n  const shubhPeriods = getShubhPeriods(panchang);\n  const abhijit = panchang ? findValue(panchang, ["abhijitMuhurta", "abhijit_muhurta", "abhijit"]) : null;
   const monthFestivals = festivals.filter(item => {
     const date = findValue(item, ["date", "gregorianDate", "gregorian_date"]);
     if (!date) return true;
@@ -143,6 +179,17 @@ export default function HinduCalendar() {
         {panchangStatus === "loading" && <p className="muted">पंचांग लोड हो रहा है…</p>}
         {panchangStatus === "error" && <p className="calendar-note" role="status">पंचांग डेटा नहीं मिल पाया। {panchangError} तारीख और कैलेंडर फिर भी इस्तेमाल कर सकते हैं।</p>}
         {panchangStatus === "ready" && (panchangRows.length ? <div className="calendar-panchang-grid">{panchangRows.map(([label,value])=><div className="calendar-panchang-item" key={label}><span>{label}</span><b>{formatValue(value)}</b></div>)}</div> : <p className="muted">इस तारीख के लिए पंचांग विवरण उपलब्ध नहीं है।</p>)}
+        <div className="calendar-shubh-muhurat">
+          <h4 className="calendar-section-title">✨ शुभ मुहूर्त</h4>
+          {panchangStatus === "loading" && <p className="muted">शुभ समय की गणना लोड हो रही है…</p>}
+          {panchangStatus === "error" && <p className="muted">शुभ मुहूर्त देखने के लिए पहले पंचांग डेटा उपलब्ध होना चाहिए।</p>}
+          {panchangStatus === "ready" && <>
+            {abhijit && typeof abhijit === "object" && <div className="calendar-muhurat-item"><span>अभिजीत मुहूर्त</span><b>{formatTime(findValue(abhijit, ["start", "startTime", "start_time"]))} – {formatTime(findValue(abhijit, ["end", "endTime", "end_time"]))}</b></div>}
+            {shubhPeriods.map((period, index) => <div className="calendar-muhurat-item" key={period.name + index}><span>{period.name}</span><b>{period.start} – {period.end}</b></div>)}
+            {!abhijit && shubhPeriods.length === 0 && <p className="muted">इस तारीख के लिए शुभ मुहूर्त का अलग समय स्रोत से उपलब्ध नहीं है। गलत समय दिखाने के बजाय विवरण छिपाया गया है।</p>}
+          </>}
+          <small className="calendar-source">शुभ समय चुने हुए शहर के पंचांग/चौघड़िया डेटा पर आधारित हैं। विवाह, गृह प्रवेश या अन्य बड़े अनुष्ठानों के मुहूर्त के लिए स्थानीय पंचांग से पुष्टि करें।</small>
+        </div>
         <p className="calendar-source">पंचांग डेटा: <a href="https://astrotathya.com/developers" target="_blank" rel="noreferrer">AstroTathya</a> · शहर बदलने पर समय बदल सकता है।</p>
       </aside>
     </div>
