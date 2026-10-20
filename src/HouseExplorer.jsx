@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import "./house-explorer.css";
+import EducationAdminPanel from "./EducationAdminPanel.jsx";
 
 const HOUSES = [
   { purushartha: "dharma", number: 1, name: "Self & Identity", hindi: "प्रथम भाव", color: "red", symbol: "◉", purpose: "Personal identity, profiles and self-development.", modules: ["M1 · Shivasha Social"], features: ["Digital identity and profiles", "Personal branding", "Social feed and connections"], phase: "Phase 1 · Foundation" },
@@ -145,6 +146,7 @@ function EducationResources({ auth, apiBase }) {
       </div>
       <p className="education-books-note">Book listing safeguards: show title, author/publisher, edition/year, board, class, subject and source. Do not upload or redistribute copyrighted books without permission.</p>
     </section>
+    {auth?.user?.role === "admin" && <EducationAdminPanel auth={auth} apiBase={apiBase} />}
     <EducationQuizApi auth={auth} apiBase={apiBase} board={board} grade={grade} subject={testSubject} />
     <section className="education-practice" aria-labelledby="education-practice-title">
       <div className="education-resource-heading"><span className="house-kicker">LEARN BY DOING</span><h3 id="education-practice-title">Quick Practice Test</h3><p>Try a short sample question by subject. This is a prototype quiz, not an official board exam or a class-specific assessment yet.</p></div>
