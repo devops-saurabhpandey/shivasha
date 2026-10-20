@@ -152,3 +152,12 @@
 .education-study-task small{color:#64748b;line-height:1.5}
 .education-study-task.completed strong{text-decoration:line-through;color:#64748b}
 .education-study-plan .education-live-catalogue-heading{gap:10px;flex-wrap:wrap}
+
+.education-weekly-dashboard{margin:18px 0;padding:16px;border:1px solid #dbe5f3;border-radius:14px;background:#f8faff}
+.education-weekly-dashboard>p{margin:14px 0 6px;color:#334155;font-size:14px}
+.education-weekly-dashboard>small{color:#64748b;line-height:1.5}
+.education-weekly-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:12px}
+.education-weekly-stats article{display:flex;flex-direction:column;gap:6px;padding:12px;border:1px solid #e2e8f0;border-radius:10px;background:#fff}
+.education-weekly-stats article small{color:#64748b;font-size:12px}
+.education-weekly-stats article strong{font-size:24px;color:#172033}
+@media(max-width:520px){.education-weekly-stats{grid-template-columns:1fr}}
