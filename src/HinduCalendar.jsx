@@ -77,7 +77,7 @@ const getShubhPeriods = panchang => {
 const formatTime = value => {
   if (value == null) return "—";
   const text = String(value);
-  const match = text.match(/T(\\d{2}:\\d{2})/);
+  const match = text.match(/T(\d{2}:\d{2})/);
   if (match) return match[1];
   return text;
 };
@@ -159,7 +159,9 @@ export default function HinduCalendar() {
     ["चंद्र मास", findValue(panchang, ["lunarMonth", "amanta", "purnimanta"])]
   ].filter(([,value]) => value != null) : [];
 
-  const selectedCity = CITIES.find(c => c.value === city)?.label || city;\n  const shubhPeriods = getShubhPeriods(panchang);\n  const abhijit = panchang ? findValue(panchang, ["abhijitMuhurta", "abhijit_muhurta", "abhijit"]) : null;
+  const selectedCity = CITIES.find(c => c.value === city)?.label || city;
+  const shubhPeriods = getShubhPeriods(panchang);
+  const abhijit = panchang ? findValue(panchang, ["abhijitMuhurta", "abhijit_muhurta", "abhijit"]) : null;
   const monthFestivals = festivals.filter(item => {
     const date = findValue(item, ["date", "gregorianDate", "gregorian_date"]);
     if (!date) return true;
