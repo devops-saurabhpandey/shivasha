@@ -46,6 +46,14 @@ export default function CreatorFinanceAdmin({ auth }) {
     catch (e) { setError(e.message); }
     finally { setBusy(false); }
   };
+  const deleteTestRecord = item => {
+    const label = item.description || "this finance record";
+    if (!window.confirm(`Delete test record "${label}"? This cannot be undone.`)) return;
+    run(() => request(`/api/creator-finance/admin/entries/${item._id}`, { method: "DELETE" }), "Test finance record deleted.");
+  };
+
+  const isTestRecord = item => /\b(test|testing|demo|sample|dummy|sandbox)\b/i.test(item.description || "") || /\b(test|testing|demo|sample|dummy|sandbox)\b/i.test(item.reference || "");
+
   const submitEntry = e => { e.preventDefault(); run(async () => {
     await request("/api/creator-finance/admin/entries", { method: "POST", body: JSON.stringify(entry) });
     setEntry({ type: "revenue", amount: "", description: "", reference: "" });
@@ -117,7 +125,7 @@ export default function CreatorFinanceAdmin({ auth }) {
 
     <div className="panel" style={{ padding: 18, overflowX: "auto" }}>
       <h3>Recent Finance Ledger</h3>
-      {!data?.recent?.length ? <p>No finance entries recorded yet.</p> : <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 600 }}><thead><tr>{["Date","Type","Creator","Description","Amount","Reference"].map(x=><th key={x} style={{ textAlign:"left", padding:8, borderBottom:"1px solid #ddd" }}>{x}</th>)}</tr></thead><tbody>{data.recent.map(item=><tr key={item._id}><td style={{padding:8}}>{new Date(item.createdAt).toLocaleDateString()}</td><td style={{padding:8}}>{item.type}</td><td style={{padding:8}}>{item.creator?.name || "—"}</td><td style={{padding:8}}>{item.description}</td><td style={{padding:8}}>{money(item.amount)}</td><td style={{padding:8}}>{item.reference || "—"}</td></tr>)}</tbody></table>}
+      {!data?.recent?.length ? <p>No finance entries recorded yet.</p> : <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 600 }}><thead><tr>{["Date","Type","Creator","Description","Amount","Reference","Actions"].map(x=><th key={x} style={{ textAlign:"left", padding:8, borderBottom:"1px solid #ddd" }}>{x}</th>)}</tr></thead><tbody>{data.recent.map(item=><tr key={item._id}><td style={{padding:8}}>{new Date(item.createdAt).toLocaleDateString()}</td><td style={{padding:8}}>{item.type}</td><td style={{padding:8}}>{item.creator?.name || "—"}</td><td style={{padding:8}}>{item.description}</td><td style={{padding:8}}>{money(item.amount)}</td><td style={{padding:8}}>{item.reference || "—"}</td><td style={{padding:8}}>{isTestRecord(item) ? <button type="button" style={{ ...buttonStyle, background: "#fee2e2", color: "#991b1b" }} disabled={busy} onClick={() => deleteTestRecord(item)}>Delete test</button> : <small>Protected</small>}</td></tr>)}</tbody></table>}
       <p><small>Audit note: entries are append-only through this API. Reconcile against bank statements and invoices before paying creators.</small></p>
     </div>
   </section>;
