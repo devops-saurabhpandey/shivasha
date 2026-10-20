@@ -84,9 +84,33 @@ const formatTime = value => {
 
 const getFestivalList = json => {
   const data = getPayload(json);
-  if (Array.isArray(data)) return data;
-  for (const key of ["festivals", "occurrences", "items", "vrats", "events"]) if (Array.isArray(data?.[key])) return data[key];
-  return [];
+  const preferred = ["festivals", "occurrences", "items", "vrats", "events", "observances", "results"];
+  const visited = new Set();
+  const walk = value => {
+    if (!value || typeof value !== "object" || visited.has(value)) return [];
+    visited.add(value);
+    if (Array.isArray(value)) {
+      if (value.some(item => item && typeof item === "object" && findValue(item, ["date", "gregorianDate", "gregorian_date", "observanceDate"]))) return value;
+      for (const item of value) {
+        const found = walk(item);
+        if (found.length) return found;
+      }
+      return [];
+    }
+    for (const key of preferred) {
+      if (Array.isArray(value[key])) {
+        const list = value[key];
+        if (list.some(item => item && typeof item === "object" && findValue(item, ["date", "gregorianDate", "gregorian_date", "observanceDate"]))) return list;
+        if (list.length) return list;
+      }
+    }
+    for (const child of Object.values(value)) {
+      const found = walk(child);
+      if (found.length) return found;
+    }
+    return [];
+  };
+  return walk(data);
 };
 
 export default function HinduCalendar() {
@@ -131,9 +155,17 @@ export default function HinduCalendar() {
       try {
         const response = await fetch(API + "/festivals?city=" + encodeURIComponent(city) + "&year=" + view.getFullYear(), {signal: controller.signal});
         const json = await response.json().catch(() => ({}));
-        if (response.status === 202) {
+        const providerCode = String(json.code || "").toLowerCase();
+        if (response.status === 202 || providerCode === "computing") {
           setFestivalStatus("computing");
-          retryTimer = setTimeout(load, 10000);
+          const retrySeconds = Number(json.retryAfter || response.headers.get("Retry-After") || 10);
+          retryTimer = setTimeout(load, Math.max(5, Math.min(retrySeconds, 120)) * 1000);
+          return;
+        }
+        if (response.status === 429 && providerCode === "place_not_ready") {
+          setFestivalStatus("computing");
+          const retrySeconds = Number(json.retryAfter || response.headers.get("Retry-After") || 60);
+          retryTimer = setTimeout(load, Math.max(15, Math.min(retrySeconds, 120)) * 1000);
           return;
         }
         if (!response.ok) throw new Error(json.error || json.message || "त्योहारों की सूची अभी उपलब्ध नहीं है।");
