@@ -26,7 +26,7 @@ The top-level navigation is organized into four main categories. The 12 Jyotish 
 | 2 — Second | Wealth & Finance | Commerce, financial tools, payment integrations | M4 Marketplace, M7 Payments, M12 Business OS |
 | 3 — Third | Skills & Communication | Communication, developer tools, software creation | M9 Developers, M10 Software Solutions |
 | 4 — Fourth | Home & Property | Property listings, home services, property tools | M6 Services |
-| 5 — Fifth | Education & Creativity | Learning, creators, creative tools | M11 Edutech, M14 Creator Platform |
+| 5 — Fifth | Education & Creativity | CBSE/ICSE school learning, books, courses, creators and creative tools | M11 Edutech, M14 Creator Platform |
 | 6 — Sixth | Services & Wellbeing | Local services, productivity, wellbeing resources | M6 Services |
 | 7 — Seventh | Business & Partnerships | Business profiles, customer acquisition, B2B | M2 Business, M4 Marketplace |
 | 8 — Eighth | Research & Transformation | AI, cloud integrations, security, risk tools | M3 AI, M8 Cloud |
@@ -179,3 +179,31 @@ The current UI is a **front-end prototype with clearly labelled example cards**.
 5. Add reporting/moderation, quotas, accessibility, analytics, retention/deletion controls and end-to-end tests.
 
 Do not describe this prototype as a working video hosting, course or live-streaming service until the corresponding backend and provider flows are implemented and tested.
+
+
+## 9. Education House — CBSE, ICSE and Books
+
+The Fifth House (Education & Creativity) should include a school-education area inside Shivasha Edutech.
+
+### Board directories
+- **CBSE:** Classes 1–12; link to the official CBSE website and the NCERT textbook portal for relevant textbooks and curriculum resources.
+- **ICSE / ISC (CISCE):** ICSE school resources for Classes 1–10 and ISC resources for Classes 11–12; link to the official CISCE website.
+- Provide class and subject filters, language, academic year, syllabus/curriculum version and resource type.
+- Clearly distinguish official free resources, publisher/catalogue entries, user-created notes and third-party seller links.
+
+### Related book catalogue
+- Textbooks and prescribed reading.
+- Workbooks, chapter exercises and worksheets.
+- Subject reference books for Mathematics, Science, English, Social Science and languages.
+- Sample/specimen papers, revision guides and exam practice.
+- Teacher resources and parent/student study guides.
+- Digital resources, syllabus documents and learning-outcome guides.
+
+### Book listing fields
+Each entry should support: board, class/grade, subject, language, title, author, publisher, edition/publication year, ISBN where available, cover image, resource type, syllabus match, source URL, price/availability if supplied by an authorized seller, and copyright/permission status.
+
+### User experience and safeguards
+- Let a student choose board → class → subject → resource type.
+- Display a reminder to verify the latest board syllabus and prescribed book list for the current academic year.
+- Do not host or distribute copyrighted textbooks without permission. Prefer official/legal sources, publisher pages and authorized sellers.
+- The current House Explorer board cards are a **navigation prototype**. A searchable book catalogue, class/subject filtering, database persistence and seller integrations require separate implementation and testing.
