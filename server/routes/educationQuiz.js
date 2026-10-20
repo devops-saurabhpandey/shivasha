@@ -2,6 +2,7 @@ import { Router } from "express";
 import mongoose from "mongoose";
 import EducationQuestion from "../models/EducationQuestion.js";
 import EducationAttempt from "../models/EducationAttempt.js";
+import EducationStudyPlan from "../models/EducationStudyPlan.js";
 import User from "../models/User.js";
 import { requireAuth } from "../middleware/auth.js";
 
