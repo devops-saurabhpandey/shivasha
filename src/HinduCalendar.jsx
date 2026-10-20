@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 
-const API = "https://astrotathya.com/api";
+const API = ((import.meta.env.VITE_API_URL || "https://shivasha.onrender.com").replace(/\\/$/, "")) + "/api/calendar";
 const WEEKDAYS = ["रवि", "सोम", "मंगल", "बुध", "गुरु", "शुक्र", "शनि"];
 const MONTHS = ["जनवरी","फ़रवरी","मार्च","अप्रैल","मई","जून","जुलाई","अगस्त","सितंबर","अक्टूबर","नवंबर","दिसंबर"];
 const CITIES = [
