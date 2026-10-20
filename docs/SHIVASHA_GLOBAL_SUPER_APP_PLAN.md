@@ -250,3 +250,10 @@ Each entry should support: board, class/grade, subject, language, title, author,
 - Shows today's saved question attempts and progress toward the target for the selected board, class, and subject.
 - Goal preference is stored in the current browser's local storage; it is not synced across devices or accounts.
 - Progress depends on saved test attempts. Build, browser verification, and live deployment remain unverified.
+
+
+### Education House personalized study planner (2026-10-21)
+- Added a daily three-task checklist: revise the weakest recorded chapter (when available), solve practice questions, and review mistakes.
+- Chapter revision suggestion is based on saved answer accuracy for the currently selected board, class, and subject; if no chapter data exists, it suggests reviewing the current subject's lesson.
+- Checklist completion is saved in the current browser for the current date and selection; it is not yet synced to a student account or across devices.
+- Recommendations are learning aids, not a guarantee of curriculum coverage. Build and live deployment remain unverified.
