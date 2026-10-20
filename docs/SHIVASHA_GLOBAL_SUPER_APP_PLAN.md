@@ -217,3 +217,9 @@ Each entry should support: board, class/grade, subject, language, title, author,
 - The Education House prototype opens YouTube search results for the selected board/class/subject. It does not yet curate, verify or embed individual videos.
 - A client-side Quick Practice Test prototype is also present with subject selection, answer feedback and explanations. Questions are demonstration examples, not board-specific or grade-calibrated; persistence, question banks, timers, analytics and student progress tracking remain future work.
 - Before featuring specific videos in-app, review source reliability, syllabus match, age appropriateness, accessibility/captions and usage permissions. Later versions may use approved video links or a supported player integration.
+
+
+### Student quiz data foundation (in progress)
+- Added MongoDB schemas for a reviewed Education Question Bank (`EducationQuestion`) and Student Test Attempts (`EducationAttempt`).
+- These schemas define board/class/subject/chapter questions, answer options, explanations, publish state and per-student score history.
+- Important: the corresponding question-bank and attempt API routes, admin authoring workflow, frontend integration and tests are not yet complete. Do not treat quiz persistence as production-ready until those steps are implemented and verified.
