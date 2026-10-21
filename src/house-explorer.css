@@ -161,3 +161,17 @@
 .education-weekly-stats article small{color:#64748b;font-size:12px}
 .education-weekly-stats article strong{font-size:24px;color:#172033}
 @media(max-width:520px){.education-weekly-stats{grid-template-columns:1fr}}
+
+
+.education-guardian-panel{margin:22px 0;padding:18px;border:1px solid #cbd8eb;border-radius:16px;background:#f8fbff;color:#172033}
+.education-guardian-panel h4{margin:5px 0 8px;font-size:20px}.education-guardian-panel h5{margin:0 0 8px;font-size:15px}.education-guardian-panel p{line-height:1.5}
+.education-guardian-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin:16px 0}
+.education-guardian-grid>article,.education-guardian-children>article{padding:15px;border:1px solid #dbe5f3;border-radius:12px;background:#fff;min-width:0}
+.education-guardian-panel button{border:1px solid #c5d4e8;border-radius:9px;padding:9px 12px;background:#fff;cursor:pointer;font:inherit}.education-guardian-panel button:disabled{opacity:.55;cursor:not-allowed}
+.education-guardian-panel label{display:grid;gap:7px;margin:10px 0;font-size:13px}.education-guardian-panel input{width:100%;min-width:0;box-sizing:border-box;border:1px solid #cbd5e1;border-radius:8px;padding:10px;font:inherit}
+.education-guardian-code{display:grid;gap:8px;margin-top:12px;padding:12px;background:#eef5ff;border-radius:10px;overflow-wrap:anywhere}.education-guardian-code strong{font-size:20px;letter-spacing:.04em}
+.education-guardian-code small,.education-guardian-requests small{display:block;color:#64748b;margin-top:4px}.education-guardian-requests,.education-guardian-children{margin-top:18px}
+.education-guardian-requests>article{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:8px;padding:12px;border:1px solid #dbe5f3;border-radius:10px;background:#fff}.education-guardian-actions{display:flex;gap:8px;flex-wrap:wrap}.education-guardian-children>article{margin-top:10px}
+.education-guardian-panel .education-weekly-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:12px 0}.education-guardian-panel .education-weekly-stats>div{display:grid;gap:6px;padding:10px;background:#f8fafc;border-radius:8px}.education-guardian-panel .education-weekly-stats small{font-size:12px;color:#64748b}.education-guardian-panel .education-weekly-stats strong{font-size:20px}
+.education-guardian-attempts p{padding:8px 0;border-top:1px solid #e2e8f0;margin:0}.education-guardian-status{padding:10px 12px;border-radius:9px;background:#eaf2ff}
+@media(max-width:600px){.education-guardian-grid{grid-template-columns:1fr}.education-guardian-requests>article{align-items:flex-start;flex-direction:column}.education-guardian-panel{padding:13px}.education-guardian-panel .education-weekly-stats{grid-template-columns:1fr}}
