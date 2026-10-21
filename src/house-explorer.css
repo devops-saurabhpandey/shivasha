@@ -181,3 +181,11 @@
 .education-catalogue-search{display:grid;gap:.4rem;margin:.75rem 0 1rem;font-weight:600;color:var(--text-color,#263238)}
 .education-catalogue-search input{width:100%;min-width:0;box-sizing:border-box;padding:.7rem .8rem;border:1px solid var(--border-color,#cbd5e1);border-radius:.65rem;background:var(--surface-color,#fff);color:inherit;font:inherit}
 .education-catalogue-search input:focus-visible{outline:3px solid var(--focus-color,#4f46e5);outline-offset:2px}
+
+
+.education-review-options{margin:10px 0 16px;padding-left:2rem;display:grid;gap:8px}
+.education-review-options li{padding:9px 11px;border:1px solid #dbe5f3;border-radius:9px;background:#fff;color:#334155;line-height:1.45}
+.education-review-options li.review-correct-option{border-color:#15803d;background:#f0fdf4;color:#166534;font-weight:700}
+.education-review-options li.review-selected-option:not(.review-correct-option){border-color:#b91c1c;background:#fef2f2;color:#991b1b;font-weight:700}
+.education-mock-report .education-question-card{margin-top:12px;padding:14px;border:1px solid #dbe5f3;border-radius:12px;background:#fff}
+.education-mock-report .education-question-card h5{margin:7px 0 10px;line-height:1.5}
