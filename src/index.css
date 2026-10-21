@@ -727,3 +727,56 @@ body { background-color: #ffffff !important; }
 .sidebar .nav-item.active,.sidebar .nav-item:hover { background:#f1f5f9 !important; color:#111827 !important; }
 .mobile-header { background:#ffffff !important; color:#111827 !important; border-bottom:1px solid #e5e7eb; }
 .mobile-header button { background:#111827 !important; color:#ffffff !important; }
+
+
+/* Unified SHIVASHA visual system: logged-in screens match the public landing page. */
+:root {
+  color: #17243b;
+  background: #f7f9fc;
+}
+body { background: #f7f9fc !important; color: #17243b; }
+.social-shell {
+  background: #f7f9fc !important;
+  background-image: none !important;
+  color: #17243b !important;
+}
+.sidebar {
+  background: #f7f9fc !important;
+  color: #17243b !important;
+  border-right: 1px solid #e3e9f2;
+}
+.sidebar .brand b, .topbar h1, .content h2, .content h3 { color: #17243b; }
+.sidebar .brand small, .sidebar .sidebar-user small { color: #66758b !important; }
+.sidebar .nav-item { color: #526176 !important; border-radius: 12px; }
+.sidebar .nav-item.active, .sidebar .nav-item:hover {
+  background: #e9eff8 !important;
+  color: #17243b !important;
+}
+.mobile-header {
+  background: #f7f9fc !important;
+  color: #17243b !important;
+  border-bottom: 1px solid #e3e9f2;
+}
+.mobile-header button { background: #17243b !important; color: #fff !important; }
+.topbar { background: rgba(255,255,255,.94); border-bottom-color: #e3e9f2; }
+.primary, .topbar-logout {
+  background: #17243b !important;
+  color: #fff !important;
+}
+.primary:hover, .topbar-logout:hover { background: #24476a !important; }
+.secondary { background: #eaf0f7; color: #17243b; }
+.panel, .post-card, .person-card, .profile-hero, .public-profile,
+.messenger-layout, .subscription-card {
+  background: #fff;
+  border-color: #e3e9f2;
+  box-shadow: 0 8px 24px rgba(23,36,59,.045);
+}
+.eyebrow, .muted { color: #66758b; }
+a, .hashtag-link, .switch-auth { color: #287d79; }
+.notification-button { color: #17243b; }
+@media(max-width:650px) {
+  .sidebar { background: #f7f9fc !important; }
+  .sidebar nav { gap: 5px; }
+  .nav-item { background: transparent; }
+  .content { background: transparent; }
+}
