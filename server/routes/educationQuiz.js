@@ -206,7 +206,14 @@ router.patch("/guardian/links/:id", requireAuth, async (req,res,next) => {
       return res.status(409).json({message:action==="revoke"?"Only approved guardian links can be revoked.":"Only pending requests can be approved or rejected."});
     }
     res.json({link:{id:String(link._id),status:link.status},message:action==="approve"?"Guardian access approved.":action==="reject"?"Guardian request rejected.":"Guardian access removed."});
-  } catch(e) { next(e); }
+  } catch(e) {
+    // A concurrent approval can hit the approved-pair unique index. Return a
+    // conflict response instead of leaking it as an internal server error.
+    if (e?.code === 11000 && action === "approve") {
+      return res.status(409).json({message:"This student already has an approved guardian link for that account."});
+    }
+    next(e);
+  }
 });
 router.get("/guardian/children", requireAuth, async (req,res,next) => {
   try {
