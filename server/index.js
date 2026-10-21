@@ -1,3 +1,4 @@
+import { getDatabaseReadiness } from "./utils/databaseReadiness.js";
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
@@ -144,21 +145,8 @@ app.get("/api/health", (_req, res) => {
 // Readiness is stricter than liveness: deployment platforms can use this
 // endpoint to avoid routing traffic to an instance without its database.
 app.get("/api/ready", (_req, res) => {
-  const databaseReady = mongoose.connection.readyState === 1;
-  if (!databaseReady) {
-    return res.status(503).json({
-      success: false,
-      service: "SHIVASHA API",
-      status: "not-ready",
-      database: "not-connected"
-    });
-  }
-  return res.json({
-    success: true,
-    service: "SHIVASHA API",
-    status: "ready",
-    database: "connected"
-  });
+  const readiness = getDatabaseReadiness(mongoose.connection.readyState);
+  return res.status(readiness.httpStatus).json(readiness.body);
 });
 
 app.use("/api/auth", authRoutes);
