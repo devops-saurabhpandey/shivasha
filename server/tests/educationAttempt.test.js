@@ -48,7 +48,7 @@ test("education attempt rejects unsupported board and out-of-range class", () =>
   assert.ok(gradeError?.errors.grade);
 });
 
-test("education attempt requires a non-empty answer history and valid score range", () => {
+test("education attempt requires a positive question count and valid score range", () => {
   const empty = makeAttempt({ answers: [], totalQuestions: 0 });
   const emptyError = empty.validateSync();
   assert.ok(emptyError?.errors.totalQuestions);
