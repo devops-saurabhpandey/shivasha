@@ -40,8 +40,32 @@ const serviceDirectory = [
   { category: "SHIVASHA Games", name: "Family-Friendly Challenges", access: "Free", desc: "Discover approachable challenges designed for general audiences and family play." }
 ];
 
+function createGameDeck() {
+  const symbols = ["🌟", "🚀", "🎯", "🧩", "🎮", "🌈", "⚽", "🎨"];
+  return [...symbols, ...symbols].sort(() => Math.random() - 0.5).map((symbol, index) => ({ id: `${Date.now()}-${index}-${Math.random()}`, symbol }));
+}
+
 export default function PublicHome({ onGetStarted, onLogin }) {
   const [search, setSearch] = useState("");
+  const [gameDeck, setGameDeck] = useState(createGameDeck);
+  const [gameOpen, setGameOpen] = useState([]);
+  const [gameMatched, setGameMatched] = useState([]);
+  const [gameMoves, setGameMoves] = useState(0);
+  const resetGame = () => { setGameDeck(createGameDeck()); setGameOpen([]); setGameMatched([]); setGameMoves(0); };
+  const flipGameCard = (index) => {
+    if (gameMatched.includes(index) || gameOpen.includes(index) || gameOpen.length === 2) return;
+    const next = [...gameOpen, index];
+    setGameOpen(next);
+    if (next.length === 2) {
+      setGameMoves(moves => moves + 1);
+      if (gameDeck[next[0]].symbol === gameDeck[next[1]].symbol) {
+        setGameMatched(matched => [...matched, ...next]);
+        setGameOpen([]);
+      } else {
+        window.setTimeout(() => setGameOpen([]), 750);
+      }
+    }
+  };
   const [activeCategory, setActiveCategory] = useState("All");
   const categories = ["All", ...groups.map(g => g.title)];
   const filteredGroups = useMemo(() => groups.filter(g => (activeCategory === "All" || g.title === activeCategory) && (g.title + " " + g.desc + " " + g.items.join(" ")).toLowerCase().includes(search.toLowerCase().trim())), [activeCategory, search]);
@@ -79,6 +103,12 @@ export default function PublicHome({ onGetStarted, onLogin }) {
       .sh-card{border:1px solid var(--line);background:#fff;border-radius:20px;padding:23px;min-height:245px;transition:transform .2s,box-shadow .2s}
       .sh-card:hover{transform:translateY(-4px);box-shadow:0 16px 36px #1c31500e}
       .sh-discovery{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:14px;margin:22px 0 18px}
+      .sh-game-panel{margin:44px 0;padding:28px;border:1px solid var(--line);border-radius:24px;background:linear-gradient(135deg,#fff,#f0f8ff)}
+      .sh-game-board{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;max-width:440px;margin:22px auto}
+      .sh-game-tile{aspect-ratio:1;border:1px solid #dbe5f2;border-radius:15px;background:#17324f;color:#fff;font-size:clamp(22px,4vw,34px);cursor:pointer;box-shadow:0 4px 10px #17324f12}
+      .sh-game-tile[aria-pressed="true"]{background:#fff;color:#172b4d;border-color:#8accc6}
+      .sh-game-stats{display:flex;justify-content:center;gap:18px;flex-wrap:wrap;color:var(--muted);font-size:13px;font-weight:800}
+      .sh-game-status{text-align:center;min-height:24px;font-weight:800;color:#187e79}
       .sh-search{width:100%;min-width:0;border:1px solid #dce4ef;background:#fff;border-radius:13px;padding:14px 16px;font:inherit;font-size:14px;color:var(--ink);outline:none}
       .sh-search:focus{border-color:#328b91;box-shadow:0 0 0 3px #328b9118}
       .sh-filter{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 22px}
@@ -146,6 +176,13 @@ export default function PublicHome({ onGetStarted, onLogin }) {
         <div className="sh-service-list">{filteredServices.map(s=><article className="sh-service" key={s.category+s.name}><div className="sh-service-top"><h3>{s.name}</h3><span className={"sh-access"+(s.access!=="Free"?" planned":"")}>{s.access}</span></div><p>{s.desc}</p><button className="sh-btn sh-btn-light" onClick={onLogin}>Sign in to explore ↗</button></article>)}
           {!filteredServices.length&&<div className="sh-empty">No services found for this search. Clear the search or select All.</div>}</div>
         <p className="sh-note">“Premium planned” indicates a possible future offering only; paid subscriptions or payments are not activated by this label.</p>
+      </section>
+      <section id="games" className="sh-game-panel">
+        <div className="sh-section-head"><div><div className="sh-kicker">SHIVASHA GAMES · PLAY NOW</div><h2>Memory Match Challenge</h2></div><p>Find all eight matching emoji pairs. This simple game works in your browser and does not need an account.</p></div>
+        <div className="sh-game-stats"><span>Moves: {gameMoves}</span><span>Pairs: {gameMatched.length / 2} / 8</span></div>
+        <div className="sh-game-board" aria-label="Memory matching game board">{gameDeck.map((card, index) => { const revealed = gameOpen.includes(index) || gameMatched.includes(index); return <button key={card.id} type="button" className="sh-game-tile" aria-label={revealed ? `Card ${index + 1}: ${card.symbol}` : `Reveal card ${index + 1}`} aria-pressed={revealed} onClick={() => flipGameCard(index)}>{revealed ? card.symbol : "?"}</button>; })}</div>
+        <p className="sh-game-status" role="status">{gameMatched.length === gameDeck.length ? `Great job! You matched all pairs in ${gameMoves} moves.` : "Turn over two cards at a time and remember their positions."}</p>
+        <div style={{display:"flex",justifyContent:"center",gap:10,flexWrap:"wrap"}}><button type="button" className="sh-btn sh-btn-dark" onClick={resetGame}>Restart game ↻</button></div>
       </section>
       <section id="plans" className="sh-plans">
         <div className="sh-kicker">CHOOSE YOUR ACCESS</div><h2 style={{fontSize:30,letterSpacing:"-1px",margin:"8px 0"}}>Start free. Upgrade when you need more.</h2><p style={{color:"#66758b",fontSize:13,lineHeight:1.7,maxWidth:680,margin:0}}>Services will be clearly marked so you can understand what is available at no cost and which features may require a premium plan.</p>
