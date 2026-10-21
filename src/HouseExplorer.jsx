@@ -135,6 +135,7 @@ function EducationResources({ auth, apiBase }) {
   const [catalogueLoading, setCatalogueLoading] = useState(false);
   const [catalogueMessage, setCatalogueMessage] = useState("");
   const [catalogueRetry, setCatalogueRetry] = useState(0);
+  const [catalogueSearch, setCatalogueSearch] = useState("");
   useEffect(() => {
     if (!auth?.token || !apiBase) return;
     const controller = new AbortController();
@@ -149,6 +150,8 @@ function EducationResources({ auth, apiBase }) {
       .finally(() => { if (!controller.signal.aborted) setCatalogueLoading(false); });
     return () => controller.abort();
   }, [auth?.token, apiBase, board, grade, subject, bookType, catalogueRetry]);
+  const normalizedCatalogueSearch = catalogueSearch.trim().toLocaleLowerCase();
+  const visibleCatalogueResources = catalogueResources.filter(resource => !normalizedCatalogueSearch || [resource.title, resource.author, resource.publisher, resource.edition, resource.subject, resource.board, resource.resourceType, resource.isbn].filter(Boolean).join(" ").toLocaleLowerCase().includes(normalizedCatalogueSearch));
   const matchingQuestions = PRACTICE_QUESTIONS.filter(q => q.subject === testSubject);
   const currentQuestion = matchingQuestions[questionIndex];
   const completed = currentQuestion && Object.prototype.hasOwnProperty.call(answers, currentQuestion.subject);
@@ -172,10 +175,12 @@ function EducationResources({ auth, apiBase }) {
         <div className="education-resource-result-icon">📚</div><div className="education-resource-result-copy"><span className="education-board-tag">{board} · {grade} · {subject}</span><h4>{bookType}</h4><p>{resourceDescription} Shivasha currently links to official resource portals; it does not yet maintain a verified title-by-title inventory for every class.</p><a href={sourceUrl} target="_blank" rel="noopener noreferrer">Open official resource ↗</a></div>
       </article>
       <div className="education-live-catalogue" aria-live="polite">
-        <div className="education-live-catalogue-heading"><h4>Matching catalogue entries</h4><span>{catalogueLoading ? "Loading…" : `${catalogueResources.length} found`}</span></div>
+        <div className="education-live-catalogue-heading"><h4>Matching catalogue entries</h4><span>{catalogueLoading ? "Loading…" : `${visibleCatalogueResources.length} shown · ${catalogueResources.length} found`}</span></div>
+        <label className="education-catalogue-search">Search title, author, publisher or ISBN<input type="search" value={catalogueSearch} onChange={event => setCatalogueSearch(event.target.value)} placeholder="e.g. Mathematics, NCERT, ISBN" maxLength={100} /></label>
         {!catalogueLoading && catalogueMessage && <div className="education-catalogue-empty" role="status"><p>{catalogueMessage}</p><button type="button" onClick={() => setCatalogueRetry(value => value + 1)}>Retry catalogue ↻</button></div>}
         {!catalogueLoading && !catalogueMessage && !catalogueResources.length && <p className="education-catalogue-empty" role="status">No resources match these filters yet. Try another board, class, subject or resource type.</p>}
-        {catalogueResources.map(resource => <article className="education-catalogue-entry" key={resource._id}>
+        {!catalogueLoading && !catalogueMessage && catalogueResources.length > 0 && visibleCatalogueResources.length === 0 && <p className="education-catalogue-empty" role="status">No catalogue entries match “{catalogueSearch.trim()}”. Try a shorter search.</p>}
+        {visibleCatalogueResources.map(resource => <article className="education-catalogue-entry" key={resource._id}>
           <div><span className={resource.verified ? "education-verified-tag" : "education-unverified-tag"}>{resource.verified ? "✓ Verified source" : "Pending verification"}</span><h5>{resource.title}</h5><p>{[resource.author, resource.publisher, resource.edition, resource.language].filter(Boolean).join(" · ")}</p><small>{resource.board} · Class {resource.grade} · {resource.subject} · {resource.resourceType}</small></div>
           <a href={resource.sourceUrl} target="_blank" rel="noopener noreferrer">View source ↗</a>
         </article>)}
