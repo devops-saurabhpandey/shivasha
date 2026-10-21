@@ -20,7 +20,7 @@ const serviceDirectory = [
   { category: "SHIVASHA Business Suite", name: "Business Leads & CRM", access: "Free", desc: "Organize business enquiries and customer follow-up workflows." },
   { category: "SHIVASHA Business Suite", name: "Software Tools Directory", access: "Free", desc: "Discover software and practical tools for business operations." },
   { category: "SHIVASHA Edutech", name: "CBSE / ICSE / ISC Resources", access: "Free", desc: "Browse school-board learning resources, books, videos and study support." },
-  { category: "SHIVASHA Edutech", name: "Learning Resource Library", access: "Free", desc: "Find educational materials by class, subject and resource type." },
+  { category: "SHIVASHA Edutech", name: "Class → Subject → Books & Videos", access: "Free", desc: "Organize learning resources by class and subject, with related books, videos and study material." },
   { category: "SHIVASHA Edutech", name: "Practice Tests & Student Progress", access: "Free", desc: "Practise quizzes, review saved results and track subject or chapter progress." },
   { category: "SHIVASHA Finance", name: "Tax & Finance Calculators", access: "Free", desc: "Use practical calculators for estimates and planning; verify important decisions independently." },
   { category: "SHIVASHA Finance", name: "Earning & Commission Tools", access: "Free", desc: "Explore earning calculators and commission-planning resources." },
