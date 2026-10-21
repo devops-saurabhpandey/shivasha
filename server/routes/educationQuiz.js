@@ -102,7 +102,7 @@ router.get("/attempts/:id/review", requireAuth, async(req,res,next)=>{
     const map=new Map(questions.map(q=>[String(q._id),q]));
     const answers=attempt.answers.map(a=>{
       const q=map.get(String(a.question));
-      return {questionId:String(a.question),chapter:a.chapter||q?.chapter||"Uncategorized",question:q?.question||"Question no longer available.",selectedIndex:a.selectedIndex,selectedOption:q?.options?.[a.selectedIndex]||"Option no longer available.",correctOption:Number.isInteger(q?.answerIndex)?q.options[q.answerIndex]:"Correct answer unavailable.",correct:a.correct,explanation:q?.explanation||""};
+      return {questionId:String(a.question),chapter:a.chapter||q?.chapter||"Uncategorized",question:q?.question||"Question no longer available.",options:q?.options||[],selectedIndex:a.selectedIndex,selectedOption:q?.options?.[a.selectedIndex]||"Option no longer available.",correctIndex:Number.isInteger(q?.answerIndex)?q.answerIndex:null,correctOption:Number.isInteger(q?.answerIndex)?q.options[q.answerIndex]:"Correct answer unavailable.",correct:a.correct,explanation:q?.explanation||""};
     });
     res.json({attempt:{_id:String(attempt._id),board:attempt.board,grade:attempt.grade,subject:attempt.subject,scorePercent:attempt.scorePercent,correctCount:attempt.correctCount,totalQuestions:attempt.totalQuestions,createdAt:attempt.createdAt,answers}});
   }catch(e){next(e);}
