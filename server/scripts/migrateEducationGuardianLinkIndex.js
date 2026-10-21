@@ -32,20 +32,30 @@ try {
     );
   }
 
-  // Create replacement constraints before removing the legacy unique index.
-  // If either creation fails, the old index still protects existing data.
-  await collection.createIndex(
-    { student: 1, guardian: 1 },
-    { name: "approved_guardian_pair_unique", unique: true, partialFilterExpression: { guardian: { $type: "objectId" }, status: "approved" } }
-  );
-  await collection.createIndex(
-    { student: 1, guardian: 1 },
-    { name: "pending_guardian_pair_unique", unique: true, partialFilterExpression: { guardian: { $type: "objectId" }, status: "pending" } }
-  );
-  if (indexes.some(index => index.name === "student_1_guardian_1" && index.unique)) {
-    await collection.dropIndex("student_1_guardian_1");
+  const dryRun = process.argv.includes("--dry-run");
+  const legacyUniqueIndexExists = indexes.some(index => index.name === "student_1_guardian_1" && index.unique);
+
+  if (dryRun) {
+    console.log("Dry run only: no indexes were changed.");
+    console.log("Would ensure indexes: approved_guardian_pair_unique, pending_guardian_pair_unique.");
+    console.log(`Would drop legacy student_1_guardian_1 unique index: ${legacyUniqueIndexExists ? "yes" : "no"}.`);
+    console.log("Duplicate preflight passed for pending and approved student/guardian pairs.");
+  } else {
+    // Create replacement constraints before removing the legacy unique index.
+    // If either creation fails, the old index still protects existing data.
+    await collection.createIndex(
+      { student: 1, guardian: 1 },
+      { name: "approved_guardian_pair_unique", unique: true, partialFilterExpression: { guardian: { $type: "objectId" }, status: "approved" } }
+    );
+    await collection.createIndex(
+      { student: 1, guardian: 1 },
+      { name: "pending_guardian_pair_unique", unique: true, partialFilterExpression: { guardian: { $type: "objectId" }, status: "pending" } }
+    );
+    if (legacyUniqueIndexExists) {
+      await collection.dropIndex("student_1_guardian_1");
+    }
+    console.log("Guardian link indexes migrated.");
   }
-  console.log("Guardian link indexes migrated.");
 } finally {
   await mongoose.disconnect();
 }
