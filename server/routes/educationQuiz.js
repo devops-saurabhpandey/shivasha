@@ -125,7 +125,7 @@ router.get("/study-plan/me", requireAuth, async (req, res, next) => {
 router.put("/study-plan/me", requireAuth, async (req, res, next) => {
   try {
     const b=req.body||{}, board=String(b.board||""), grade=Number(b.grade), subject=String(b.subject||""), date=String(b.date||"");
-    if(!boards.includes(board)||!Number.isInteger(grade)||grade<1||grade>12||!subjects.includes(subject)||!/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(date)) return res.status(400).json({message:"Select a valid board, class, subject and date."});
+    if(!boards.includes(board)||!Number.isInteger(grade)||grade<1||grade>12||!subjects.includes(subject)||!isValidDateString(date)) return res.status(400).json({message:"Select a valid board, class, subject and date."});
     if(!Array.isArray(b.tasks)||b.tasks.length>3) return res.status(400).json({message:"Submit a valid study checklist."});
     const allowed=["revise","practice","review"], seen=new Set(), tasks=[];
     for(const task of b.tasks){
