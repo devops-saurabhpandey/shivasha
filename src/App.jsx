@@ -115,14 +115,14 @@ function SocialApp({auth,setAuth,onLogout}) {
     <header className="mobile-header"><b>SHIVASHA</b><button onClick={onLogout}>Logout</button></header>
     <aside className="sidebar"><div className="brand"><div className="brand-mark" aria-label="एको ब्रह्म द्वितीयो नास्ति।">एको ब्रह्म<br/>द्वितीयो नास्ति।</div><div><b>SHIVASHA</b><small>Social • Connect • Share</small></div></div><nav>
       {[
-        {title:"1. SHIVASHA SOCIAL & COMMUNITY • सोशल एवं समुदाय",free:[["home","⌂","Home / Community"],["discover","◎","Discover People"],["create","＋","Create Post"],["messages","✉","Messages"],["saved","🔖","Saved Posts"],["profile","◉","My Profile"]],paid:[["live","🔴","Live Video"],["content-studio","▶","Content Studio"]]},
-        {title:"2. SHIVASHA BUSINESS SUITE • E-COMMERCE & SOFTWARE",free:[["crm","👥","CRM & Customer Leads"],["mis","📊","MIS Reports"],["ecommerce","🛍","Products & Services"],["business-law-ai","⚖","Business & Law AI"]],paid:[["admin","⚙","Admin / Company Tools"]]},
-        {title:"3. SHIVASHA EDUTECH • शिक्षा",free:[["houses","📚","Education & 12 Houses"],["science","🔬","Science Learning"],["technology","💻","Technology Learning"],["current-affairs","📰","Current Affairs"]],paid:[["software-hub","🧩","Software & Learning Directory"]]},
-        {title:"4. SHIVASHA FINANCE • वित्त",free:[["tax-calculators","₹","Tax & Finance Calculators"],["creator-earnings","💰","Creator Earnings"]],paid:[["my-plan","💎","Membership & Plans"]]},
-        {title:"5. SHIVASHA AI & WELLNESS • AI सहायता",free:[["ayurveda-ai","🌿","AI Ayurvedic Help"],["business-law-ai","🤖","AI Business Assistance"],["astro-career","✦","AI Career Guide"]],paid:[]},
-        {title:"6. SHIVASHA SPIRITUAL • अध्यात्म एवं ज्ञान",free:[["wisdom","🕉","Daily Wisdom"],["hindu-calendar","🗓","Hindu Calendar"],["government-schemes","🏛","Government Schemes & Knowledge"]],paid:[]}
+        {title:"SHIVASHA SOCIAL & COMMUNITY • सोशल एवं समुदाय",free:[["home","⌂","Home / Community"],["discover","◎","Discover People"],["create","＋","Create Post"],["messages","✉","Messages"],["saved","🔖","Saved Posts"],["profile","◉","My Profile"]],paid:[["live","🔴","Live Video"],["content-studio","▶","Content Studio"]]},
+        {title:"SHIVASHA BUSINESS SUITE • E-COMMERCE & SOFTWARE",free:[["crm","👥","CRM & Customer Leads"],["mis","📊","MIS Reports"],["ecommerce","🛍","Products & Services"],["business-law-ai","⚖","Business & Law AI"]],paid:[["admin","⚙","Admin / Company Tools"]]},
+        {title:"SHIVASHA EDUTECH • शिक्षा",free:[["houses","📚","Education & 12 Houses"],["science","🔬","Science Learning"],["technology","💻","Technology Learning"],["current-affairs","📰","Current Affairs"]],paid:[["software-hub","🧩","Software & Learning Directory"]]},
+        {title:"SHIVASHA FINANCE • वित्त",free:[["tax-calculators","₹","Tax & Finance Calculators"],["creator-earnings","💰","Creator Earnings"]],paid:[["my-plan","💎","Membership & Plans"]]},
+        {title:"SHIVASHA AI & WELLNESS • AI सहायता",free:[["ayurveda-ai","🌿","AI Ayurvedic Help"],["business-law-ai","🤖","AI Business Assistance"],["astro-career","✦","AI Career Guide"]],paid:[]},
+        {title:"SHIVASHA SPIRITUAL • अध्यात्म एवं ज्ञान",free:[["wisdom","🕉","Daily Wisdom"],["hindu-calendar","🗓","Hindu Calendar"],["government-schemes","🏛","Government Schemes & Knowledge"]],paid:[]}
       ].map(group=><section key={group.title} style={{marginBottom:16}}>
-        <div style={{fontSize:11,fontWeight:800,letterSpacing:".06em",color:"var(--muted,#8b93a7)",padding:"12px 10px 6px"}}>{group.title}</div>
+        <div style={{fontSize:13,fontWeight:900,letterSpacing:".02em",color:"#111827",padding:"12px 10px 6px"}}>{group.title}</div>
         <div style={{fontSize:10,fontWeight:700,textTransform:"uppercase",padding:"4px 10px",color:"#16845b"}}>✓ Free services</div>
         {group.free.map(([key,icon,label])=><button key={key} className={active===key?"nav-item active":"nav-item"} onClick={()=>key==="saved"?openSaved():key==="messages"?openMessages():navigateToSection(key)}><span>{icon}</span><span style={{flex:1,textAlign:"left"}}>{label}</span><small style={{fontSize:9,color:"#16845b",fontWeight:700}}>FREE</small></button>)}
         {group.paid.length>0&&<><div style={{fontSize:10,fontWeight:700,textTransform:"uppercase",padding:"8px 10px 4px",color:"#b7791f"}}>◆ Premium services (planned)</div>
