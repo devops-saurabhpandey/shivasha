@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import "./house-explorer.css";
+import "./education-student-profile.css";
 import EducationAdminPanel from "./EducationAdminPanel.jsx";
 
 const HOUSES = [
