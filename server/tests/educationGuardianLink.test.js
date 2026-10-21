@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import mongoose from "mongoose";
 import EducationGuardianLink from "../models/EducationGuardianLink.js";
+import { formatDuplicatePairs, getGuardianIndexMigrationPlan, hasLegacyUniqueGuardianIndex } from "../scripts/guardianIndexMigrationPlan.js";
 
 test("guardian link requires student and invitation fields", () => {
   const error = new EducationGuardianLink({}).validateSync();
@@ -54,4 +55,40 @@ test("guardian link can be validated with a nullable guardian while invitation i
     inviteExpiresAt: new Date(Date.now() + 60_000)
   });
   assert.equal(link.validateSync(), undefined);
+});
+
+test("guardian migration plan keeps legacy index when no legacy unique index exists", () => {
+  const plan = getGuardianIndexMigrationPlan([{ name: "_id_", unique: true }]);
+  assert.deepEqual(plan, {
+    ensureIndexes: ["approved_guardian_pair_unique", "pending_guardian_pair_unique"],
+    dropLegacyUniqueIndex: false
+  });
+});
+
+test("guardian migration plan identifies the legacy unique index", () => {
+  assert.equal(hasLegacyUniqueGuardianIndex([{ name: "student_1_guardian_1", unique: true }]), true);
+  assert.equal(hasLegacyUniqueGuardianIndex([{ name: "student_1_guardian_1", unique: false }]), false);
+  assert.equal(hasLegacyUniqueGuardianIndex([{ name: "other_index", unique: true }]), false);
+});
+
+test("guardian migration duplicate report safely stringifies ids", () => {
+  const duplicate = {
+    _id: {
+      student: new mongoose.Types.ObjectId("507f1f77bcf86cd799439011"),
+      guardian: new mongoose.Types.ObjectId("507f1f77bcf86cd799439012"),
+      status: "pending"
+    },
+    count: 2,
+    ids: [
+      new mongoose.Types.ObjectId("507f1f77bcf86cd799439013"),
+      new mongoose.Types.ObjectId("507f1f77bcf86cd799439014")
+    ]
+  };
+  assert.deepEqual(formatDuplicatePairs([duplicate]), [{
+    student: "507f1f77bcf86cd799439011",
+    guardian: "507f1f77bcf86cd799439012",
+    status: "pending",
+    count: 2,
+    linkIds: ["507f1f77bcf86cd799439013", "507f1f77bcf86cd799439014"]
+  }]);
 });
