@@ -151,7 +151,7 @@ function EducationResources({ auth, apiBase }) {
     return () => controller.abort();
   }, [auth?.token, apiBase, board, grade, subject, bookType, catalogueRetry]);
   const normalizedCatalogueSearch = catalogueSearch.trim().toLocaleLowerCase();
-  const visibleCatalogueResources = catalogueResources.filter(resource => !normalizedCatalogueSearch || [resource.title, resource.author, resource.publisher, resource.edition, resource.subject, resource.board, resource.resourceType, resource.isbn].filter(Boolean).join(" ").toLocaleLowerCase().includes(normalizedCatalogueSearch));
+  const visibleCatalogueResources = catalogueResources.filter(resource => !normalizedCatalogueSearch || [resource.title, resource.author, resource.publisher, resource.edition, resource.language, resource.academicYear, resource.subject, resource.board, resource.resourceType, resource.isbn].filter(Boolean).join(" ").toLocaleLowerCase().includes(normalizedCatalogueSearch));
   const matchingQuestions = PRACTICE_QUESTIONS.filter(q => q.subject === testSubject);
   const currentQuestion = matchingQuestions[questionIndex];
   const completed = currentQuestion && Object.prototype.hasOwnProperty.call(answers, currentQuestion.subject);
@@ -181,7 +181,7 @@ function EducationResources({ auth, apiBase }) {
         {!catalogueLoading && !catalogueMessage && !catalogueResources.length && <p className="education-catalogue-empty" role="status">No resources match these filters yet. Try another board, class, subject or resource type.</p>}
         {!catalogueLoading && !catalogueMessage && catalogueResources.length > 0 && visibleCatalogueResources.length === 0 && <p className="education-catalogue-empty" role="status">No catalogue entries match “{catalogueSearch.trim()}”. Try a shorter search.</p>}
         {visibleCatalogueResources.map(resource => <article className="education-catalogue-entry" key={resource._id}>
-          <div><span className={resource.verified ? "education-verified-tag" : "education-unverified-tag"}>{resource.verified ? "✓ Verified source" : "Pending verification"}</span><h5>{resource.title}</h5><p>{[resource.author, resource.publisher, resource.edition, resource.language].filter(Boolean).join(" · ")}</p><small>{resource.board} · Class {resource.grade} · {resource.subject} · {resource.resourceType}</small></div>
+          <div><span className={resource.verified ? "education-verified-tag" : "education-unverified-tag"}>{resource.verified ? "✓ Verified source" : "Pending verification"}</span><h5>{resource.title}</h5><p>{[resource.author, resource.publisher, resource.edition, resource.language].filter(Boolean).join(" · ")}</p><small>{resource.board} · Class {resource.grade} · {resource.subject} · {resource.resourceType}{resource.academicYear ? ` · ${resource.academicYear}` : ""}{resource.isbn ? ` · ISBN ${resource.isbn}` : ""}</small>{resource.price != null && <p className="education-resource-price">{new Intl.NumberFormat("en-IN", { style: "currency", currency: resource.currency || "INR", maximumFractionDigits: 2 }).format(resource.price)}</p>}</div>
           <a href={resource.sourceUrl} target="_blank" rel="noopener noreferrer">View source ↗</a>
         </article>)}
       </div>
