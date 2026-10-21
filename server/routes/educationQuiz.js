@@ -82,7 +82,7 @@ router.post("/attempts", requireAuth, async(req,res,next)=>{
     const qs=await EducationQuestion.find({_id:{$in:ids},board,grade,subject,published:true}).select("answerIndex options chapter explanation");
     if(qs.length!==ids.length) return res.status(400).json({message:"One or more questions are unavailable."});
     const map=new Map(qs.map(q=>[String(q._id),q]));
-    const checked=answers.map(a=>{const q=map.get(String(a.questionId)),n=Number(a.selectedIndex);return Number.isInteger(n)&&n>=0&&n<q.options.length?{question:q._id,chapter:q.chapter||"Uncategorized",selectedIndex:n,correct:n===q.answerIndex}:null;});
+    const checked=answers.map(a=>{const q=map.get(String(a.questionId)),n=Number(a.selectedIndex);return Number.isInteger(n)&&n>=0&&n<q.options.length?{question:q._id,chapter:q.chapter||"Uncategorized",selectedIndex:n,correct:n===q.answerIndex,questionText:q.question||"",optionsSnapshot:[...q.options],correctIndexSnapshot:q.answerIndex,explanationSnapshot:q.explanation||""}:null;});
     if(checked.some(a=>!a)) return res.status(400).json({message:"Choose a valid option for every answer."});
     const correctCount=checked.filter(a=>a.correct).length,scorePercent=Math.round(correctCount/checked.length*100);
     const attempt=await EducationAttempt.create({student:req.user.id,board,grade,subject,answers:checked,totalQuestions:checked.length,correctCount,scorePercent});
@@ -102,7 +102,9 @@ router.get("/attempts/:id/review", requireAuth, async(req,res,next)=>{
     const map=new Map(questions.map(q=>[String(q._id),q]));
     const answers=attempt.answers.map(a=>{
       const q=map.get(String(a.question));
-      return {questionId:String(a.question),chapter:a.chapter||q?.chapter||"Uncategorized",question:q?.question||"Question no longer available.",options:q?.options||[],selectedIndex:a.selectedIndex,selectedOption:q?.options?.[a.selectedIndex]||"Option no longer available.",correctIndex:Number.isInteger(q?.answerIndex)?q.answerIndex:null,correctOption:Number.isInteger(q?.answerIndex)?q.options[q.answerIndex]:"Correct answer unavailable.",correct:a.correct,explanation:q?.explanation||""};
+      const options=Array.isArray(a.optionsSnapshot)&&a.optionsSnapshot.length?a.optionsSnapshot:(q?.options||[]);
+      const correctIndex=Number.isInteger(a.correctIndexSnapshot)?a.correctIndexSnapshot:(Number.isInteger(q?.answerIndex)?q.answerIndex:null);
+      return {questionId:String(a.question),chapter:a.chapter||q?.chapter||"Uncategorized",question:a.questionText||q?.question||"Question no longer available.",options,selectedIndex:a.selectedIndex,selectedOption:options[a.selectedIndex]||"Option no longer available.",correctIndex,correctOption:Number.isInteger(correctIndex)?options[correctIndex]:"Correct answer unavailable.",correct:a.correct,explanation:a.explanationSnapshot||q?.explanation||""};
     });
     res.json({attempt:{_id:String(attempt._id),board:attempt.board,grade:attempt.grade,subject:attempt.subject,scorePercent:attempt.scorePercent,correctCount:attempt.correctCount,totalQuestions:attempt.totalQuestions,createdAt:attempt.createdAt,answers}});
   }catch(e){next(e);}
