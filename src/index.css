@@ -718,3 +718,12 @@ body { background-color: #ffffff !important; }
   background-image: none !important;
   color: #111827 !important;
 }
+
+
+/* White theme for the SHIVASHA dashboard navigation shown in the app. */
+.sidebar { background:#ffffff !important; color:#111827 !important; border-right:1px solid #e5e7eb; }
+.sidebar .brand small,.sidebar .sidebar-user small { color:#6b7280 !important; }
+.sidebar .nav-item { color:#4b5563 !important; }
+.sidebar .nav-item.active,.sidebar .nav-item:hover { background:#f1f5f9 !important; color:#111827 !important; }
+.mobile-header { background:#ffffff !important; color:#111827 !important; border-bottom:1px solid #e5e7eb; }
+.mobile-header button { background:#111827 !important; color:#ffffff !important; }
