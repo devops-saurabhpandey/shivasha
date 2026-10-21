@@ -1,6 +1,6 @@
-const BOARDS = new Set(["CBSE", "ICSE", "ISC"]);
-const TYPES = new Set(["Textbooks", "Workbooks", "Reference Books", "Exam Preparation", "Digital Learning"]);
-const SUBJECTS = new Set(["Mathematics", "Science", "Physics", "Chemistry", "Biology", "English", "Hindi", "Social Science", "History", "Geography", "Computer Science"]);
+export const BOARDS = new Set(["CBSE", "ICSE", "ISC"]);
+export const TYPES = new Set(["Textbooks", "Workbooks", "Reference Books", "Exam Preparation", "Digital Learning"]);
+export const SUBJECTS = new Set(["Mathematics", "Science", "Physics", "Chemistry", "Biology", "English", "Hindi", "Social Science", "History", "Geography", "Computer Science"]);
 
 export function buildEducationResourceFilter(query = {}) {
   const filter = {};
