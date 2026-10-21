@@ -10,6 +10,12 @@ import { requireAuth } from "../middleware/auth.js";
 const router = Router();
 const boards = ["CBSE", "ICSE", "ISC"];
 const subjects = ["Mathematics", "Science", "Physics", "Chemistry", "Biology", "English", "Hindi", "Social Science", "History", "Geography", "Computer Science"];
+function isValidDateString(value) {
+  if (!/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(value)) return false;
+  const [year, month, day] = value.split("-").map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  return date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day;
+}
 async function admin(req) {
   const user = await User.findById(req.user.id).select("role");
   return user?.role === "admin";
@@ -111,7 +117,7 @@ router.put("/profile/me", requireAuth, async (req,res,next) => {
 router.get("/study-plan/me", requireAuth, async (req, res, next) => {
   try {
     const board=String(req.query.board||""), grade=Number(req.query.grade), subject=String(req.query.subject||""), date=String(req.query.date||"");
-    if(!boards.includes(board)||!Number.isInteger(grade)||grade<1||grade>12||!subjects.includes(subject)||!/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(date)) return res.status(400).json({message:"Select a valid board, class, subject and date."});
+    if(!boards.includes(board)||!Number.isInteger(grade)||grade<1||grade>12||!subjects.includes(subject)||!isValidDateString(date)) return res.status(400).json({message:"Select a valid board, class, subject and date."});
     const plan=await EducationStudyPlan.findOne({student:req.user.id,board,grade,subject,planDate:date}).lean();
     res.json({plan:plan?{board:plan.board,grade:plan.grade,subject:plan.subject,planDate:plan.planDate,tasks:plan.tasks}:null});
   } catch(e) { next(e); }
@@ -135,5 +141,5 @@ router.put("/study-plan/me", requireAuth, async (req, res, next) => {
   } catch(e) { next(e); }
 });
 
-router.use((e,_req,res,_next)=>res.status(500).json({message:e.message||"Quiz request failed."}));
+router.use((e,_req,res,_next)=>{ console.error("Education quiz route error:", e); res.status(500).json({message:"Quiz request failed. Please try again."}); });
 export default router;
