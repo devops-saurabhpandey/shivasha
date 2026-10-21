@@ -10,6 +10,6 @@ const educationGuardianLinkSchema = new mongoose.Schema({
   revokedAt: { type: Date, default: null }
 }, { timestamps: true });
 
-educationGuardianLinkSchema.index({ student: 1, guardian: 1 }, { unique: true, partialFilterExpression: { guardian: { $type: "objectId" } } });
+educationGuardianLinkSchema.index({ student: 1, guardian: 1 }, { name: "approved_guardian_pair_unique", unique: true, partialFilterExpression: { guardian: { $type: "objectId" }, status: "approved" } });
 
 export default mongoose.model("EducationGuardianLink", educationGuardianLinkSchema);
