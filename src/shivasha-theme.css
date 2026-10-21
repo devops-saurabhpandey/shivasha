@@ -70,3 +70,77 @@ a { color: var(--sh-purple); }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; }
 }
+
+/* SHIVASHA brand palette aligned with the mobile home-screen reference */
+:root {
+  --sh-bg: #f7f9fc;
+  --sh-surface: #ffffff;
+  --sh-ink: #15233b;
+  --sh-muted: #66758b;
+  --sh-border: #e5eaf2;
+  --sh-nav-active: #e7eef7;
+  --sh-green: #187e79;
+  --sh-purple: #187e79;
+  --sh-purple-dark: #10203d;
+  --sh-shadow: 0 10px 30px rgba(21,35,59,.08);
+}
+a { color: #187e79; }
+.sidebar .nav-item.active, .sidebar .nav-item:hover { background: #e7eef7 !important; color: #15233b !important; }
+.primary, .topbar-logout, .login-button, .mobile-header button {
+  background: #172b4d !important;
+  color: #fff !important;
+}
+.primary:hover, .topbar-logout:hover, .login-button:hover { background: #23466a !important; }
+.share-app-button, .notification-badge, .message-unread {
+  background: #172b4d !important;
+  color: #fff !important;
+}
+.login-page { background: radial-gradient(ellipse at 90% 100%, rgba(124,226,210,.17), transparent 38%), #f7f9fc !important; }
+.login-card:before { background: linear-gradient(90deg, #10203d, #183b65, #7ce2d2) !important; }
+.shivasha-logo { color: #172b4d !important; border-color: #dce9f0 !important; background: #edf5fa !important; }
+.auth-tab.selected { color: #172b4d !important; }
+.switch-auth, .hashtag-link { color: #187e79 !important; }
+.wisdom-actions button.primary, .share-app-button {
+  background: linear-gradient(115deg, #10203d, #183b65 58%, #246a83) !important;
+}
+.live-hero, .astro-hero, .tax-hero {
+  background: linear-gradient(115deg, #10203d 0%, #183b65 58%, #246a83 100%) !important;
+}
+/* Public website: match the navy-to-teal hero, mint highlights and crisp headings. */
+.sh-public {
+  --ink: #15233b !important;
+  --muted: #66758b !important;
+  --line: #e5eaf2 !important;
+  background: #f7f9fc !important;
+  color: #15233b !important;
+}
+.sh-public .sh-nav { background: #f7f9fc !important; }
+.sh-public .sh-brand { color: #15233b !important; font-weight: 900 !important; }
+.sh-public .sh-mark { background: #172b4d !important; color: #fff !important; }
+.sh-public .sh-btn-dark { background: #172b4d !important; color: #fff !important; }
+.sh-public .sh-btn-dark:hover { background: #23466a !important; }
+.sh-public .sh-hero {
+  background: linear-gradient(115deg, #10203d 0%, #183b65 58%, #246a83 100%) !important;
+  color: #fff !important;
+}
+.sh-public .sh-hero h1 { color: #fff !important; font-weight: 900 !important; }
+.sh-public .sh-hero h1 span { color: #7ce2d2 !important; }
+.sh-public .sh-eyebrow { color: #c6f5ed !important; }
+.sh-public .sh-hero p { color: #d8e4f2 !important; }
+.sh-public .sh-hero .sh-btn-light { background: #fff !important; color: #17324f !important; }
+.sh-public .sh-hero .sh-btn:not(.sh-btn-light) { border-color: #ffffff45 !important; }
+.sh-public .sh-kicker { color: #187e79 !important; }
+.sh-public .sh-section-head h2,
+.sh-public .sh-card h3,
+.sh-public .sh-service h3 { color: #15233b !important; font-weight: 900 !important; }
+.sh-public .sh-card, .sh-public .sh-service { background: #fff !important; border-color: #e5eaf2 !important; }
+.sh-public .sh-filter button[aria-pressed="true"] { background: #172b4d !important; border-color: #172b4d !important; }
+.sh-public .sh-card-action button { color: #187e79 !important; }
+.sh-public .sh-game-panel { background: linear-gradient(135deg,#fff,#edf7fa) !important; }
+.sh-public .sh-game-tile { background: #17324f !important; }
+.sh-public .sh-game-tile[aria-pressed="true"] { background: #fff !important; color: #172b4d !important; border-color: #7ce2d2 !important; }
+.sh-public .sh-plan-grid .sh-plan { border-color: #e5eaf2 !important; }
+@media (max-width: 650px) {
+  .sh-public .sh-hero { border-radius: 28px !important; }
+  .sh-public .sh-section-head h2 { color: #15233b !important; }
+}
