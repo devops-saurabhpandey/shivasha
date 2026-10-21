@@ -279,3 +279,11 @@ Each entry should support: board, class/grade, subject, language, title, author,
 - Study-plan GET/PUT endpoints now validate that the supplied date is a real calendar date, not merely a string matching YYYY-MM-DD (for example, invalid month/day values are rejected).
 - Education quiz route errors are logged server-side and return a generic client-facing message rather than exposing the underlying exception message.
 - These are source-level changes only. Automated tests, database integration and live deployment have not yet been verified.
+
+
+## Student-approved guardian access (2026-10-21)
+
+- Added `EducationGuardianLink` records and authenticated endpoints to create a 24-hour invitation code, redeem it from a separate account, review pending requests, approve/reject/revoke a link, and retrieve a guardian's approved children's recent education progress.
+- Invitation codes are stored as SHA-256 hashes; a redeemed request does not expose progress until the student explicitly approves it.
+- Guardian progress is queried only through approved links belonging to the authenticated guardian. Returned reports are limited to the latest 50 attempts per student and include a last-seven-days summary.
+- This is a backend API foundation only. No parent dashboard UI has been connected yet. Automated tests, MongoDB index behavior, database integration and live deployment remain unverified. Product/legal review of guardian consent and child-data handling is still required before production use.
