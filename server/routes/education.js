@@ -1,12 +1,11 @@
 import { Router } from "express";
 import mongoose from "mongoose";
 import EducationResource from "../models/EducationResource.js";
+import { buildEducationResourceFilter } from "../utils/educationResourceFilters.js";
 import { requireAuth } from "../middleware/auth.js";
 
 const router = Router();
-const BOARDS = new Set(["CBSE", "ICSE", "ISC"]);
-const TYPES = new Set(["Textbooks", "Workbooks", "Reference Books", "Exam Preparation", "Digital Learning"]);
-const SUBJECTS = new Set(["Mathematics", "Science", "Physics", "Chemistry", "Biology", "English", "Hindi", "Social Science", "History", "Geography", "Computer Science"]);
+
 const safeHttpUrl = value => {
   try { const url = new URL(String(value || "")); return ["https:", "http:"].includes(url.protocol) ? url.toString() : ""; }
   catch { return ""; }
@@ -14,27 +13,9 @@ const safeHttpUrl = value => {
 
 router.get("/resources", requireAuth, async (req, res, next) => {
   try {
-    const filter = {};
-    if (req.query.board) {
-      const board = String(req.query.board);
-      if (!BOARDS.has(board)) return res.status(400).json({ message: "Select CBSE, ICSE or ISC." });
-      filter.board = board;
-    }
-    if (req.query.grade) {
-      const grade = Number(req.query.grade);
-      if (!Number.isInteger(grade) || grade < 1 || grade > 12) return res.status(400).json({ message: "Class must be from 1 to 12." });
-      filter.grade = grade;
-    }
-    if (req.query.subject) {
-      const subject = String(req.query.subject);
-      if (!SUBJECTS.has(subject)) return res.status(400).json({ message: "Select a supported subject." });
-      filter.subject = subject;
-    }
-    if (req.query.type) {
-      const type = String(req.query.type);
-      if (!TYPES.has(type)) return res.status(400).json({ message: "Select a supported resource type." });
-      filter.resourceType = type;
-    }
+    const parsed = buildEducationResourceFilter(req.query);
+    if (parsed.error) return res.status(400).json({ message: parsed.error });
+    const filter = parsed.filter;
 
     // Students only see reviewed catalogue entries. Admins may explicitly
     // request pending or all entries for moderation.
