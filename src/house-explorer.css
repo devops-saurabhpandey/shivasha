@@ -40,6 +40,8 @@
 .education-video-filters{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:16px}
 .education-video-filters label{display:flex;flex-direction:column;gap:6px;color:#4b586b;font-size:11px;font-weight:800}
 .education-video-filters select{width:100%;min-width:0;padding:11px;border:1px solid #d8e0ec;border-radius:10px;background:#fff;color:#172033;font:inherit;font-size:12px}
+.education-video-filters input{width:100%;min-width:0;box-sizing:border-box;padding:11px;border:1px solid #d8e0ec;border-radius:10px;background:#fff;color:#172033;font:inherit;font-size:12px}
+.education-video-filters select:focus-visible,.education-video-filters input:focus-visible{outline:3px solid #93c5fd;outline-offset:2px}
 .education-video-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:15px}
 .education-video-actions button{padding:11px 15px;border:1px solid #265fa8;border-radius:10px;background:#265fa8;color:#fff;font:inherit;font-size:12px;font-weight:850;cursor:pointer}
 .education-video-actions button.secondary{background:#fff;color:#265fa8}
