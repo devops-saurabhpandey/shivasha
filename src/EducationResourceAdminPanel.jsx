@@ -43,7 +43,7 @@ export default function EducationResourceAdminPanel({ auth, apiBase }) {
   async function submit(event) {
     event.preventDefault();
     setMessage("");
-    if (!/^https?:\\/\\//i.test(form.sourceUrl.trim())) {
+    if (!/^https?:\/\//i.test(form.sourceUrl.trim())) {
       setMessage("Official source ke liye valid http/https URL enter karein.");
       return;
     }
