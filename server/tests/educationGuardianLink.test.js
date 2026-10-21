@@ -18,6 +18,13 @@ test("approved guardian pair index is partial and unique", () => {
   assert.deepEqual(index[1].partialFilterExpression, { guardian: { $type: "objectId" }, status: "approved" });
 });
 
+test("pending guardian pair index prevents duplicate open requests", () => {
+  const index = EducationGuardianLink.schema.indexes().find(([, options]) => options.name === "pending_guardian_pair_unique");
+  assert.ok(index);
+  assert.equal(index[1].unique, true);
+  assert.deepEqual(index[1].partialFilterExpression, { guardian: { $type: "objectId" }, status: "pending" });
+});
+
 test("guardian link status is restricted to the supported lifecycle", () => {
   const statusPath = EducationGuardianLink.schema.path("status");
   assert.deepEqual(statusPath.enumValues, ["pending", "approved", "revoked"]);
