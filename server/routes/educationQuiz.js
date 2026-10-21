@@ -110,6 +110,17 @@ router.get("/attempts/:id/review", requireAuth, async(req,res,next)=>{
     res.json({attempt:{_id:String(attempt._id),board:attempt.board,grade:attempt.grade,subject:attempt.subject,scorePercent:attempt.scorePercent,correctCount:attempt.correctCount,totalQuestions:attempt.totalQuestions,createdAt:attempt.createdAt,answers}});
   }catch(e){next(e);}
 });
+router.delete("/attempts/:id", requireAuth, async (req, res, next) => {
+  try {
+    if (!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({ message: "Invalid test ID." });
+    const attempt = await EducationAttempt.findOneAndDelete({ _id: req.params.id, student: req.user.id });
+    if (!attempt) return res.status(404).json({ message: "Saved test not found." });
+    res.json({ success: true, id: String(attempt._id), message: "Test result deleted." });
+  } catch (e) {
+    next(e);
+  }
+});
+
 router.delete("/questions/:id",requireAuth,async(req,res,next)=>{
   try{if(!await admin(req))return res.status(403).json({message:"Admin access required."});if(!mongoose.isValidObjectId(req.params.id))return res.status(400).json({message:"Invalid question ID."});const q=await EducationQuestion.findByIdAndDelete(req.params.id);if(!q)return res.status(404).json({message:"Question not found."});res.json({success:true,id:req.params.id});}catch(e){next(e);}
 });
