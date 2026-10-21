@@ -36,6 +36,10 @@ jobs:
       - name: Install backend dependencies
         working-directory: server
         run: npm install
+      - name: Run backend tests
+        working-directory: server
+        run: npm test
+
       - name: Check backend JavaScript syntax
         shell: bash
         run: |
