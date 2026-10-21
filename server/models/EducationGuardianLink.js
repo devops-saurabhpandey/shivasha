@@ -11,6 +11,5 @@ const educationGuardianLinkSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 educationGuardianLinkSchema.index({ student: 1, guardian: 1 }, { unique: true });
-educationGuardianLinkSchema.index({ inviteExpiresAt: 1 }, { expireAfterSeconds: 0 });
 
 export default mongoose.model("EducationGuardianLink", educationGuardianLinkSchema);
