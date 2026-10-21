@@ -12,7 +12,7 @@ const groups = [
 const serviceDirectory = [
   { category: "SHIVASHA Social", name: "Creator Profiles & Social Posts", access: "Free", desc: "Build a creator presence, publish posts and connect with your audience." },
   { category: "SHIVASHA Social", name: "Live Video & Content Studio", access: "Free / Premium planned", desc: "Explore live content and creator production tools; any paid features should show pricing before use." },
-  { category: "SHIVASHA Social", name: "Creator Earnings", access: "Free", desc: "Review creator earning features and related account tools." },
+  { category: "SHIVASHA Social", name: "Audience Growth & Creator Insights", access: "Free / Premium planned", desc: "Explore audience-building guidance and future creator insights." },
   { category: "SHIVASHA Business Suite", name: "E-commerce & Product Listings", access: "Free", desc: "Showcase products and services so potential customers can discover your business." },
   { category: "SHIVASHA Business Suite", name: "Business Profiles & Customer Discovery", access: "Free", desc: "Create a public business presence and receive customer enquiries." },
   { category: "SHIVASHA Business Suite", name: "CRM, MIS & Business Software", access: "Free / Premium planned", desc: "Explore lead tracking, reporting and software tools for business operations." },
