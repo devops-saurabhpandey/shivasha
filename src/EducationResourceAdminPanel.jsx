@@ -63,8 +63,8 @@ export default function EducationResourceAdminPanel({ auth, apiBase }) {
       if (!response.ok) throw new Error(data.message || "Resource save nahi hua");
       setMessage("Resource save ho gaya. Students ko dikhne se pehle verification zaroori hai.");
       setForm(EMPTY_FORM);
-      setFilter("false");
-      await load();
+      // Changing the filter triggers the load effect with the new "pending" value.
+      // Avoid an immediate request using the stale "all" filter closure.
     } catch (error) {
       setMessage(error.message || "Resource save nahi hua");
     } finally {
