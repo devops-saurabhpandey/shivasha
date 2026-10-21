@@ -6,7 +6,8 @@ const groups = [
   { icon: "🎓", title: "SHIVASHA Edutech", tag: "LEARN", audience: "For Students", desc: "Learn with school-board resources, books, videos, quizzes and student progress tools.", items: ["CBSE, ICSE & ISC resources", "Books, videos & study material", "Practice tests & progress reports"], tone: "violet" },
   { icon: "📊", title: "SHIVASHA Finance", tag: "PLAN", audience: "For Individuals & Businesses", desc: "Use practical financial, tax, earning and planning tools to make better-informed decisions.", items: ["Tax & finance calculators", "Earning and commission tools", "Business finance resources"], tone: "green" },
   { icon: "🤖", title: "SHIVASHA AI & Wellness", tag: "ASSIST", audience: "For Everyday Guidance", desc: "Explore AI-powered help for everyday business and learning needs, plus general Ayurveda and wellness information.", items: ["AI assistant", "AI business assistance", "Ayurvedic information"], tone: "amber" },
-  { icon: "🕉️", title: "SHIVASHA Spiritual & Community", tag: "CONNECT", audience: "For Knowledge & Community", desc: "Explore spiritual learning, daily wisdom, cultural knowledge and community connections.", items: ["Daily wisdom & spiritual learning", "Calendar & knowledge hub", "Community posts & connections"], tone: "slate" }
+  { icon: "🕉️", title: "SHIVASHA Spiritual & Community", tag: "CONNECT", audience: "For Knowledge & Community", desc: "Explore spiritual learning, daily wisdom, cultural knowledge and community connections.", items: ["Daily wisdom & spiritual learning", "Calendar & knowledge hub", "Community posts & connections"], tone: "slate" },
+  { icon: "🎮", title: "SHIVASHA Games", tag: "PLAY", audience: "For Players & Families", desc: "Discover casual games, puzzles and learning games for fun and skill-building.", items: ["Casual games & puzzles", "Educational games", "Family-friendly challenges"], tone: "amber" }
 ];
 
 const serviceDirectory = [
@@ -33,7 +34,10 @@ const serviceDirectory = [
   { category: "SHIVASHA Spiritual & Community", name: "Spiritual Learning & Self-Knowledge", access: "Free", desc: "Explore spiritual topics, self-reflection and knowledge resources for personal learning." },
   { category: "SHIVASHA Spiritual & Community", name: "Daily Wisdom & Reflections", access: "Free", desc: "Read daily reflections and prompts for thoughtful self-development." },
   { category: "SHIVASHA Spiritual & Community", name: "Calendar & Cultural Knowledge", access: "Free", desc: "Explore cultural calendar information and general knowledge resources." },
-  { category: "SHIVASHA Spiritual & Community", name: "Community Posts & Connections", access: "Free", desc: "Discover community sharing features and connect around shared interests." }
+  { category: "SHIVASHA Spiritual & Community", name: "Community Posts & Connections", access: "Free", desc: "Discover community sharing features and connect around shared interests." },
+  { category: "SHIVASHA Games", name: "Casual Games & Puzzles", access: "Free", desc: "Play simple casual games and puzzles for entertainment." },
+  { category: "SHIVASHA Games", name: "Educational Games", access: "Free", desc: "Explore learning-focused games that support practice and problem-solving." },
+  { category: "SHIVASHA Games", name: "Family-Friendly Challenges", access: "Free", desc: "Discover approachable challenges designed for general audiences and family play." }
 ];
 
 export default function PublicHome({ onGetStarted, onLogin }) {
