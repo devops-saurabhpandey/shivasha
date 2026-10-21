@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "node --watch index.js",
     "start": "node index.js",
+    "test": "node --test",
     "admin:bootstrap": "node scripts/bootstrapAdmin.js"
   },
   "dependencies": {
