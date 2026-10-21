@@ -30,8 +30,10 @@ const serviceDirectory = [
   { category: "SHIVASHA AI & Wellness", name: "AI Education Help", access: "Free", desc: "Get learning support for concepts, study planning and practice questions; verify important academic information." },
   { category: "SHIVASHA AI & Wellness", name: "Ayurvedic Information Assistant", access: "Free", desc: "Explore general Ayurveda and wellness information, not a diagnosis or treatment plan." },
   { category: "SHIVASHA AI & Wellness", name: "Wellness & Lifestyle Guidance", access: "Free", desc: "Explore general information about healthy routines, sleep, hydration and balanced lifestyle habits." },
-  { category: "SHIVASHA Spiritual & Community", name: "Daily Wisdom & Spiritual Learning", access: "Free", desc: "Explore daily reflections, spiritual topics and self-development resources." },
-  { category: "SHIVASHA Spiritual & Community", name: "Calendar, Knowledge Hub & Community", access: "Free", desc: "Explore cultural calendar information, knowledge resources and community connections." }
+  { category: "SHIVASHA Spiritual & Community", name: "Spiritual Learning & Self-Knowledge", access: "Free", desc: "Explore spiritual topics, self-reflection and knowledge resources for personal learning." },
+  { category: "SHIVASHA Spiritual & Community", name: "Daily Wisdom & Reflections", access: "Free", desc: "Read daily reflections and prompts for thoughtful self-development." },
+  { category: "SHIVASHA Spiritual & Community", name: "Calendar & Cultural Knowledge", access: "Free", desc: "Explore cultural calendar information and general knowledge resources." },
+  { category: "SHIVASHA Spiritual & Community", name: "Community Posts & Connections", access: "Free", desc: "Discover community sharing features and connect around shared interests." }
 ];
 
 export default function PublicHome({ onGetStarted, onLogin }) {
