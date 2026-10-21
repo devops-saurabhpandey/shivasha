@@ -14,6 +14,7 @@ import AstroAICareerGuide from "./AstroAICareerGuide.jsx";
 import LiveStudio from "./LiveStudio.jsx";
 import TaxCalculators from "./TaxCalculators.jsx";
 import AyurvedicAIHelp from "./AyurvedicAIHelp.jsx";
+import PublicHome from "./PublicHome.jsx";
 
 const API_BASE = (import.meta.env.VITE_API_URL || "https://shivasha.onrender.com").replace(/\/$/, "");
 function apiFetch(path, auth, options = {}) {
@@ -32,8 +33,9 @@ function apiFetch(path, auth, options = {}) {
 }
 export default function App() {
   const [auth,setAuth]=useState(()=>{try{return JSON.parse(localStorage.getItem("shivasha_auth"))||null}catch{return null}});
-  if(!auth) return <Login onLogin={setAuth}/>;
-  return <SocialApp auth={auth} setAuth={setAuth} onLogout={()=>{localStorage.removeItem("shivasha_auth");setAuth(null)}}/>;
+  const [showLogin,setShowLogin]=useState(false);
+  if(!auth) return showLogin ? <Login onLogin={setAuth}/> : <PublicHome onGetStarted={()=>document.getElementById("services")?.scrollIntoView({behavior:"smooth"})} onLogin={()=>setShowLogin(true)}/>;
+  return <SocialApp auth={auth} setAuth={setAuth} onLogout={()=>{localStorage.removeItem("shivasha_auth");setAuth(null);setShowLogin(false)}}/>;
 }
 function Login({onLogin}) {
   const [mode,setMode]=useState("login"),[form,setForm]=useState({name:"",email:"",password:""}),[message,setMessage]=useState(""),[loading,setLoading]=useState(false),[showPassword,setShowPassword]=useState(false);
