@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo, useState } from "react";
 
 const groups = [
   { icon: "🏢", title: "Business", tag: "GROW", desc: "Find customers, showcase products, manage leads and grow your business.", items: ["Business profiles", "Customer discovery", "CRM & MIS tools"], tone: "blue" },
@@ -9,7 +9,28 @@ const groups = [
   { icon: "💬", title: "Community", tag: "CONNECT", desc: "Connect with people, share ideas and discover useful content.", items: ["Community posts", "Creator content", "Messages & connections"], tone: "slate" }
 ];
 
+const serviceDirectory = [
+  { category: "Business", name: "Business Profiles & Discovery", access: "Free", desc: "Create a public business presence and help customers discover your products or services." },
+  { category: "Business", name: "CRM & MIS Tools", access: "Free", desc: "Explore lead tracking and business reporting tools available in your account." },
+  { category: "Education", name: "CBSE / ICSE / ISC Resources", access: "Free", desc: "Browse school-board learning resources, books, videos and study support." },
+  { category: "Education", name: "Learning Resource Library", access: "Free", desc: "Find educational materials by class, subject and resource type." },
+  { category: "Finance", name: "Tax & Finance Calculators", access: "Free", desc: "Use practical calculators for estimates and planning; verify important decisions independently." },
+  { category: "Finance", name: "Creator Earnings", access: "Free", desc: "Review creator earning features and related account tools." },
+  { category: "AI & Wellness", name: "AI Business Assistance", access: "Free", desc: "Get guided information for common business questions." },
+  { category: "AI & Wellness", name: "Ayurvedic Information Assistant", access: "Free", desc: "Explore general Ayurveda and wellness information, not a diagnosis or treatment plan." },
+  { category: "Spirituality", name: "Daily Wisdom & Spiritual Learning", access: "Free", desc: "Explore daily reflections, spiritual topics and self-development resources." },
+  { category: "Spirituality", name: "Calendar & Knowledge Hub", access: "Free", desc: "Explore cultural calendar information and knowledge resources." },
+  { category: "Community", name: "Community Posts & Connections", access: "Free", desc: "Share posts, follow members and build community connections." },
+  { category: "Community", name: "Advanced Creator Tools", access: "Premium planned", desc: "Advanced creator capabilities may be introduced with clearly disclosed pricing later." }
+];
+
 export default function PublicHome({ onGetStarted, onLogin }) {
+  const [search, setSearch] = useState("");
+  const [activeCategory, setActiveCategory] = useState("All");
+  const [showDirectory, setShowDirectory] = useState(false);
+  const categories = ["All", ...groups.map(g => g.title)];
+  const filteredGroups = useMemo(() => groups.filter(g => (activeCategory === "All" || g.title === activeCategory) && (g.title + " " + g.desc + " " + g.items.join(" ")).toLowerCase().includes(search.toLowerCase().trim())), [activeCategory, search]);
+  const filteredServices = useMemo(() => serviceDirectory.filter(s => (activeCategory === "All" || s.category === activeCategory) && (s.category + " " + s.name + " " + s.desc + " " + s.access).toLowerCase().includes(search.toLowerCase().trim())), [activeCategory, search]);
   return <div className="sh-public">
     <style>{`
       .sh-public{--ink:#15233b;--muted:#66758b;--line:#e5eaf2;min-height:100vh;background:#f7f9fc;color:var(--ink);font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
@@ -42,6 +63,24 @@ export default function PublicHome({ onGetStarted, onLogin }) {
       .sh-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:17px}
       .sh-card{border:1px solid var(--line);background:#fff;border-radius:20px;padding:23px;min-height:245px;transition:transform .2s,box-shadow .2s}
       .sh-card:hover{transform:translateY(-4px);box-shadow:0 16px 36px #1c31500e}
+      .sh-discovery{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:14px;margin:22px 0 18px}
+      .sh-search{width:100%;min-width:0;border:1px solid #dce4ef;background:#fff;border-radius:13px;padding:14px 16px;font:inherit;font-size:14px;color:var(--ink);outline:none}
+      .sh-search:focus{border-color:#328b91;box-shadow:0 0 0 3px #328b9118}
+      .sh-filter{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 22px}
+      .sh-filter button{border:1px solid #dce4ef;background:#fff;color:#53627a;border-radius:999px;padding:9px 13px;font-size:11px;font-weight:800;cursor:pointer}
+      .sh-filter button[aria-pressed="true"]{background:#172b4d;border-color:#172b4d;color:#fff}
+      .sh-card{display:flex;flex-direction:column}
+      .sh-card .sh-items{margin-top:auto;padding-top:14px}
+      .sh-card-action{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:18px;padding-top:14px;border-top:1px solid #edf1f6}
+      .sh-card-action button{background:transparent;border:0;color:#167c7a;font-size:12px;font-weight:900;cursor:pointer;padding:4px 0}
+      .sh-service-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:18px}
+      .sh-service{background:#fff;border:1px solid var(--line);border-radius:15px;padding:17px}
+      .sh-service-top{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:9px}
+      .sh-service h3{font-size:14px;margin:0}
+      .sh-service p{font-size:12px;line-height:1.7;color:var(--muted);margin:0 0 12px}
+      .sh-access{font-size:10px;font-weight:900;border-radius:7px;padding:6px 8px;background:#e4f8ef;color:#18744b;white-space:nowrap}
+      .sh-access.planned{background:#fff2d9;color:#865800}
+      .sh-empty{background:white;border:1px dashed #cbd5e1;border-radius:16px;padding:24px;color:var(--muted);font-size:13px;grid-column:1/-1}
       .sh-card-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
       .sh-icon{width:49px;height:49px;display:grid;place-items:center;border-radius:15px;font-size:24px}
       .sh-tag{font-size:10px;font-weight:900;letter-spacing:1.1px;color:#7c8798}
@@ -60,7 +99,7 @@ export default function PublicHome({ onGetStarted, onLogin }) {
       .sh-bottom h2{font-size:25px;margin:0 0 8px}.sh-bottom p{color:#c6d3e3;font-size:13px;margin:0;line-height:1.7}
       .sh-footer{border-top:1px solid var(--line);padding:22px 0 28px;display:flex;justify-content:space-between;gap:16px;color:#718096;font-size:11px}
       @media(max-width:800px){.sh-links a:not(.sh-keep){display:none}.sh-hero{padding:45px 26px;min-height:0;margin-top:8px}.sh-hero h1{letter-spacing:-1.2px}.sh-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.sh-section-head{align-items:start;flex-direction:column}.sh-bottom{align-items:flex-start;flex-direction:column}}
-      @media(max-width:540px){.sh-wrap{width:calc(100% - 24px)}.sh-nav{height:68px}.sh-brand{font-size:16px}.sh-mark{width:37px;height:37px}.sh-links{gap:8px}.sh-links .sh-btn{padding:10px 12px}.sh-hero{border-radius:22px;padding:36px 22px}.sh-hero p{font-size:14px}.sh-trust{gap:12px}.sh-grid,.sh-plan-grid{grid-template-columns:1fr}.sh-card{min-height:0}.sh-plans{padding:22px;margin:42px 0}.sh-bottom{padding:25px 22px}.sh-footer{flex-direction:column}}
+      @media(max-width:650px){.sh-discovery{grid-template-columns:1fr}.sh-service-list{grid-template-columns:1fr}}\n      @media(max-width:540px){.sh-wrap{width:calc(100% - 24px)}.sh-nav{height:68px}.sh-brand{font-size:16px}.sh-mark{width:37px;height:37px}.sh-links{gap:8px}.sh-links .sh-btn{padding:10px 12px}.sh-hero{border-radius:22px;padding:36px 22px}.sh-hero p{font-size:14px}.sh-trust{gap:12px}.sh-grid,.sh-plan-grid{grid-template-columns:1fr}.sh-card{min-height:0}.sh-plans{padding:22px;margin:42px 0}.sh-bottom{padding:25px 22px}.sh-footer{flex-direction:column}}
     `}</style>
     <header className="sh-wrap sh-nav">
       <div className="sh-brand"><div className="sh-mark">शि</div><span>SHIVASHA</span></div>
@@ -78,7 +117,19 @@ export default function PublicHome({ onGetStarted, onLogin }) {
       </section>
       <section id="services" style={{paddingBottom:8}}>
         <div className="sh-section-head"><div><div className="sh-kicker">EXPLORE SHIVASHA</div><h2>Everything starts with a category.</h2></div><p>Move between practical services and discovery areas from one simple, mobile-friendly platform.</p></div>
-        <div className="sh-grid">{groups.map(g=><article className={"sh-card sh-"+g.tone} key={g.title}><div className="sh-card-top"><div className="sh-icon">{g.icon}</div><span className="sh-tag">{g.tag}</span></div><h3>{g.title}</h3><p>{g.desc}</p><div className="sh-items">{g.items.map(x=><span key={x}>{x}</span>)}</div></article>)}</div>
+        <div className="sh-discovery">
+          <input className="sh-search" type="search" value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search business, books, finance, Ayurveda…" aria-label="Search Shivasha services" />
+          <button className="sh-btn sh-btn-dark" onClick={()=>{setShowDirectory(true);document.getElementById("directory")?.scrollIntoView({behavior:"smooth"})}}>Find services</button>
+        </div>
+        <div className="sh-filter" role="group" aria-label="Filter by category">{categories.map(category=><button key={category} type="button" aria-pressed={activeCategory===category} onClick={()=>setActiveCategory(category)}>{category}</button>)}</div>
+        <div className="sh-grid">{filteredGroups.map(g=><article className={"sh-card sh-"+g.tone} key={g.title}><div className="sh-card-top"><div className="sh-icon">{g.icon}</div><span className="sh-tag">{g.tag}</span></div><h3>{g.title}</h3><p>{g.desc}</p><div className="sh-items">{g.items.map(x=><span key={x}>{x}</span>)}</div><div className="sh-card-action"><span style={{fontSize:11,color:"#718096"}}>{serviceDirectory.filter(s=>s.category===g.title).length} services</span><button type="button" onClick={()=>{setActiveCategory(g.title);setShowDirectory(true);document.getElementById("directory")?.scrollIntoView({behavior:"smooth"})}}>Explore category →</button></div></article>)}
+          {!filteredGroups.length&&<div className="sh-empty">No category matches “{search}”. Try another keyword or choose All.</div>}</div>
+      </section>
+      <section id="directory" style={{paddingTop:44,scrollMarginTop:24}}>
+        <div className="sh-section-head"><div><div className="sh-kicker">SERVICE DIRECTORY</div><h2>{activeCategory==="All"?"Browse available services":activeCategory+" services"}</h2></div><p>Choose a service to see its current access status. Sign in to open the account-based features.</p></div>
+        <div className="sh-service-list">{filteredServices.map(s=><article className="sh-service" key={s.category+s.name}><div className="sh-service-top"><h3>{s.name}</h3><span className={"sh-access"+(s.access!=="Free"?" planned":"")}>{s.access}</span></div><p>{s.desc}</p><button className="sh-btn sh-btn-light" onClick={onLogin}>Sign in to explore ↗</button></article>)}
+          {!filteredServices.length&&<div className="sh-empty">No services found for this search. Clear the search or select All.</div>}</div>
+        <p className="sh-note">“Premium planned” indicates a possible future offering only; paid subscriptions or payments are not activated by this label.</p>
       </section>
       <section id="plans" className="sh-plans">
         <div className="sh-kicker">CHOOSE YOUR ACCESS</div><h2 style={{fontSize:30,letterSpacing:"-1px",margin:"8px 0"}}>Start free. Upgrade when you need more.</h2><p style={{color:"#66758b",fontSize:13,lineHeight:1.7,maxWidth:680,margin:0}}>Services will be clearly marked so you can understand what is available at no cost and which features may require a premium plan.</p>
