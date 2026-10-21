@@ -43,7 +43,9 @@ router.post("/resources", requireAuth, async (req, res, next) => {
     const resourceType = String(body.resourceType || "");
     const title = String(body.title || "").trim().slice(0, 180);
     const sourceUrl = safeHttpUrl(body.sourceUrl);
-    if (!BOARDS.has(board) || !Number.isInteger(grade) || grade < 1 || grade > 12 || !SUBJECTS.has(subject) || !TYPES.has(resourceType) || !title || !sourceUrl) {
+    const priceProvided = body.price !== "" && body.price != null;
+    const price = priceProvided ? Number(body.price) : null;
+    if (!BOARDS.has(board) || !Number.isInteger(grade) || grade < 1 || grade > 12 || !SUBJECTS.has(subject) || !TYPES.has(resourceType) || !title || !sourceUrl || (priceProvided && (!Number.isFinite(price) || price < 0))) {
       return res.status(400).json({ message: "Provide a valid board, class, subject, resource type, title and HTTP(S) source URL." });
     }
     const resource = await EducationResource.create({
@@ -54,7 +56,7 @@ router.post("/resources", requireAuth, async (req, res, next) => {
       language: String(body.language || "English").trim().slice(0, 50),
       academicYear: String(body.academicYear || "").trim().slice(0, 20),
       isbn: String(body.isbn || "").trim().slice(0, 24),
-      price: body.price === "" || body.price == null ? null : Math.max(0, Number(body.price)),
+      price,
       currency: body.currency === "USD" ? "USD" : "INR",
       copyrightStatus: ["official-free", "authorized-listing", "permission-required", "unknown"].includes(body.copyrightStatus) ? body.copyrightStatus : "unknown",
       verified: false,
