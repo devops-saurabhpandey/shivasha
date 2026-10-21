@@ -1,5 +1,6 @@
 import "dotenv/config";
 import mongoose from "mongoose";
+import { formatDuplicatePairs, getGuardianIndexMigrationPlan } from "./guardianIndexMigrationPlan.js";
 
 const uri = process.env.MONGODB_URI || process.env.MONGO_URI;
 if (!uri) throw new Error("MONGODB_URI or MONGO_URI is required");
@@ -18,13 +19,7 @@ try {
   ]).toArray();
 
   if (duplicates.length) {
-    const details = duplicates.map(item => ({
-      student: String(item._id.student),
-      guardian: String(item._id.guardian),
-      status: item._id.status,
-      count: item.count,
-      linkIds: item.ids.map(String)
-    }));
+    const details = formatDuplicatePairs(duplicates);
     throw new Error(
       "Migration stopped before changing indexes: duplicate pending or approved student/guardian pairs exist. " +
       "Review these records, resolve duplicates, back up the database, and rerun. Examples: " +
@@ -33,7 +28,8 @@ try {
   }
 
   const dryRun = process.argv.includes("--dry-run");
-  const legacyUniqueIndexExists = indexes.some(index => index.name === "student_1_guardian_1" && index.unique);
+  const migrationPlan = getGuardianIndexMigrationPlan(indexes);
+  const legacyUniqueIndexExists = migrationPlan.dropLegacyUniqueIndex;
 
   if (dryRun) {
     console.log("Dry run only: no indexes were changed.");
