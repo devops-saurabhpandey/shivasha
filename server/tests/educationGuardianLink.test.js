@@ -108,3 +108,22 @@ test("database readiness returns 200 only when MongoDB is connected", () => {
   assert.equal(result.body.status, "ready");
   assert.equal(result.body.database, "connected");
 });
+
+import { buildEducationResourceFilter } from "../utils/educationResourceFilters.js";
+
+test("education catalogue filter accepts valid board, class, subject and type", () => {
+  assert.deepEqual(buildEducationResourceFilter({ board: "CBSE", grade: "10", subject: "Mathematics", type: "Textbooks" }), {
+    filter: { board: "CBSE", grade: 10, subject: "Mathematics", resourceType: "Textbooks" }
+  });
+});
+
+test("education catalogue filter rejects unsupported boards and subjects", () => {
+  assert.equal(buildEducationResourceFilter({ board: "OTHER" }).error, "Select CBSE, ICSE or ISC.");
+  assert.equal(buildEducationResourceFilter({ subject: "Unsupported" }).error, "Select a supported subject.");
+});
+
+test("education catalogue filter rejects invalid classes and resource types", () => {
+  assert.equal(buildEducationResourceFilter({ grade: "13" }).error, "Class must be from 1 to 12.");
+  assert.equal(buildEducationResourceFilter({ grade: "2.5" }).error, "Class must be from 1 to 12.");
+  assert.equal(buildEducationResourceFilter({ type: "Unlicensed PDFs" }).error, "Select a supported resource type.");
+});
