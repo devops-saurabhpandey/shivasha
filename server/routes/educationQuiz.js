@@ -148,7 +148,6 @@ router.put("/study-plan/me", requireAuth, async (req, res, next) => {
 // the guardian redeems it, and the student must explicitly approve the request.
 router.post("/guardian/invite", requireAuth, async (req,res,next) => {
   try {
-    const existing=await EducationGuardianLink.findOne({student:req.user.id,guardian:{$ne:null},status:"approved"}).lean();
     const code=randomBytes(18).toString("base64url");
     const inviteHash=createHash("sha256").update(code).digest("hex");
     const link=await EducationGuardianLink.create({student:req.user.id,status:"pending",inviteHash,inviteExpiresAt:new Date(Date.now()+24*60*60*1000)});
