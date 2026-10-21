@@ -271,13 +271,13 @@ export default function HouseExplorer({ auth, apiBase }) {
 
     <div className="purushartha-grid" aria-label="Four main categories">
       {PURUSHARTHAS.map(p => <button key={p.id} type="button" className={"purushartha-card " + p.color + (selectedCategory === p.id ? " selected" : "")} onClick={() => chooseCategory(p.id)} aria-pressed={selectedCategory === p.id}>
-        <span className="purushartha-icon">{p.icon}</span><span className="purushartha-english">{p.english}</span><strong>{p.name}</strong><span className="purushartha-tagline">{p.tagline}</span><p>{p.description}</p><small>Houses {p.houses.join(" · ")}</small>
+        <span className="purushartha-icon">{p.icon}</span><span className="purushartha-english">{p.english}</span><strong>{p.name}</strong><span className="purushartha-tagline">{p.tagline}</span><p>{p.description}</p>
       </button>)}
     </div>
     <div className="house-section-heading"><div><span className="house-kicker">{category.english} · SUBCATEGORIES</span><h2>{category.name}: 3 House Categories</h2><p>{category.description} Choose a house to explore its purpose, features and mapped modules.</p></div><label className="house-search"><span aria-hidden="true">⌕</span><input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search within this category" aria-label="Search houses or modules" /></label></div>
     <div className="house-grid">
       {visible.map(h => <button key={h.number} type="button" className={selected === h.number ? "house-card selected " + h.color : "house-card " + h.color} onClick={() => { setSelected(h.number); setSelectedCategory(h.purushartha); }} aria-pressed={selected === h.number}>
-        <span className="house-card-top"><span className="house-number">{String(h.number).padStart(2, "0")}</span><span className="house-symbol">{h.symbol}</span></span>
+        <span className="house-card-top"><span className="house-symbol">{h.symbol}</span></span>
         <span className="house-card-hindi">{h.hindi}</span><strong>{h.name}</strong><span className="house-card-purpose">{h.purpose}</span>
         <span className="house-card-modules">{h.modules.length} mapped module{h.modules.length === 1 ? "" : "s"}</span>
       </button>)}
