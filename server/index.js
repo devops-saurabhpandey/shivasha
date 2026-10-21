@@ -22,6 +22,7 @@ import liveVideoRoutes from "./routes/liveVideos.js";
 import educationRoutes from "./routes/education.js";
 import educationQuizRoutes from "./routes/educationQuiz.js";
 import ayurvedaAIRoutes from "./routes/ayurvedaAI.js";
+import subscriptionRoutes from "./routes/subscriptions.js";
 
 dotenv.config();
 
@@ -166,6 +167,7 @@ app.use("/api/live-videos", liveVideoRoutes);
 app.use("/api/education", educationRoutes);
 app.use("/api/education/quiz", educationQuizRoutes);
 app.use("/api/ayurveda-ai", ayurvedaAIRoutes);
+app.use("/api/subscriptions", subscriptionRoutes);
 
 app.get("/api", (_req, res) => res.json({ message: "SHIVASHA API is running" }));
 
