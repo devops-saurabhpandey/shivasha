@@ -709,3 +709,12 @@ body { background-color: #111827 !important; }
 }
 /* Keep the feed cards readable while removing the separate peach wallpaper. */
 .shivasha-feed { background: transparent; }
+
+
+/* Restore SHIVASHA's original clean white theme consistently across app screens. */
+body { background-color: #ffffff !important; }
+.social-shell {
+  background-color: #ffffff !important;
+  background-image: none !important;
+  color: #111827 !important;
+}
