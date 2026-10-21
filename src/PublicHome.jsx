@@ -27,7 +27,6 @@ const serviceDirectory = [
 export default function PublicHome({ onGetStarted, onLogin }) {
   const [search, setSearch] = useState("");
   const [activeCategory, setActiveCategory] = useState("All");
-  const [showDirectory, setShowDirectory] = useState(false);
   const categories = ["All", ...groups.map(g => g.title)];
   const filteredGroups = useMemo(() => groups.filter(g => (activeCategory === "All" || g.title === activeCategory) && (g.title + " " + g.desc + " " + g.items.join(" ")).toLowerCase().includes(search.toLowerCase().trim())), [activeCategory, search]);
   const filteredServices = useMemo(() => serviceDirectory.filter(s => (activeCategory === "All" || s.category === activeCategory) && (s.category + " " + s.name + " " + s.desc + " " + s.access).toLowerCase().includes(search.toLowerCase().trim())), [activeCategory, search]);
@@ -99,7 +98,8 @@ export default function PublicHome({ onGetStarted, onLogin }) {
       .sh-bottom h2{font-size:25px;margin:0 0 8px}.sh-bottom p{color:#c6d3e3;font-size:13px;margin:0;line-height:1.7}
       .sh-footer{border-top:1px solid var(--line);padding:22px 0 28px;display:flex;justify-content:space-between;gap:16px;color:#718096;font-size:11px}
       @media(max-width:800px){.sh-links a:not(.sh-keep){display:none}.sh-hero{padding:45px 26px;min-height:0;margin-top:8px}.sh-hero h1{letter-spacing:-1.2px}.sh-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.sh-section-head{align-items:start;flex-direction:column}.sh-bottom{align-items:flex-start;flex-direction:column}}
-      @media(max-width:650px){.sh-discovery{grid-template-columns:1fr}.sh-service-list{grid-template-columns:1fr}}\n      @media(max-width:540px){.sh-wrap{width:calc(100% - 24px)}.sh-nav{height:68px}.sh-brand{font-size:16px}.sh-mark{width:37px;height:37px}.sh-links{gap:8px}.sh-links .sh-btn{padding:10px 12px}.sh-hero{border-radius:22px;padding:36px 22px}.sh-hero p{font-size:14px}.sh-trust{gap:12px}.sh-grid,.sh-plan-grid{grid-template-columns:1fr}.sh-card{min-height:0}.sh-plans{padding:22px;margin:42px 0}.sh-bottom{padding:25px 22px}.sh-footer{flex-direction:column}}
+      @media(max-width:650px){.sh-discovery{grid-template-columns:1fr}.sh-service-list{grid-template-columns:1fr}}
+      @media(max-width:540px){.sh-wrap{width:calc(100% - 24px)}.sh-nav{height:68px}.sh-brand{font-size:16px}.sh-mark{width:37px;height:37px}.sh-links{gap:8px}.sh-links .sh-btn{padding:10px 12px}.sh-hero{border-radius:22px;padding:36px 22px}.sh-hero p{font-size:14px}.sh-trust{gap:12px}.sh-grid,.sh-plan-grid{grid-template-columns:1fr}.sh-card{min-height:0}.sh-plans{padding:22px;margin:42px 0}.sh-bottom{padding:25px 22px}.sh-footer{flex-direction:column}}
     `}</style>
     <header className="sh-wrap sh-nav">
       <div className="sh-brand"><div className="sh-mark">शि</div><span>SHIVASHA</span></div>
@@ -119,7 +119,7 @@ export default function PublicHome({ onGetStarted, onLogin }) {
         <div className="sh-section-head"><div><div className="sh-kicker">EXPLORE SHIVASHA</div><h2>Everything starts with a category.</h2></div><p>Move between practical services and discovery areas from one simple, mobile-friendly platform.</p></div>
         <div className="sh-discovery">
           <input className="sh-search" type="search" value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search business, books, finance, Ayurveda…" aria-label="Search Shivasha services" />
-          <button className="sh-btn sh-btn-dark" onClick={()=>{setShowDirectory(true);document.getElementById("directory")?.scrollIntoView({behavior:"smooth"})}}>Find services</button>
+          <button className="sh-btn sh-btn-dark" onClick={()=>{document.getElementById("directory")?.scrollIntoView({behavior:"smooth"})}}>Find services</button>
         </div>
         <div className="sh-filter" role="group" aria-label="Filter by category">{categories.map(category=><button key={category} type="button" aria-pressed={activeCategory===category} onClick={()=>setActiveCategory(category)}>{category}</button>)}</div>
         <div className="sh-grid">{filteredGroups.map(g=><article className={"sh-card sh-"+g.tone} key={g.title}><div className="sh-card-top"><div className="sh-icon">{g.icon}</div><span className="sh-tag">{g.tag}</span></div><h3>{g.title}</h3><p>{g.desc}</p><div className="sh-items">{g.items.map(x=><span key={x}>{x}</span>)}</div><div className="sh-card-action"><span style={{fontSize:11,color:"#718096"}}>{serviceDirectory.filter(s=>s.category===g.title).length} services</span><button type="button" onClick={()=>{setActiveCategory(g.title);setShowDirectory(true);document.getElementById("directory")?.scrollIntoView({behavior:"smooth"})}}>Explore category →</button></div></article>)}
