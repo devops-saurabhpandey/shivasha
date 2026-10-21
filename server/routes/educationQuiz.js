@@ -160,15 +160,17 @@ router.post("/guardian/redeem", requireAuth, async (req,res,next) => {
     const code=String(req.body?.code||"").trim();
     if(code.length<16||code.length>100) return res.status(400).json({message:"Enter a valid invitation code."});
     const inviteHash=createHash("sha256").update(code).digest("hex");
-    const link=await EducationGuardianLink.findOne({inviteHash,guardian:null,inviteExpiresAt:{$gt:new Date()},status:"pending"});
-    if(!link) return res.status(400).json({message:"Invitation is invalid, expired or already used."});
-    if(String(link.student)===String(req.user.id)) return res.status(400).json({message:"Use a different account as guardian."});
-    const duplicate=await EducationGuardianLink.findOne({student:link.student,guardian:req.user.id,status:{$in:["pending","approved"]}});
+    const preview=await EducationGuardianLink.findOne({inviteHash,guardian:null,inviteExpiresAt:{$gt:new Date()},status:"pending"}).select("student").lean();
+    if(!preview) return res.status(400).json({message:"Invitation is invalid, expired or already used."});
+    if(String(preview.student)===String(req.user.id)) return res.status(400).json({message:"Use a different account as guardian."});
+    const duplicate=await EducationGuardianLink.findOne({student:preview.student,guardian:req.user.id,status:{$in:["pending","approved"]}});
     if(duplicate) return res.status(409).json({message:"A link request already exists for these accounts."});
-    link.guardian=req.user.id;
-    link.inviteHash=createHash("sha256").update(randomBytes(32).toString("hex")).digest("hex");
-    link.inviteExpiresAt=new Date(0);
-    await link.save();
+    const link=await EducationGuardianLink.findOneAndUpdate(
+      {inviteHash,student:preview.student,guardian:null,inviteExpiresAt:{$gt:new Date()},status:"pending"},
+      {$set:{guardian:req.user.id,inviteHash:createHash("sha256").update(randomBytes(32).toString("hex")).digest("hex"),inviteExpiresAt:new Date(0)}},
+      {new:true}
+    );
+    if(!link) return res.status(409).json({message:"Invitation was already redeemed. Ask the student to generate a new code."});
     res.status(201).json({message:"Request sent. The student must approve it before any progress is shared."});
   } catch(e) { next(e); }
 });
