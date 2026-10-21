@@ -69,7 +69,7 @@ function EducationQuizApi({auth,apiBase,board,grade,subject}) {
   catch(e){setMessage(e.message||"Could not load test history.");}
   finally{setHistoryLoading(false);}
  };
- useEffect(()=>{loadHistory();},[auth?.token,apiBase]);
+ useEffect(()=>{if(!auth?.token||!apiBase){setHistory([]);setHistoryLoading(false);return;}setHistory([]);loadHistory();},[auth?.token,apiBase]);
  useEffect(()=>{if(!auth?.token||!apiBase){setStudentProfile(null);return;}let active=true;fetch(apiBase+"/api/education/quiz/profile/me",{headers:{Authorization:"Bearer "+auth.token}}).then(r=>r.json()).then(d=>{if(active){setStudentProfile(d.profile||null);if([5,10,15,20].includes(Number(d.profile?.dailyQuestionGoal)))setDailyGoal(Number(d.profile.dailyQuestionGoal));}}).catch(()=>{if(active)setStudentProfile(null);});return()=>{active=false;};},[auth?.token,apiBase]);
  const saveStudentProfile=async()=>{setProfileMessage("");try{const r=await fetch(apiBase+"/api/education/quiz/profile/me",{method:"PUT",headers:{"Content-Type":"application/json",Authorization:"Bearer "+auth.token},body:JSON.stringify({board,grade:Number(String(grade).replace("Class ","")),subject,dailyQuestionGoal:dailyGoal})});const d=await r.json();if(!r.ok)throw new Error(d.message||"Could not save profile");setStudentProfile(d.profile);setProfileMessage("Profile saved to your account.");}catch(e){setProfileMessage(e.message||"Could not save profile.");}};
 
