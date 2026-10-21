@@ -83,7 +83,8 @@ export default function EducationAdminPanel({ auth, apiBase }) {
     setMessage("");
     const options = form.options.split("\n").map(value => value.trim()).filter(Boolean);
     if (options.length < 2 || options.length > 6) { setMessage("Enter 2–6 options, one per line."); return; }
-    if (Number(form.answerIndex) >= options.length) { setMessage("The selected correct option does not exist. Choose a valid option."); return; }
+    const answerIndex = Number(form.answerIndex);
+    if (!Number.isInteger(answerIndex) || answerIndex < 0 || answerIndex >= options.length) { setMessage("The selected correct option does not exist. Choose a valid option."); return; }
     setBusy(true);
     try {
       const response = await fetch(apiBase + "/api/education/quiz/questions" + (editingId ? "/" + editingId : ""), {
