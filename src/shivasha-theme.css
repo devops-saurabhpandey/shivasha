@@ -144,3 +144,22 @@ a { color: #187e79; }
   .sh-public .sh-hero { border-radius: 28px !important; }
   .sh-public .sh-section-head h2 { color: #15233b !important; }
 }
+
+/* Authenticated dashboard: align with the public navy, teal and white theme */
+.social-shell{background:#f7f9fc!important;color:#15233b!important}
+.social-shell .mobile-header,.social-shell .topbar{background:#fff!important;color:#15233b!important;border-bottom:1px solid #e5eaf2!important}
+.social-shell .mobile-header b,.social-shell .topbar h1,.social-shell .content h1,.social-shell .content h2,.social-shell .content h3,.social-shell .feed-head h2{color:#15233b!important;font-weight:900!important}
+.social-shell .mobile-header button,.social-shell .primary,.social-shell .topbar-logout{background:#172b4d!important;color:#fff!important;border-radius:10px!important}
+.social-shell .sidebar{background:#fff!important;color:#15233b!important;border-right:1px solid #e5eaf2!important}
+.social-shell .brand-mark{background:#172b4d!important;color:#fff!important}
+.social-shell .brand b,.social-shell .sidebar-user b{color:#15233b!important;font-weight:900!important}
+.social-shell .brand small,.social-shell .sidebar-user small{color:#66758b!important}
+.social-shell .sidebar .nav-item{color:#53627a!important;border-radius:12px!important}
+.social-shell .sidebar .nav-item.active,.social-shell .sidebar .nav-item:hover{background:#e7eef7!important;color:#15233b!important}
+.social-shell .panel,.social-shell .post-card,.social-shell .person-card,.social-shell .profile-hero,.social-shell .public-profile,.social-shell .messenger-layout,.social-shell .subscription-card,.social-shell .notifications-panel{background:#fff!important;border-color:#e5eaf2!important;box-shadow:0 8px 24px rgba(21,35,59,.055)!important;border-radius:16px!important}
+.social-shell .secondary,.social-shell .logout{background:#edf2f8!important;color:#15233b!important}
+.social-shell .notification-badge,.social-shell .message-unread{background:#187e79!important;color:#fff!important}
+.social-shell .eyebrow{color:#187e79!important}
+.social-shell .messenger-layout .chat-messages{background:#f2f6fa!important}
+.social-shell .message.mine span{background:#172b4d!important;color:#fff!important}
+@media(max-width:650px){.social-shell .sidebar,.social-shell .sidebar nav{background:#fff!important}.social-shell .sidebar .nav-item.active{background:#e7eef7!important}}
