@@ -141,6 +141,26 @@ app.get("/api/health", (_req, res) => {
   });
 });
 
+// Readiness is stricter than liveness: deployment platforms can use this
+// endpoint to avoid routing traffic to an instance without its database.
+app.get("/api/ready", (_req, res) => {
+  const databaseReady = mongoose.connection.readyState === 1;
+  if (!databaseReady) {
+    return res.status(503).json({
+      success: false,
+      service: "SHIVASHA API",
+      status: "not-ready",
+      database: "not-connected"
+    });
+  }
+  return res.json({
+    success: true,
+    service: "SHIVASHA API",
+    status: "ready",
+    database: "connected"
+  });
+});
+
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/posts", postRoutes);
