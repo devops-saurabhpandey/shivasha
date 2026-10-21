@@ -10,6 +10,14 @@ const educationGuardianLinkSchema = new mongoose.Schema({
   revokedAt: { type: Date, default: null }
 }, { timestamps: true });
 
-educationGuardianLinkSchema.index({ student: 1, guardian: 1 }, { name: "approved_guardian_pair_unique", unique: true, partialFilterExpression: { guardian: { $type: "objectId" }, status: "approved" } });
+// Prevent duplicate links in each active state while allowing a revoked pair to be linked again.
+educationGuardianLinkSchema.index(
+  { student: 1, guardian: 1 },
+  { name: "approved_guardian_pair_unique", unique: true, partialFilterExpression: { guardian: { $type: "objectId" }, status: "approved" } }
+);
+educationGuardianLinkSchema.index(
+  { student: 1, guardian: 1 },
+  { name: "pending_guardian_pair_unique", unique: true, partialFilterExpression: { guardian: { $type: "objectId" }, status: "pending" } }
+);
 
 export default mongoose.model("EducationGuardianLink", educationGuardianLinkSchema);
