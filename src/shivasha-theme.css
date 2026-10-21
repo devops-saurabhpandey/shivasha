@@ -1,0 +1,72 @@
+/* SHIVASHA unified design system — inspired by the official dashboard screenshot. */
+:root {
+  --sh-bg: #f7f8fc;
+  --sh-surface: #ffffff;
+  --sh-ink: #182235;
+  --sh-muted: #667085;
+  --sh-border: #e2e6ef;
+  --sh-nav-active: #e8eef9;
+  --sh-green: #21845f;
+  --sh-purple: #6736c8;
+  --sh-purple-dark: #25164d;
+  --sh-shadow: 0 8px 28px rgba(24,34,53,.07);
+  color-scheme: light;
+}
+html { background: var(--sh-bg); }
+body { background: var(--sh-bg) !important; color: var(--sh-ink); }
+#root { min-height: 100vh; }
+button, input, textarea, select { font: inherit; }
+button { -webkit-tap-highlight-color: transparent; }
+a { color: var(--sh-purple); }
+.social-shell { background: var(--sh-bg) !important; background-image: none !important; color: var(--sh-ink) !important; }
+.sidebar { background: var(--sh-surface) !important; color: var(--sh-ink) !important; border-right: 1px solid var(--sh-border) !important; }
+.sidebar .brand b, .sidebar-user b { color: var(--sh-ink) !important; }
+.sidebar .brand small, .sidebar-user small { color: var(--sh-muted) !important; }
+.sidebar .nav-item { color: #596579 !important; border-radius: 12px !important; transition: background .18s ease, color .18s ease; }
+.sidebar .nav-item.active, .sidebar .nav-item:hover { background: var(--sh-nav-active) !important; color: var(--sh-ink) !important; }
+.mobile-header { background: var(--sh-surface) !important; color: var(--sh-ink) !important; border-bottom: 1px solid var(--sh-border) !important; }
+.mobile-header button { background: var(--sh-ink) !important; color: #fff !important; }
+.topbar { background: rgba(255,255,255,.96) !important; border-bottom: 1px solid var(--sh-border) !important; }
+.topbar h1, .content h1, .content h2, .content h3, .feed-head h2 { color: var(--sh-ink); }
+.eyebrow, .muted, .empty { color: var(--sh-muted); }
+.panel, .post-card, .person-card, .profile-hero, .public-profile, .messenger-layout, .subscription-card, .notifications-panel {
+  background: var(--sh-surface) !important; border-color: var(--sh-border) !important; box-shadow: var(--sh-shadow);
+}
+.primary, .topbar-logout, .login-button { background: var(--sh-ink) !important; color: #fff !important; border-radius: 10px !important; }
+.primary:hover, .topbar-logout:hover, .login-button:hover { background: #2c3c58 !important; }
+.secondary, .logout { background: #edf1f7 !important; color: var(--sh-ink) !important; border-radius: 10px !important; }
+.top-actions input, .panel input, .panel textarea, .login-card input, .comment-form input, .chat-form input {
+  border-color: #dce2ec !important; border-radius: 10px !important; color: var(--sh-ink);
+}
+.notification-button { background: #fff !important; border-color: var(--sh-border) !important; color: var(--sh-ink) !important; }
+.notification-badge, .message-unread { background: var(--sh-purple) !important; }
+.post-actions { border-color: var(--sh-border); }
+.post-actions button.liked { color: #c13e63; }
+.login-page { background: radial-gradient(ellipse at 90% 100%, rgba(103,54,200,.13), transparent 38%), var(--sh-bg) !important; }
+.login-card { background: rgba(255,255,255,.97) !important; border: 1px solid var(--sh-border) !important; box-shadow: 0 20px 60px rgba(24,34,53,.12) !important; }
+.login-card:before { background: linear-gradient(90deg, var(--sh-purple-dark), var(--sh-purple), #9c75ef) !important; }
+.shivasha-logo { color: var(--sh-purple-dark) !important; border-color: #e5dafb !important; background: #f7f3ff !important; }
+.login-brand b { color: var(--sh-ink) !important; }
+.auth-tabs { background: #f1f2f8 !important; border-color: var(--sh-border) !important; }
+.auth-tab.selected { color: var(--sh-purple-dark) !important; }
+.switch-auth, .hashtag-link { color: var(--sh-purple) !important; }
+.wisdom-card { border-color: #ead9b7; }
+.wisdom-actions button.primary { background: linear-gradient(110deg,var(--sh-purple-dark),var(--sh-purple)) !important; }
+.knowledge-card, .knowledge-live, .knowledge-news-tools { border-color: var(--sh-border) !important; }
+.knowledge-news-filters button.selected { background: var(--sh-ink) !important; border-color: var(--sh-ink) !important; }
+.share-app-button { background: linear-gradient(110deg,var(--sh-purple-dark),var(--sh-purple)) !important; border-color: transparent !important; }
+.subscription-featured { border-color: var(--sh-purple) !important; }
+.live-hero { background: linear-gradient(120deg,var(--sh-purple-dark),#49318c) !important; }
+.astro-hero, .tax-hero { background: linear-gradient(120deg,var(--sh-ink),#344968) !important; }
+@media (max-width: 650px) {
+  .social-shell { background: var(--sh-bg) !important; }
+  .sidebar { background: var(--sh-surface) !important; }
+  .sidebar nav { gap: 5px; }
+  .nav-item { background: transparent; }
+  .content { background: transparent; }
+  .topbar { background: var(--sh-surface) !important; }
+  .panel, .post-card, .person-card { border-radius: 14px !important; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; }
+}
