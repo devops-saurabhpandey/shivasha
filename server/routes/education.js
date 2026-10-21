@@ -1,7 +1,7 @@
 import { Router } from "express";
 import mongoose from "mongoose";
 import EducationResource from "../models/EducationResource.js";
-import { buildEducationResourceFilter } from "../utils/educationResourceFilters.js";
+import { BOARDS, SUBJECTS, TYPES, buildEducationResourceFilter } from "../utils/educationResourceFilters.js";
 import { requireAuth } from "../middleware/auth.js";
 
 const router = Router();
