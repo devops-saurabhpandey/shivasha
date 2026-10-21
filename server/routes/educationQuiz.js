@@ -8,6 +8,7 @@ import EducationStudentProfile from "../models/EducationStudentProfile.js";
 import EducationGuardianLink from "../models/EducationGuardianLink.js";
 import User from "../models/User.js";
 import { requireAuth } from "../middleware/auth.js";
+import { normalizeQuestionOptions, isValidSelectedIndex } from "../utils/educationQuizValidation.js";
 
 const router = Router();
 const boards = ["CBSE", "ICSE", "ISC"];
@@ -46,8 +47,8 @@ router.post("/questions", requireAuth, async (req,res,next) => {
   try {
     if(!await admin(req)) return res.status(403).json({message:"Admin access required."});
     const b=req.body||{}, board=String(b.board||""), grade=Number(b.grade), subject=String(b.subject||""), chapter=String(b.chapter||"").trim(), question=String(b.question||"").trim();
-    const rawOptions=Array.isArray(b.options)?b.options:[], options=rawOptions.map(x=>String(x).trim()).filter(Boolean), answerIndex=Number(b.answerIndex);
-    if(!boards.includes(board)||!Number.isInteger(grade)||grade<1||grade>12||!subjects.includes(subject)||!chapter||!question||rawOptions.length>6||options.length<2||!Number.isInteger(answerIndex)||answerIndex<0||answerIndex>=options.length) return res.status(400).json({message:"Check board, class, subject, chapter, question, options and answer."});
+    const options=normalizeQuestionOptions(b.options), answerIndex=Number(b.answerIndex);
+    if(!boards.includes(board)||!Number.isInteger(grade)||grade<1||grade>12||!subjects.includes(subject)||!chapter||!question||!options||!Number.isInteger(answerIndex)||answerIndex<0||answerIndex>=options.length) return res.status(400).json({message:"Check board, class, subject, chapter, question, options and answer."});
     const item=await EducationQuestion.create({board,grade,subject,chapter:chapter.slice(0,160),question:question.slice(0,2000),options,answerIndex,explanation:String(b.explanation||"").trim().slice(0,2000),sourceUrl:String(b.sourceUrl||"").slice(0,1000),published:false,createdBy:req.user.id});
     res.status(201).json({question:{_id:item._id,board,grade,subject,chapter,question,options,explanation:item.explanation,published:false},message:"Saved as draft; review before publishing."});
   } catch(e){next(e);}
@@ -57,8 +58,8 @@ router.patch("/questions/:id",requireAuth,async(req,res,next)=>{
     if(!await admin(req))return res.status(403).json({message:"Admin access required."});
     if(!mongoose.isValidObjectId(req.params.id))return res.status(400).json({message:"Invalid question ID."});
     const b=req.body||{},board=String(b.board||""),grade=Number(b.grade),subject=String(b.subject||""),chapter=String(b.chapter||"").trim(),question=String(b.question||"").trim();
-    const options=Array.isArray(b.options)?b.options.map(x=>String(x).trim()).filter(Boolean):[],answerIndex=Number(b.answerIndex);
-    if(!boards.includes(board)||!Number.isInteger(grade)||grade<1||grade>12||!subjects.includes(subject)||!chapter||!question||options.length<2||options.length>6||!Number.isInteger(answerIndex)||answerIndex<0||answerIndex>=options.length)return res.status(400).json({message:"Check board, class, subject, chapter, question, options and answer."});
+    const options=normalizeQuestionOptions(b.options),answerIndex=Number(b.answerIndex);
+    if(!boards.includes(board)||!Number.isInteger(grade)||grade<1||grade>12||!subjects.includes(subject)||!chapter||!question||!options||!Number.isInteger(answerIndex)||answerIndex<0||answerIndex>=options.length)return res.status(400).json({message:"Check board, class, subject, chapter, question, options and answer."});
     const item=await EducationQuestion.findOneAndUpdate({_id:req.params.id,published:false},{$set:{board,grade,subject,chapter:chapter.slice(0,160),question:question.slice(0,2000),options,answerIndex,explanation:String(b.explanation||"").trim().slice(0,2000),sourceUrl:String(b.sourceUrl||"").slice(0,1000)}},{new:true,runValidators:true});
     if(!item)return res.status(404).json({message:"Draft not found. Published questions cannot be edited; unpublish it first."});
     res.json({question:{_id:item._id,board:item.board,grade:item.grade,subject:item.subject,chapter:item.chapter,question:item.question,options:item.options,published:item.published},message:"Draft updated."});
@@ -82,7 +83,7 @@ router.post("/attempts", requireAuth, async(req,res,next)=>{
     const qs=await EducationQuestion.find({_id:{$in:ids},board,grade,subject,published:true}).select("question answerIndex options chapter explanation");
     if(qs.length!==ids.length) return res.status(400).json({message:"One or more questions are unavailable."});
     const map=new Map(qs.map(q=>[String(q._id),q]));
-    const checked=answers.map(a=>{const q=map.get(String(a.questionId)),n=a?.selectedIndex;return Number.isInteger(n)&&n>=0&&n<q.options.length?{question:q._id,chapter:q.chapter||"Uncategorized",selectedIndex:n,correct:n===q.answerIndex,questionText:q.question||"",optionsSnapshot:[...q.options],correctIndexSnapshot:q.answerIndex,explanationSnapshot:q.explanation||""}:null;});
+    const checked=answers.map(a=>{const q=map.get(String(a.questionId)),n=a?.selectedIndex;return isValidSelectedIndex(n,q.options.length)?{question:q._id,chapter:q.chapter||"Uncategorized",selectedIndex:n,correct:n===q.answerIndex,questionText:q.question||"",optionsSnapshot:[...q.options],correctIndexSnapshot:q.answerIndex,explanationSnapshot:q.explanation||""}:null;});
     if(checked.some(a=>!a)) return res.status(400).json({message:"Choose a valid option for every answer."});
     const correctCount=checked.filter(a=>a.correct).length,scorePercent=Math.round(correctCount/checked.length*100);
     const attempt=await EducationAttempt.create({student:req.user.id,board,grade,subject,answers:checked,totalQuestions:checked.length,correctCount,scorePercent});
