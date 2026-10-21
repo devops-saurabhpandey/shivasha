@@ -115,10 +115,12 @@ function SocialApp({auth,setAuth,onLogout}) {
     <header className="mobile-header"><b>SHIVASHA</b><button onClick={onLogout}>Logout</button></header>
     <aside className="sidebar"><div className="brand"><div className="brand-mark" aria-label="एको ब्रह्म द्वितीयो नास्ति।">एको ब्रह्म<br/>द्वितीयो नास्ति।</div><div><b>SHIVASHA</b><small>Social • Connect • Share</small></div></div><nav>
       {[
-        {title:"1. धर्म • KNOWLEDGE",free:[["wisdom","🕉","आज का ज्ञान"],["hindu-calendar","🗓","हिंदू कैलेंडर"],["government-schemes","🏛","सरकारी योजनाएँ"],["science","🔬","Science"],["current-affairs","📰","Current Affairs"]],paid:[["software-hub","🧩","Software Directory"]]},
-        {title:"2. अर्थ • BUSINESS & WEALTH",free:[["crm","👥","CRM"],["mis","📊","MIS Reports"],["tax-calculators","₹","Tax Calculators"],["technology","💻","Technology"],["admin","⚙","Admin / Company Tools"]],paid:[["ecommerce","🛍","E-commerce Services"],["business-law-ai","⚖","Business & Law AI"],["creator-earnings","💰","Creator Earnings"]]},
-        {title:"3. काम • SOCIAL & CREATIVITY",free:[["home","⌂","Home / Community"],["discover","◎","Discover"],["create","＋","Create Post"],["messages","✉","Messages"],["saved","🔖","Saved Posts"],["profile","◉","Profile"]],paid:[["live","🔴","Live Video"],["content-studio","▶","Content Studio"]]},
-        {title:"4. मोक्ष • SELF & WELLNESS",free:[["houses","☼","4 Purusharthas / Houses"],["ayurveda-ai","🌿","AI Ayurvedic Help"],["astro-career","✦","Astro AI Career Guide"]],paid:[]}
+        {title:"1. BUSINESS HOUSE • व्यवसाय",free:[["crm","👥","CRM & Customer Leads"],["mis","📊","MIS Reports"],["ecommerce","🛍","Products & Services"],["business-law-ai","⚖","Business & Law AI"]],paid:[["admin","⚙","Admin / Company Tools"]]},
+        {title:"2. EDUCATION HOUSE • शिक्षा",free:[["houses","📚","Education & 12 Houses"],["science","🔬","Science Learning"],["technology","💻","Technology Learning"],["current-affairs","📰","Current Affairs"]],paid:[["software-hub","🧩","Software & Learning Directory"]]},
+        {title:"3. FINANCE HOUSE • वित्त",free:[["tax-calculators","₹","Tax & Finance Calculators"],["creator-earnings","💰","Creator Earnings"]],paid:[["my-plan","💎","Membership & Plans"]]},
+        {title:"4. AI HOUSE • कृत्रिम बुद्धिमत्ता",free:[["ayurveda-ai","🌿","AI Ayurvedic Help"],["business-law-ai","🤖","AI Business Assistance"],["astro-career","✦","AI Career Guide"]],paid:[]},
+        {title:"5. SPIRITUALITY HOUSE • अध्यात्म",free:[["wisdom","🕉","Daily Wisdom"],["hindu-calendar","🗓","Hindu Calendar"],["government-schemes","🏛","Government Schemes & Knowledge"]],paid:[]},
+        {title:"6. COMMUNITY HOUSE • समुदाय",free:[["home","⌂","Home / Community"],["discover","◎","Discover People"],["create","＋","Create Post"],["messages","✉","Messages"],["saved","🔖","Saved Posts"],["profile","◉","My Profile"]],paid:[["live","🔴","Live Video"],["content-studio","▶","Content Studio"]]}
       ].map(group=><section key={group.title} style={{marginBottom:16}}>
         <div style={{fontSize:11,fontWeight:800,letterSpacing:".06em",color:"var(--muted,#8b93a7)",padding:"12px 10px 6px"}}>{group.title}</div>
         <div style={{fontSize:10,fontWeight:700,textTransform:"uppercase",padding:"4px 10px",color:"#16845b"}}>✓ Free services</div>
