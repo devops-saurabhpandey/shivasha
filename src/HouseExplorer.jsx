@@ -199,6 +199,17 @@ export default function HouseExplorer({ auth, apiBase }) {
   const [selected, setSelected] = useState(1);
   const [query, setQuery] = useState("");
   const [showPhases, setShowPhases] = useState(false);
+  const [videoBoard, setVideoBoard] = useState("CBSE");
+  const [videoGrade, setVideoGrade] = useState("Class 10");
+  const [videoSubject, setVideoSubject] = useState("Mathematics");
+  const [videoTopic, setVideoTopic] = useState("");
+  const [videoLanguage, setVideoLanguage] = useState("Hindi");
+  const openEducationVideoSearch = kind => {
+    const topic = videoTopic.trim();
+    const suffix = kind === "revision" ? "revision sample paper exam preparation" : "chapter explanation concept lesson";
+    const terms = [videoBoard, videoGrade, videoSubject, topic, videoLanguage, suffix].filter(Boolean).join(" ");
+    window.open("https://www.youtube.com/results?search_query=" + encodeURIComponent(terms), "_blank", "noopener,noreferrer");
+  };
   const visible = useMemo(() => HOUSES.filter(h => h.purushartha === selectedCategory && (h.name + " " + h.hindi + " " + h.purpose + " " + h.modules.join(" ")).toLowerCase().includes(query.toLowerCase())), [query, selectedCategory]);
   const active = HOUSES.find(h => h.number === selected) || HOUSES[0];
   const category = PURUSHARTHAS.find(p => p.id === selectedCategory) || PURUSHARTHAS[0];
@@ -248,18 +259,20 @@ export default function HouseExplorer({ auth, apiBase }) {
       </div>
       <EducationResources auth={auth} apiBase={apiBase} />
       <section className="education-videos" aria-labelledby="education-videos-title">
-        <div className="education-videos-heading"><span className="house-kicker">WATCH · LEARN · PRACTISE</span><h3 id="education-videos-title">Related Educational Videos</h3><p>Find chapter explanations, concept lessons, revision classes and exam-preparation videos relevant to the chosen board and class.</p></div>
+        <div className="education-videos-heading"><span className="house-kicker">WATCH · LEARN · PRACTISE</span><h3 id="education-videos-title">Related Educational Videos</h3><p>Board, class, subject, topic aur language select karke relevant lessons aur revision videos search karein.</p></div>
         <div className="education-video-filters">
-          <label>Board<select id="education-video-board" defaultValue="CBSE"><option value="CBSE">CBSE</option><option value="ICSE">ICSE</option><option value="ISC">ISC</option></select></label>
-          <label>Class<select id="education-video-class" defaultValue="Class 10">{Array.from({length:12},(_,i)=><option key={i+1} value={`Class ${i+1}`}>{`Class ${i+1}`}</option>)}</select></label>
-          <label>Subject<select id="education-video-subject" defaultValue="Mathematics"><option>Mathematics</option><option>Science</option><option>Physics</option><option>Chemistry</option><option>Biology</option><option>English</option><option>Hindi</option><option>Social Science</option><option>History</option><option>Geography</option><option>Computer Science</option></select></label>
+          <label>Board<select value={videoBoard} onChange={e => setVideoBoard(e.target.value)}><option value="CBSE">CBSE</option><option value="ICSE">ICSE</option><option value="ISC">ISC</option></select></label>
+          <label>Class<select value={videoGrade} onChange={e => setVideoGrade(e.target.value)}>{Array.from({length:12},(_,i)=><option key={i+1} value={`Class ${i+1}`}>{`Class ${i+1}`}</option>)}</select></label>
+          <label>Subject<select value={videoSubject} onChange={e => setVideoSubject(e.target.value)}>{["Mathematics","Science","Physics","Chemistry","Biology","English","Hindi","Social Science","History","Geography","Computer Science"].map(subject => <option key={subject}>{subject}</option>)}</select></label>
+          <label>Video language<select value={videoLanguage} onChange={e => setVideoLanguage(e.target.value)}><option>Hindi</option><option>English</option><option>Hindi English</option></select></label>
+          <label className="education-video-topic-field">Chapter / topic (optional)<input value={videoTopic} maxLength={100} placeholder="e.g. Linear equations" onChange={e => setVideoTopic(e.target.value)} onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); openEducationVideoSearch("lesson"); } }} /></label>
         </div>
         <div className="education-video-actions">
-          <button type="button" onClick={() => { const board=document.getElementById("education-video-board").value; const grade=document.getElementById("education-video-class").value; const subject=document.getElementById("education-video-subject").value; window.open("https://www.youtube.com/results?search_query="+encodeURIComponent(board+" "+grade+" "+subject+" chapter explanation"),"_blank","noopener,noreferrer"); }}>▶ Find chapter lessons</button>
-          <button type="button" className="secondary" onClick={() => { const board=document.getElementById("education-video-board").value; const grade=document.getElementById("education-video-class").value; const subject=document.getElementById("education-video-subject").value; window.open("https://www.youtube.com/results?search_query="+encodeURIComponent(board+" "+grade+" "+subject+" revision sample paper exam preparation"),"_blank","noopener,noreferrer"); }}>✦ Revision & exam preparation</button>
+          <button type="button" onClick={() => openEducationVideoSearch("lesson")}>▶ Find chapter lessons</button>
+          <button type="button" className="secondary" onClick={() => openEducationVideoSearch("revision")}>✦ Revision & exam preparation</button>
         </div>
         <div className="education-video-topics"><span>Explore video types</span><div><span>Chapter explanations</span><span>Concept animations</span><span>Revision lessons</span><span>Sample-paper solutions</span><span>Practical demonstrations</span></div></div>
-        <p className="education-video-note">These buttons open YouTube search results based on the selected board, class and subject. Videos are not yet individually curated or embedded inside Shivasha; review channel quality and syllabus alignment before featuring specific videos.</p>
+        <p className="education-video-note">Search results khulenge; videos abhi individually curated ya Shivasha mein embedded nahi hain. Kisi video ko recommend karne se pehle channel, syllabus aur content quality verify karein.</p>
       </section>
       <p className="education-books-note">Shivasha should show board, class, subject, book title, author/publisher, edition/year and official or seller source for each listing. Verify the current syllabus and prescribed list before recommending a book; avoid uploading copyrighted books without permission.</p>
     </section>}
