@@ -92,6 +92,21 @@ router.post("/attempts", requireAuth, async(req,res,next)=>{
 router.get("/attempts/me",requireAuth,async(req,res,next)=>{
   try{const attempts=await EducationAttempt.find({student:req.user.id}).select("board grade subject answers totalQuestions correctCount scorePercent createdAt").sort({createdAt:-1}).limit(50).lean();res.json({attempts});}catch(e){next(e);}
 });
+router.get("/attempts/:id/review", requireAuth, async(req,res,next)=>{
+  try{
+    if(!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({message:"Invalid test ID."});
+    const attempt=await EducationAttempt.findOne({_id:req.params.id,student:req.user.id}).lean();
+    if(!attempt) return res.status(404).json({message:"Saved test not found."});
+    const ids=attempt.answers.map(a=>a.question);
+    const questions=await EducationQuestion.find({_id:{$in:ids}}).select("question options answerIndex explanation chapter").lean();
+    const map=new Map(questions.map(q=>[String(q._id),q]));
+    const answers=attempt.answers.map(a=>{
+      const q=map.get(String(a.question));
+      return {questionId:String(a.question),chapter:a.chapter||q?.chapter||"Uncategorized",question:q?.question||"Question no longer available.",selectedIndex:a.selectedIndex,selectedOption:q?.options?.[a.selectedIndex]||"Option no longer available.",correctOption:Number.isInteger(q?.answerIndex)?q.options[q.answerIndex]:"Correct answer unavailable.",correct:a.correct,explanation:q?.explanation||""};
+    });
+    res.json({attempt:{_id:String(attempt._id),board:attempt.board,grade:attempt.grade,subject:attempt.subject,scorePercent:attempt.scorePercent,correctCount:attempt.correctCount,totalQuestions:attempt.totalQuestions,createdAt:attempt.createdAt,answers}});
+  }catch(e){next(e);}
+});
 router.delete("/questions/:id",requireAuth,async(req,res,next)=>{
   try{if(!await admin(req))return res.status(403).json({message:"Admin access required."});if(!mongoose.isValidObjectId(req.params.id))return res.status(400).json({message:"Invalid question ID."});const q=await EducationQuestion.findByIdAndDelete(req.params.id);if(!q)return res.status(404).json({message:"Question not found."});res.json({success:true,id:req.params.id});}catch(e){next(e);}
 });
