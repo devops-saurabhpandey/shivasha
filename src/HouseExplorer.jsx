@@ -135,6 +135,12 @@ function EducationGuardianPanel({auth,apiBase}) {
  <div className="education-guardian-children"><h5>Children linked to this guardian account</h5>{children.length?children.map(child=><article key={child.student.id}><div className="education-live-catalogue-heading"><strong>{child.student.name||"Student"}</strong><span>Linked with approval</span></div><div className="education-weekly-stats"><div><small>Tests · 7 days</small><strong>{child.summary.testsLast7Days}</strong></div><div><small>Questions · 7 days</small><strong>{child.summary.questionsLast7Days}</strong></div><div><small>Average score</small><strong>{child.summary.averageScoreLast7Days}%</strong></div></div>{child.recentAttempts.length?<div className="education-guardian-attempts">{child.recentAttempts.map((a,i)=><p key={i}>{a.board} · Class {a.grade} · {a.subject}: <strong>{a.scorePercent}%</strong> ({a.correctCount}/{a.totalQuestions}) <small>{new Date(a.createdAt).toLocaleDateString()}</small></p>)}</div>:<p>No saved tests yet.</p>}</article>):<p>No approved student links yet. Ask the student to generate a code and approve your request.</p>}</div>{status&&<p role="status" className="education-guardian-status">{status}</p>}</section>;
 }
 
+const EDUCATION_GRADES_BY_BOARD = {
+  CBSE: Array.from({ length: 12 }, (_, i) => `Class ${i + 1}`),
+  ICSE: Array.from({ length: 10 }, (_, i) => `Class ${i + 1}`),
+  ISC: ["Class 11", "Class 12"]
+};
+
 function EducationResources({ auth, apiBase }) {
   const [board, setBoard] = useState("CBSE");
   const [grade, setGrade] = useState("Class 10");
@@ -178,8 +184,8 @@ function EducationResources({ auth, apiBase }) {
     <section className="education-books" aria-labelledby="education-books-title">
       <div className="education-resource-heading"><span className="house-kicker">SHIVASHA EDUTECH · RESOURCE DIRECTORY</span><h3 id="education-books-title">Books & study resources</h3><p>Filter by board, class, subject and resource type. Official sources are prioritised; prescribed books can change by academic year.</p></div>
       <div className="education-catalogue-filters">
-        <label>Board<select value={board} onChange={e=>setBoard(e.target.value)}><option>CBSE</option><option>ICSE</option><option>ISC</option></select></label>
-        <label>Class<select value={grade} onChange={e=>setGrade(e.target.value)}>{Array.from({length:12},(_,i)=><option key={i+1}>Class {i+1}</option>)}</select></label>
+        <label>Board<select value={board} onChange={e=>{const nextBoard=e.target.value;setBoard(nextBoard);setGrade(current=>EDUCATION_GRADES_BY_BOARD[nextBoard].includes(current)?current:(nextBoard==="ISC"?"Class 11":nextBoard==="ICSE"?"Class 10":"Class 10"));}}><option>CBSE</option><option>ICSE</option><option>ISC</option></select></label>
+        <label>Class<select value={grade} onChange={e=>setGrade(e.target.value)}>{EDUCATION_GRADES_BY_BOARD[board].map(className=><option key={className}>{className}</option>)}</select></label>
         <label>Subject<select value={subject} onChange={e=>setSubject(e.target.value)}>{EDUCATION_SUBJECTS.map(s=><option key={s}>{s}</option>)}</select></label>
         <label>Resource type<select value={bookType} onChange={e=>setBookType(e.target.value)}><option>Textbooks</option><option>Workbooks</option><option>Reference Books</option><option>Exam Preparation</option><option>Digital Learning</option></select></label>
       </div>
