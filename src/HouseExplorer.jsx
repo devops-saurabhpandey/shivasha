@@ -257,15 +257,15 @@ export default function HouseExplorer({ auth, apiBase }) {
   return <section className="content house-explorer">
     <div className="house-hero">
       <div className="house-hero-copy">
-        <span className="house-kicker">SHIVASHA SOFTWARE COMPANY · FLAGSHIP PRODUCT</span>
+        <span className="house-kicker">FOUR PILLARS · CATEGORY EXPLORER</span>
         <h2>Four purposes. <span>One ecosystem.</span></h2>
-        <p>Explore Shivasha through the four Purusharthas — Dharma, Artha, Kaam and Moksh. The 12 Jyotish houses become subcategories inside these four main sections.</p>
+        <p>Explore the four Purusharthas — Dharma, Artha, Kaam and Moksh. The 12 Jyotish houses become subcategories inside these four main sections.</p>
         <div className="house-hero-stats"><span><b>4</b> Main Categories</span><span><b>12</b> House Subcategories</span><span><b>15</b> Product Modules</span></div>
       </div>
       <div className="purushartha-hero-visual" aria-label="Dharma, Artha, Kaam and Moksh">
         <div className="purushartha-orbit"></div>
         {PURUSHARTHAS.map(p => <div key={p.id} className={"purushartha-orbit-item " + p.color}><span>{p.icon}</span><b>{p.name}</b><small>{p.english}</small></div>)}
-        <div className="purushartha-orbit-center"><b>S</b><small>SHIVASHA</small></div>
+        <div className="purushartha-orbit-center"><b>✦</b><small>CATEGORIES</small></div>
       </div>
     </div>
 
