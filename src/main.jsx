@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import App from "./App";
 import UpdateChecker from "./UpdateChecker.jsx";
 import "./index.css";
+import "./shivasha-theme.css";
 
 function PwaControls() {
   const [installPrompt, setInstallPrompt] = useState(null);
