@@ -1,27 +1,30 @@
 import React, { useMemo, useState } from "react";
 
 const groups = [
-  { icon: "🏢", title: "Business", tag: "GROW", desc: "Find customers, showcase products, manage leads and grow your business.", items: ["Business profiles", "Customer discovery", "CRM & MIS tools"], tone: "blue" },
-  { icon: "📚", title: "Education", tag: "LEARN", desc: "Explore learning resources, school boards, books and educational content.", items: ["CBSE & ICSE resources", "Books & learning", "Educational videos"], tone: "violet" },
-  { icon: "📈", title: "Finance", tag: "PLAN", desc: "Use practical calculators and tools to make better-informed decisions.", items: ["Financial calculators", "Business tools", "Earning resources"], tone: "green" },
-  { icon: "🤖", title: "AI & Wellness", tag: "DISCOVER", desc: "Get guided information and explore AI-powered assistance responsibly.", items: ["AI assistant", "Ayurvedic information", "Wellness guidance"], tone: "amber" },
-  { icon: "🕉️", title: "Spirituality", tag: "EXPLORE", desc: "Discover spiritual knowledge, daily wisdom and self-development resources.", items: ["Daily wisdom", "Purushartha learning", "Spiritual resources"], tone: "rose" },
-  { icon: "💬", title: "Community", tag: "CONNECT", desc: "Connect with people, share ideas and discover useful content.", items: ["Community posts", "Creator content", "Messages & connections"], tone: "slate" }
+  { icon: "🎬", title: "SHIVASHA Social", tag: "CREATE", audience: "For Creators", desc: "Create, publish and grow your audience with social profiles, posts, live content and creator tools.", items: ["Creator profiles & posts", "Live video and content studio", "Creator earnings"], tone: "rose" },
+  { icon: "🛍️", title: "SHIVASHA Business Suite", tag: "GROW", audience: "For Business Owners", desc: "A connected place to showcase products, sell online, find customers and manage business operations and software tools.", items: ["E-commerce & product listings", "Business profiles, leads & CRM", "Software, MIS & business tools"], tone: "blue" },
+  { icon: "🎓", title: "SHIVASHA Edutech", tag: "LEARN", audience: "For Students", desc: "Learn with school-board resources, books, videos, quizzes and student progress tools.", items: ["CBSE, ICSE & ISC resources", "Books, videos & study material", "Practice tests & progress reports"], tone: "violet" },
+  { icon: "📊", title: "SHIVASHA Finance", tag: "PLAN", audience: "For Individuals & Businesses", desc: "Use practical financial, tax, earning and planning tools to make better-informed decisions.", items: ["Tax & finance calculators", "Earning and commission tools", "Business finance resources"], tone: "green" },
+  { icon: "🤖", title: "SHIVASHA AI & Wellness", tag: "ASSIST", audience: "For Everyday Guidance", desc: "Explore AI-powered help for everyday business and learning needs, plus general Ayurveda and wellness information.", items: ["AI assistant", "AI business assistance", "Ayurvedic information"], tone: "amber" },
+  { icon: "🕉️", title: "SHIVASHA Spiritual & Community", tag: "CONNECT", audience: "For Knowledge & Community", desc: "Explore spiritual learning, daily wisdom, cultural knowledge and community connections.", items: ["Daily wisdom & spiritual learning", "Calendar & knowledge hub", "Community posts & connections"], tone: "slate" }
 ];
 
 const serviceDirectory = [
-  { category: "Business", name: "Business Profiles & Discovery", access: "Free", desc: "Create a public business presence and help customers discover your products or services." },
-  { category: "Business", name: "CRM & MIS Tools", access: "Free", desc: "Explore lead tracking and business reporting tools available in your account." },
-  { category: "Education", name: "CBSE / ICSE / ISC Resources", access: "Free", desc: "Browse school-board learning resources, books, videos and study support." },
-  { category: "Education", name: "Learning Resource Library", access: "Free", desc: "Find educational materials by class, subject and resource type." },
-  { category: "Finance", name: "Tax & Finance Calculators", access: "Free", desc: "Use practical calculators for estimates and planning; verify important decisions independently." },
-  { category: "Finance", name: "Creator Earnings", access: "Free", desc: "Review creator earning features and related account tools." },
-  { category: "AI & Wellness", name: "AI Business Assistance", access: "Free", desc: "Get guided information for common business questions." },
-  { category: "AI & Wellness", name: "Ayurvedic Information Assistant", access: "Free", desc: "Explore general Ayurveda and wellness information, not a diagnosis or treatment plan." },
-  { category: "Spirituality", name: "Daily Wisdom & Spiritual Learning", access: "Free", desc: "Explore daily reflections, spiritual topics and self-development resources." },
-  { category: "Spirituality", name: "Calendar & Knowledge Hub", access: "Free", desc: "Explore cultural calendar information and knowledge resources." },
-  { category: "Community", name: "Community Posts & Connections", access: "Free", desc: "Share posts, follow members and build community connections." },
-  { category: "Community", name: "Advanced Creator Tools", access: "Premium planned", desc: "Advanced creator capabilities may be introduced with clearly disclosed pricing later." }
+  { category: "SHIVASHA Social", name: "Creator Profiles & Social Posts", access: "Free", desc: "Build a creator presence, publish posts and connect with your audience." },
+  { category: "SHIVASHA Social", name: "Live Video & Content Studio", access: "Free / Premium planned", desc: "Explore live content and creator production tools; any paid features should show pricing before use." },
+  { category: "SHIVASHA Social", name: "Creator Earnings", access: "Free", desc: "Review creator earning features and related account tools." },
+  { category: "SHIVASHA Business Suite", name: "E-commerce & Product Listings", access: "Free", desc: "Showcase products and services so potential customers can discover your business." },
+  { category: "SHIVASHA Business Suite", name: "Business Profiles & Customer Discovery", access: "Free", desc: "Create a public business presence and receive customer enquiries." },
+  { category: "SHIVASHA Business Suite", name: "CRM, MIS & Business Software", access: "Free / Premium planned", desc: "Explore lead tracking, reporting and software tools for business operations." },
+  { category: "SHIVASHA Edutech", name: "CBSE / ICSE / ISC Resources", access: "Free", desc: "Browse school-board learning resources, books, videos and study support." },
+  { category: "SHIVASHA Edutech", name: "Learning Resource Library", access: "Free", desc: "Find educational materials by class, subject and resource type." },
+  { category: "SHIVASHA Edutech", name: "Practice Tests & Student Progress", access: "Free", desc: "Practise quizzes, review saved results and track subject or chapter progress." },
+  { category: "SHIVASHA Finance", name: "Tax & Finance Calculators", access: "Free", desc: "Use practical calculators for estimates and planning; verify important decisions independently." },
+  { category: "SHIVASHA Finance", name: "Earning & Commission Tools", access: "Free", desc: "Explore earning calculators and commission-planning resources." },
+  { category: "SHIVASHA AI & Wellness", name: "AI Business Assistance", access: "Free", desc: "Get guided information for common business questions." },
+  { category: "SHIVASHA AI & Wellness", name: "Ayurvedic Information Assistant", access: "Free", desc: "Explore general Ayurveda and wellness information, not a diagnosis or treatment plan." },
+  { category: "SHIVASHA Spiritual & Community", name: "Daily Wisdom & Spiritual Learning", access: "Free", desc: "Explore daily reflections, spiritual topics and self-development resources." },
+  { category: "SHIVASHA Spiritual & Community", name: "Calendar, Knowledge Hub & Community", access: "Free", desc: "Explore cultural calendar information, knowledge resources and community connections." }
 ];
 
 export default function PublicHome({ onGetStarted, onLogin }) {
