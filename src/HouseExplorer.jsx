@@ -94,7 +94,7 @@ function EducationQuizApi({auth,apiBase,board,grade,subject}) {
  useEffect(()=>{if(mockActive&&secondsLeft===0&&!result){setMockActive(false);submit();}},[mockActive,secondsLeft,result]);
  const submit=async()=>{
   setMessage("");
-  const activeItems=items.filter(q=>selectedChapter==="all"||q.chapter===selectedChapter);
+  const activeItems=items.filter(q=>selectedChapter==="all"||(q.chapter||"Uncategorized")===selectedChapter);
   const answers=activeItems.filter(q=>Number.isInteger(picked[q._id])).map(q=>({questionId:q._id,selectedIndex:picked[q._id]}));
   if(!answers.length){setMessage("Please answer at least one question.");return;}
   try{
