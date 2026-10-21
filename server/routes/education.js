@@ -15,17 +15,39 @@ const safeHttpUrl = value => {
 router.get("/resources", requireAuth, async (req, res, next) => {
   try {
     const filter = {};
-    if (req.query.board && BOARDS.has(String(req.query.board))) filter.board = String(req.query.board);
+    if (req.query.board) {
+      const board = String(req.query.board);
+      if (!BOARDS.has(board)) return res.status(400).json({ message: "Select CBSE, ICSE or ISC." });
+      filter.board = board;
+    }
     if (req.query.grade) {
       const grade = Number(req.query.grade);
       if (!Number.isInteger(grade) || grade < 1 || grade > 12) return res.status(400).json({ message: "Class must be from 1 to 12." });
       filter.grade = grade;
     }
-    if (req.query.subject && SUBJECTS.has(String(req.query.subject))) filter.subject = String(req.query.subject);
-    if (req.query.type && TYPES.has(String(req.query.type))) filter.resourceType = String(req.query.type);
-    if (req.query.verified === "true") filter.verified = true;
+    if (req.query.subject) {
+      const subject = String(req.query.subject);
+      if (!SUBJECTS.has(subject)) return res.status(400).json({ message: "Select a supported subject." });
+      filter.subject = subject;
+    }
+    if (req.query.type) {
+      const type = String(req.query.type);
+      if (!TYPES.has(type)) return res.status(400).json({ message: "Select a supported resource type." });
+      filter.resourceType = type;
+    }
+
+    // Students only see reviewed catalogue entries. Admins may explicitly
+    // request pending or all entries for moderation.
+    filter.verified = true;
+    if (["false", "all"].includes(String(req.query.verified || ""))) {
+      const user = await mongoose.model("User").findById(req.user.id).select("role");
+      if (!user || user.role !== "admin") return res.status(403).json({ message: "Admin access required to view pending resources." });
+      if (req.query.verified === "false") filter.verified = false;
+      else delete filter.verified;
+    }
+
     const resources = await EducationResource.find(filter).sort({ verified: -1, board: 1, grade: 1, subject: 1, title: 1 }).limit(100).lean();
-    res.json({ resources, total: resources.length, message: resources.length ? "" : "No catalogue records yet. Add verified resources through the education admin workflow." });
+    res.json({ resources, total: resources.length, message: resources.length ? "" : "No matching verified catalogue records yet. Add and verify resources through the education admin workflow." });
   } catch (error) { next(error); }
 });
 
