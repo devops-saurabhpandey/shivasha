@@ -79,7 +79,7 @@ router.post("/attempts", requireAuth, async(req,res,next)=>{
     if(!boards.includes(board)||!Number.isInteger(grade)||grade<1||grade>12||!subjects.includes(subject)||!answers.length||answers.length>50) return res.status(400).json({message:"Submit a valid test."});
     const ids=answers.map(a=>String(a.questionId||""));
     if(ids.some(id=>!mongoose.isValidObjectId(id))||new Set(ids).size!==ids.length) return res.status(400).json({message:"Invalid or repeated question IDs."});
-    const qs=await EducationQuestion.find({_id:{$in:ids},board,grade,subject,published:true}).select("answerIndex options chapter");
+    const qs=await EducationQuestion.find({_id:{$in:ids},board,grade,subject,published:true}).select("answerIndex options chapter explanation");
     if(qs.length!==ids.length) return res.status(400).json({message:"One or more questions are unavailable."});
     const map=new Map(qs.map(q=>[String(q._id),q]));
     const checked=answers.map(a=>{const q=map.get(String(a.questionId)),n=Number(a.selectedIndex);return Number.isInteger(n)&&n>=0&&n<q.options.length?{question:q._id,chapter:q.chapter||"Uncategorized",selectedIndex:n,correct:n===q.answerIndex}:null;});
