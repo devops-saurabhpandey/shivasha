@@ -92,3 +92,19 @@ test("guardian migration duplicate report safely stringifies ids", () => {
     linkIds: ["507f1f77bcf86cd799439013", "507f1f77bcf86cd799439014"]
   }]);
 });
+
+import { getDatabaseReadiness } from "../utils/databaseReadiness.js";
+
+test("database readiness returns 503 while MongoDB is disconnected", () => {
+  const result = getDatabaseReadiness(0);
+  assert.equal(result.httpStatus, 503);
+  assert.equal(result.body.status, "not-ready");
+  assert.equal(result.body.database, "not-connected");
+});
+
+test("database readiness returns 200 only when MongoDB is connected", () => {
+  const result = getDatabaseReadiness(1);
+  assert.equal(result.httpStatus, 200);
+  assert.equal(result.body.status, "ready");
+  assert.equal(result.body.database, "connected");
+});
