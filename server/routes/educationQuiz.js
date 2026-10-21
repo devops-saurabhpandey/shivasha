@@ -171,7 +171,10 @@ router.post("/guardian/redeem", requireAuth, async (req,res,next) => {
     );
     if(!link) return res.status(409).json({message:"Invitation was already redeemed. Ask the student to generate a new code."});
     res.status(201).json({message:"Request sent. The student must approve it before any progress is shared."});
-  } catch(e) { next(e); }
+  } catch(e) {
+    if (e?.code === 11000) return res.status(409).json({message:"A link request already exists for these accounts. Ask the student to generate a new invitation if needed."});
+    next(e);
+  }
 });
 router.get("/guardian/requests/me", requireAuth, async (req,res,next) => {
   try {
