@@ -24,6 +24,8 @@ const serviceDirectory = [
   { category: "SHIVASHA Edutech", name: "Practice Tests & Student Progress", access: "Free", desc: "Practise quizzes, review saved results and track subject or chapter progress." },
   { category: "SHIVASHA Finance", name: "Tax & Finance Calculators", access: "Free", desc: "Use practical calculators for estimates and planning; verify important decisions independently." },
   { category: "SHIVASHA Finance", name: "Earning & Commission Tools", access: "Free", desc: "Explore earning calculators and commission-planning resources." },
+  { category: "SHIVASHA Finance", name: "Tax & Compliance Information", access: "Free", desc: "Find general information about PAN, GST and business tax compliance; confirm requirements with official sources or a qualified professional." },
+  { category: "SHIVASHA Finance", name: "Business Finance & Cash Flow", access: "Free", desc: "Organize business income, expenses, cash-flow estimates and basic financial planning." },
   { category: "SHIVASHA AI & Wellness", name: "AI Business Assistance", access: "Free", desc: "Get guided information for common business questions." },
   { category: "SHIVASHA AI & Wellness", name: "Ayurvedic Information Assistant", access: "Free", desc: "Explore general Ayurveda and wellness information, not a diagnosis or treatment plan." },
   { category: "SHIVASHA Spiritual & Community", name: "Daily Wisdom & Spiritual Learning", access: "Free", desc: "Explore daily reflections, spiritual topics and self-development resources." },
