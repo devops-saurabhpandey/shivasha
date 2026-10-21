@@ -86,7 +86,7 @@ router.post("/attempts", requireAuth, async(req,res,next)=>{
     if(checked.some(a=>!a)) return res.status(400).json({message:"Choose a valid option for every answer."});
     const correctCount=checked.filter(a=>a.correct).length,scorePercent=Math.round(correctCount/checked.length*100);
     const attempt=await EducationAttempt.create({student:req.user.id,board,grade,subject,answers:checked,totalQuestions:checked.length,correctCount,scorePercent});
-    res.status(201).json({attempt:{_id:attempt._id,board,grade,subject,totalQuestions:checked.length,correctCount,scorePercent,createdAt:attempt.createdAt,answers:checked.map(a=>({questionId:String(a.question),chapter:a.chapter,correct:a.correct,selectedIndex:a.selectedIndex}))}});
+    res.status(201).json({attempt:{_id:attempt._id,board,grade,subject,totalQuestions:checked.length,correctCount,scorePercent,createdAt:attempt.createdAt,answers:checked.map(a=>{const question=map.get(String(a.question));return {questionId:String(a.question),chapter:a.chapter,correct:a.correct,selectedIndex:a.selectedIndex,selectedOption:question.options[a.selectedIndex],correctOption:question.options[question.answerIndex],explanation:question.explanation||""};})}});
   }catch(e){next(e);}
 });
 router.get("/attempts/me",requireAuth,async(req,res,next)=>{
