@@ -272,3 +272,10 @@ Each entry should support: board, class/grade, subject, language, title, author,
 - The report uses the signed-in student's latest 50 attempts returned by the existing self-only history API; it is not a complete all-time analytics report.
 - Parent/guardian access remains out of scope until a verified relationship and authorization flow is implemented.
 - Frontend build and live deployment remain unverified.
+
+
+## Education API validation hardening (2026-10-21)
+
+- Study-plan GET/PUT endpoints now validate that the supplied date is a real calendar date, not merely a string matching YYYY-MM-DD (for example, invalid month/day values are rejected).
+- Education quiz route errors are logged server-side and return a generic client-facing message rather than exposing the underlying exception message.
+- These are source-level changes only. Automated tests, database integration and live deployment have not yet been verified.
