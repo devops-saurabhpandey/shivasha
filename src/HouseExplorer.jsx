@@ -38,7 +38,7 @@ const PHASES = [
 ];
 
 
-const EDUCATION_SUBJECTS = ["Mathematics", "Science", "English", "Hindi", "Social Science", "Computer Science"];
+const EDUCATION_SUBJECTS = ["Mathematics", "Science", "Physics", "Chemistry", "Biology", "English", "Hindi", "Social Science", "History", "Geography", "Computer Science"];
 const PRACTICE_QUESTIONS = [
   { subject: "Mathematics", question: "What is 12 × 8?", options: ["84", "96", "108", "88"], answer: 1, explain: "12 × 8 = 96." },
   { subject: "Science", question: "Which gas do green plants absorb during photosynthesis?", options: ["Oxygen", "Nitrogen", "Carbon dioxide", "Hydrogen"], answer: 2, explain: "Plants absorb carbon dioxide and use light energy during photosynthesis." },
