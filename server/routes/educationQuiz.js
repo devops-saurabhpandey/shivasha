@@ -184,12 +184,25 @@ router.patch("/guardian/links/:id", requireAuth, async (req,res,next) => {
     if(!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({message:"Invalid link ID."});
     const action=String(req.body?.action||"");
     if(!["approve","revoke","reject"].includes(action)) return res.status(400).json({message:"Choose approve, reject or revoke."});
-    const link=await EducationGuardianLink.findOne({_id:req.params.id,student:req.user.id,guardian:{$ne:null}});
-    if(!link) return res.status(404).json({message:"Guardian request not found."});
-    if(action==="approve") { if(link.status!=="pending") return res.status(409).json({message:"Only pending requests can be approved."}); link.status="approved"; link.approvedAt=new Date(); }
-    else { link.status="revoked"; link.revokedAt=new Date(); }
-    await link.save();
-    res.json({link:{id:String(link._id),status:link.status},message:action==="approve"?"Guardian access approved.":"Guardian access removed."});
+
+    // Use a conditional database update so concurrent approve/reject/revoke
+    // requests cannot overwrite a newer link state.
+    const expectedStatus=action==="revoke"?"approved":"pending";
+    const update=action==="approve"
+      ? {$set:{status:"approved",approvedAt:new Date()}}
+      : {$set:{status:"revoked",revokedAt:new Date()}};
+    const link=await EducationGuardianLink.findOneAndUpdate(
+      {_id:req.params.id,student:req.user.id,guardian:{$ne:null},status:expectedStatus},
+      update,
+      {new:true,runValidators:true}
+    ).select("_id status").lean();
+
+    if(!link) {
+      const exists=await EducationGuardianLink.exists({_id:req.params.id,student:req.user.id,guardian:{$ne:null}});
+      if(!exists) return res.status(404).json({message:"Guardian request not found."});
+      return res.status(409).json({message:action==="revoke"?"Only approved guardian links can be revoked.":"Only pending requests can be approved or rejected."});
+    }
+    res.json({link:{id:String(link._id),status:link.status},message:action==="approve"?"Guardian access approved.":action==="reject"?"Guardian request rejected.":"Guardian access removed."});
   } catch(e) { next(e); }
 });
 router.get("/guardian/children", requireAuth, async (req,res,next) => {
