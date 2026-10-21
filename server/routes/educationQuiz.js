@@ -1,9 +1,11 @@
 import { Router } from "express";
 import mongoose from "mongoose";
+import { createHash, randomBytes } from "node:crypto";
 import EducationQuestion from "../models/EducationQuestion.js";
 import EducationAttempt from "../models/EducationAttempt.js";
 import EducationStudyPlan from "../models/EducationStudyPlan.js";
 import EducationStudentProfile from "../models/EducationStudentProfile.js";
+import EducationGuardianLink from "../models/EducationGuardianLink.js";
 import User from "../models/User.js";
 import { requireAuth } from "../middleware/auth.js";
 
@@ -138,6 +140,66 @@ router.put("/study-plan/me", requireAuth, async (req, res, next) => {
       {new:true,upsert:true,runValidators:true,setDefaultsOnInsert:true}
     ).lean();
     res.json({plan:{board:plan.board,grade:plan.grade,subject:plan.subject,planDate:plan.planDate,tasks:plan.tasks},message:"Study plan saved to your account."});
+  } catch(e) { next(e); }
+});
+
+
+// Guardian linking is student-controlled: the student creates a short-lived code,
+// the guardian redeems it, and the student must explicitly approve the request.
+router.post("/guardian/invite", requireAuth, async (req,res,next) => {
+  try {
+    const existing=await EducationGuardianLink.findOne({student:req.user.id,guardian:{$ne:null},status:"approved"}).lean();
+    const code=randomBytes(18).toString("base64url");
+    const inviteHash=createHash("sha256").update(code).digest("hex");
+    const link=await EducationGuardianLink.create({student:req.user.id,status:"pending",inviteHash,inviteExpiresAt:new Date(Date.now()+24*60*60*1000)});
+    res.status(201).json({code,expiresAt:link.inviteExpiresAt,message:"Share this code only with your intended guardian. It expires in 24 hours."});
+  } catch(e) { next(e); }
+});
+router.post("/guardian/redeem", requireAuth, async (req,res,next) => {
+  try {
+    const code=String(req.body?.code||"").trim();
+    if(code.length<16||code.length>100) return res.status(400).json({message:"Enter a valid invitation code."});
+    const inviteHash=createHash("sha256").update(code).digest("hex");
+    const link=await EducationGuardianLink.findOne({inviteHash,guardian:null,inviteExpiresAt:{$gt:new Date()},status:"pending"});
+    if(!link) return res.status(400).json({message:"Invitation is invalid, expired or already used."});
+    if(String(link.student)===String(req.user.id)) return res.status(400).json({message:"Use a different account as guardian."});
+    const duplicate=await EducationGuardianLink.findOne({student:link.student,guardian:req.user.id,status:{$in:["pending","approved"]}});
+    if(duplicate) return res.status(409).json({message:"A link request already exists for these accounts."});
+    link.guardian=req.user.id;
+    link.inviteHash=createHash("sha256").update(randomBytes(32).toString("hex")).digest("hex");
+    link.inviteExpiresAt=new Date(0);
+    await link.save();
+    res.status(201).json({message:"Request sent. The student must approve it before any progress is shared."});
+  } catch(e) { next(e); }
+});
+router.get("/guardian/requests/me", requireAuth, async (req,res,next) => {
+  try {
+    const links=await EducationGuardianLink.find({student:req.user.id,guardian:{$ne:null},status:"pending"}).populate("guardian","name email").select("guardian status createdAt").lean();
+    res.json({requests:links});
+  } catch(e) { next(e); }
+});
+router.patch("/guardian/links/:id", requireAuth, async (req,res,next) => {
+  try {
+    if(!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({message:"Invalid link ID."});
+    const action=String(req.body?.action||"");
+    if(!["approve","revoke","reject"].includes(action)) return res.status(400).json({message:"Choose approve, reject or revoke."});
+    const link=await EducationGuardianLink.findOne({_id:req.params.id,student:req.user.id,guardian:{$ne:null}});
+    if(!link) return res.status(404).json({message:"Guardian request not found."});
+    if(action==="approve") { if(link.status!=="pending") return res.status(409).json({message:"Only pending requests can be approved."}); link.status="approved"; link.approvedAt=new Date(); }
+    else { link.status="revoked"; link.revokedAt=new Date(); }
+    await link.save();
+    res.json({link:{id:String(link._id),status:link.status},message:action==="approve"?"Guardian access approved.":"Guardian access removed."});
+  } catch(e) { next(e); }
+});
+router.get("/guardian/children", requireAuth, async (req,res,next) => {
+  try {
+    const links=await EducationGuardianLink.find({guardian:req.user.id,status:"approved"}).populate("student","name").select("student approvedAt").lean();
+    const children=await Promise.all(links.map(async link=>{
+      const attempts=await EducationAttempt.find({student:link.student._id}).select("board grade subject totalQuestions correctCount scorePercent createdAt").sort({createdAt:-1}).limit(50).lean();
+      const recent=attempts.filter(a=>Date.now()-new Date(a.createdAt).getTime()<=7*24*60*60*1000);
+      return {student:{id:String(link.student._id),name:link.student.name},approvedAt:link.approvedAt,summary:{testsLast7Days:recent.length,questionsLast7Days:recent.reduce((n,a)=>n+Number(a.totalQuestions||0),0),averageScoreLast7Days:recent.length?Math.round(recent.reduce((n,a)=>n+Number(a.scorePercent||0),0)/recent.length):0},recentAttempts:attempts.slice(0,10).map(a=>({board:a.board,grade:a.grade,subject:a.subject,totalQuestions:a.totalQuestions,correctCount:a.correctCount,scorePercent:a.scorePercent,createdAt:a.createdAt}))};
+    }));
+    res.json({children});
   } catch(e) { next(e); }
 });
 
