@@ -23,6 +23,7 @@ import educationRoutes from "./routes/education.js";
 import educationQuizRoutes from "./routes/educationQuiz.js";
 import ayurvedaAIRoutes from "./routes/ayurvedaAI.js";
 import subscriptionRoutes from "./routes/subscriptions.js";
+import aiAssistantRoutes from "./routes/aiAssistant.js";
 
 dotenv.config();
 
@@ -165,6 +166,7 @@ app.get("/api/ready", (_req, res) => {
 });
 
 app.use("/api/auth", authRoutes);
+app.use("/api/ai", aiAssistantRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/posts", postRoutes);
 app.use("/api/notifications", notificationRoutes);
