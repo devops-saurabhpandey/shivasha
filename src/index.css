@@ -780,3 +780,60 @@ a, .hashtag-link, .switch-auth { color: #287d79; }
   .nav-item { background: transparent; }
   .content { background: transparent; }
 }
+
+
+/* Mobile navigation: keep the feed as the main screen and show the menu as an overlay drawer. */
+@media (max-width: 650px) {
+  .mobile-header {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    min-height: 58px;
+    gap: 10px;
+    box-shadow: 0 2px 10px rgba(17, 24, 39, .12);
+  }
+  .mobile-menu-toggle {
+    flex: 0 0 auto;
+    border: 1px solid #465164;
+    border-radius: 8px;
+    background: #273247;
+    color: #fff;
+    padding: 9px 11px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .sidebar {
+    position: fixed;
+    z-index: 60;
+    top: 58px;
+    left: 0;
+    bottom: 0;
+    width: min(88vw, 360px);
+    height: calc(100dvh - 58px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 12px 14px 24px;
+    box-shadow: 12px 0 32px rgba(17, 24, 39, .22);
+    transform: translateX(-110%);
+    visibility: hidden;
+    transition: transform .22s ease, visibility .22s ease;
+  }
+  .sidebar.mobile-sidebar-open {
+    transform: translateX(0);
+    visibility: visible;
+  }
+  .sidebar nav {
+    display: block;
+    overflow: visible;
+  }
+  .sidebar .nav-item {
+    display: flex;
+    width: 100%;
+    min-width: 0;
+    margin: 3px 0;
+  }
+  .main {
+    width: 100%;
+    min-width: 0;
+  }
+}
