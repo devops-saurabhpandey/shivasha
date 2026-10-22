@@ -10,7 +10,20 @@ const SHIVASHA_PRODUCTS = [
   { id: "suite", icon: "🏢", name: "SHIVASHA Business Suite", description: "A planned combined package for eligible business modules.", status: "Coming Soon" },
   { id: "accounting", icon: "🧾", name: "SHIVASHA Accounting", description: "Accounting, billing and GST workflows.", status: "Planned — under development" },
   { id: "hr", icon: "👥", name: "SHIVASHA HR & Payroll", description: "Employee, attendance and payroll workflows.", status: "Planned — under development" },
-  { id: "ai", icon: "✨", name: "SHIVASHA AI Assistant", description: "A proposed AI helper for work and business tasks.", status: "Planned — under development" }
+  { id: "ai", icon: "✨", name: "SHIVASHA AI Assistant", description: "A proposed AI helper for work and business tasks.", status: "Planned — under development" },
+
+  { id: "ai-assistant", icon: "✨", name: "SHIVASHA AI", description: "AI chat, writing, research and coding assistance in one workspace.", status: "योजना — अभी निर्माण नहीं हुआ" },
+  { id: "flow", icon: "🔄", name: "SHIVASHA Flow", description: "Visual workflow automation, triggers, actions and execution logs.", status: "योजना — अभी निर्माण नहीं हुआ" },
+  { id: "agents", icon: "🤖", name: "SHIVASHA Agents", description: "Create controlled AI agents for multi-step tasks with approval gates.", status: "योजना — अभी निर्माण नहीं हुआ" },
+  { id: "knowledge-ai", icon: "📚", name: "SHIVASHA Knowledge AI", description: "Ask questions across approved documents and knowledge bases with source references.", status: "योजना — अभी निर्माण नहीं हुआ" },
+  { id: "model-studio", icon: "🧩", name: "SHIVASHA Model Studio", description: "Configure supported model providers, compare outputs and track usage.", status: "योजना — अभी निर्माण नहीं हुआ" },
+  { id: "multimodal-ai", icon: "🖼️", name: "SHIVASHA Multimodal AI", description: "Work with supported text, image, audio and document inputs.", status: "योजना — अभी निर्माण नहीं हुआ" },
+  { id: "video-studio", icon: "🎥", name: "SHIVASHA Video Studio", description: "Plan scripts and storyboards, then connect approved video-generation providers.", status: "योजना — अभी निर्माण नहीं हुआ" },
+  { id: "worksuite", icon: "🗂️", name: "SHIVASHA WorkSuite", description: "Manage notes, tasks, projects and team collaboration.", status: "योजना — अभी निर्माण नहीं हुआ" },
+  { id: "ai-monitor", icon: "🧪", name: "SHIVASHA AI Monitor", description: "Track AI request quality, latency, errors and provider usage costs.", status: "योजना — अभी निर्माण नहीं हुआ" },
+  { id: "seo-studio", icon: "🔎", name: "SHIVASHA SEO Studio", description: "SEO checklists, content planning and authorized search analytics integrations.", status: "योजना — अभी निर्माण नहीं हुआ" },
+  { id: "system-architect", icon: "🗺️", name: "SHIVASHA System Architect", description: "Create system diagrams, process maps and software architecture plans.", status: "योजना — अभी निर्माण नहीं हुआ" },
+  { id: "brand-intelligence", icon: "🏷️", name: "SHIVASHA Brand Intelligence", description: "Organize brand information and audit public website consistency.", status: "योजना — अभी निर्माण नहीं हुआ" }
 ];
 
 const PARTNER_SOFTWARE = [
