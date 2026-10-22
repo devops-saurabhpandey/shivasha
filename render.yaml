@@ -2,8 +2,6 @@ services:
   - type: web
     name: shivasha
     runtime: node
-    plan: free
     buildCommand: npm install && npm run build
     startCommand: node server.js
-    healthCheckPath: /
     autoDeploy: true
