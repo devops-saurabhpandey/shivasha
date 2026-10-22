@@ -2,8 +2,16 @@ import http from "node:http";
 import { createReadStream, existsSync, statSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { execFileSync } from "node:child_process";
 
-const root = path.join(path.dirname(fileURLToPath(import.meta.url)), "dist");
+const projectRoot = path.dirname(fileURLToPath(import.meta.url));
+const root = path.join(projectRoot, "dist");
+
+// Build the Vite frontend automatically if Render starts the server without a dist/ folder.
+if (!existsSync(path.join(root, "index.html"))) {
+  console.log("dist/index.html missing; running npm run build before starting SHIVASHA...");
+  execFileSync("npm", ["run", "build"], { cwd: projectRoot, stdio: "inherit" });
+}
 const port = Number(process.env.PORT || 10000);
 const mime = {
   ".html": "text/html; charset=utf-8",
