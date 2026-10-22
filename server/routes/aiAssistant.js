@@ -10,7 +10,7 @@ const MAX_HISTORY_CHARS = 12_000;
 const MAX_TRACKED_RATE_LIMIT_KEYS = 10_000;
 const requestWindows = new Map();
 
-function rateLimit(req, res, next) {
+export function rateLimit(req, res, next) {
   const key = String(req.user?.id || req.ip || "unknown");
   const now = Date.now();
   let entry = requestWindows.get(key);
@@ -41,7 +41,7 @@ function rateLimit(req, res, next) {
   return next();
 }
 
-function sanitizeHistory(history) {
+export function sanitizeHistory(history) {
   if (!Array.isArray(history)) return [];
   const candidates = history
     .slice(-MAX_HISTORY_MESSAGES)
