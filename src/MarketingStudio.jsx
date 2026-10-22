@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from "react";
+import "./marketing-studio.css";
 
 const CHANNELS = ["Instagram / Facebook", "YouTube", "WhatsApp", "Website / SEO", "Local business"];
 const GOALS = ["Brand awareness", "Get customer enquiries", "Sell a product/service", "Grow followers", "Promote an event"];
