@@ -134,6 +134,19 @@ io.on("connection", socket => {
 
 app.set("io", io);
 
+// Give the Render API service a useful root response instead of Express's
+// default "Cannot GET /". The user-facing frontend is hosted on GitHub Pages.
+app.get("/", (_req, res) => {
+  res.status(200).json({
+    service: "SHIVASHA API",
+    status: "running",
+    message: "The SHIVASHA backend is online. Open the frontend to use the app.",
+    frontend: "https://devops-saurabhpandey.github.io/shivasha/",
+    health: "/api/health",
+    api: "/api"
+  });
+});
+
 app.get("/api/health", (_req, res) => {
   res.json({
     success: true,
