@@ -1,6 +1,7 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 
 const STORAGE_KEY = "shivasha_business_platform_v1";
+const API_BASE = (import.meta.env.VITE_API_URL || "https://shivasha.onrender.com").replace(/\/$/, "");
 const PRODUCTS = ["Shivasha Social", "Shivasha Edutech", "Shivasha Software", "Shivasha E-commerce", "Shivasha Games", "Shivasha AI", "Marketing Agency", "Business Services"];
 const seed = { leads: [], campaigns: [], sales: [] };
 function loadData(){ try { return { ...seed, ...JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}") }; } catch { return seed; } }
@@ -8,12 +9,13 @@ const money = n => new Intl.NumberFormat("en-IN",{style:"currency",currency:"INR
 const inputStyle = {width:"100%",padding:"11px 12px",border:"1px solid #dbe2ea",borderRadius:10,background:"#fff",color:"#172033",boxSizing:"border-box",font:"inherit"};
 const buttonStyle = {padding:"10px 14px",border:0,borderRadius:10,background:"#4f46e5",color:"#fff",fontWeight:750,cursor:"pointer"};
 const cardStyle = {background:"#fff",border:"1px solid #e5eaf1",borderRadius:16,padding:18,boxShadow:"0 4px 18px rgba(15,23,42,.04)"};
-export default function BusinessPlatform(){
- const [data,setData]=useState(loadData),[tab,setTab]=useState("overview"),[notice,setNotice]=useState("");
+export default function BusinessPlatform({auth}){
+ const [data,setData]=useState(loadData),[tab,setTab]=useState("overview"),[notice,setNotice]=useState("Loading saved business data…");
+ useEffect(()=>{let cancelled=false;(async()=>{try{const response=await fetch(API_BASE+"/api/business-platform/data",{headers:auth?.token?{Authorization:"Bearer "+auth.token}:{}});const body=await response.json().catch(()=>({}));if(!response.ok)throw new Error(body.message||"Could not load saved business data.");if(!cancelled){const loaded={...seed,...body.data};setData(loaded);localStorage.setItem(STORAGE_KEY,JSON.stringify(loaded));setNotice("Connected — data is saved to your Shivasha account.");}}catch(error){if(!cancelled)setNotice("API connection unavailable. Changes may only be saved on this device until the server is available.");}})();return()=>{cancelled=true};},[auth?.token]);
  const [lead,setLead]=useState({name:"",email:"",phone:"",business:PRODUCTS[0],source:"Social Media",status:"New",value:""});
  const [campaign,setCampaign]=useState({name:"",channel:"Social Media",business:PRODUCTS[0],budget:"",leads:"0"});
  const [sale,setSale]=useState({customer:"",business:PRODUCTS[0],amount:"",status:"Paid"});
- const persist=next=>{setData(next);localStorage.setItem(STORAGE_KEY,JSON.stringify(next));setNotice("Saved on this device.");setTimeout(()=>setNotice(""),2500)};
+ const persist=next=>{setData(next);localStorage.setItem(STORAGE_KEY,JSON.stringify(next));setNotice("Saving to your account…");fetch(API_BASE+"/api/business-platform/data",{method:"PUT",headers:{"Content-Type":"application/json",...(auth?.token?{Authorization:"Bearer "+auth.token}:{})},body:JSON.stringify({data:next})}).then(async response=>{const body=await response.json().catch(()=>({}));if(!response.ok)throw new Error(body.message||"Save failed");setNotice("Saved securely to your Shivasha account.");setTimeout(()=>setNotice(""),2500)}).catch(()=>{setNotice("Server save failed. This change is only on this device for now.");});};
  const addLead=e=>{e.preventDefault();if(!lead.name.trim())return;persist({...data,leads:[{...lead,id:Date.now(),value:Number(lead.value)||0,createdAt:new Date().toISOString()},...data.leads]});setLead({...lead,name:"",email:"",phone:"",value:""});setTab("leads")};
  const addCampaign=e=>{e.preventDefault();if(!campaign.name.trim())return;persist({...data,campaigns:[{...campaign,id:Date.now(),budget:Number(campaign.budget)||0,leads:Number(campaign.leads)||0,createdAt:new Date().toISOString()},...data.campaigns]});setCampaign({...campaign,name:"",budget:"",leads:"0"});setTab("campaigns")};
  const addSale=e=>{e.preventDefault();if(!sale.customer.trim()||!(Number(sale.amount)>0))return;persist({...data,sales:[{...sale,id:Date.now(),amount:Number(sale.amount),createdAt:new Date().toISOString()},...data.sales]});setSale({...sale,customer:"",amount:""});setTab("sales")};
