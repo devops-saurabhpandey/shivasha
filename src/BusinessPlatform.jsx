@@ -1,6 +1,7 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 
 const STORAGE_KEY = "shivasha_business_platform_v1";
+const API_BASE = (import.meta.env.VITE_API_URL || "https://shivasha.onrender.com").replace(/\/$/, "");
 const PRODUCTS = ["Shivasha Social", "Shivasha Edutech", "Shivasha Software", "Shivasha E-commerce", "Shivasha Games", "Shivasha AI", "Marketing Agency", "Business Services"];
 const seed = { leads: [], campaigns: [], sales: [] };
 function loadData(){ try { return { ...seed, ...JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}") }; } catch { return seed; } }
