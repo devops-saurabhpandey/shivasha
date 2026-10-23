@@ -1,0 +1,18 @@
+{
+  "name": "KTL PVT LTD CRM & MIS",
+  "short_name": "KTL CRM",
+  "description": "Customer, leads, tasks and MIS reporting for KTL PVT LTD",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f3f6fa",
+  "theme_color": "#102a43",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
