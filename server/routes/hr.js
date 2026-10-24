@@ -37,12 +37,14 @@ router.post("/employees", async (req, res) => {
     const employeeCode = clean(req.body?.employeeCode, 30);
     const name = clean(req.body?.name, 100);
     const monthlyGrossSalary = Number(req.body?.monthlyGrossSalary ?? 0);
+    const annualCtc = Number(req.body?.annualCtc ?? (monthlyGrossSalary * 12));
     if (!employeeCode || !name) return res.status(400).json({ message: "Employee code and name are required" });
     if (!Number.isFinite(monthlyGrossSalary) || monthlyGrossSalary < 0 || monthlyGrossSalary > 100000000) return res.status(400).json({ message: "Invalid salary amount" });
+    if (!Number.isFinite(annualCtc) || annualCtc < 0 || annualCtc > 1000000000) return res.status(400).json({ message: "Invalid annual CTC amount" });
     const employee = await HREmployee.create({
       employeeCode, name, department: clean(req.body?.department, 80) || "Other",
       jobTitle: clean(req.body?.jobTitle, 80), workEmail: clean(req.body?.workEmail, 120).toLowerCase(),
-      joiningDate: clean(req.body?.joiningDate, 10), monthlyGrossSalary,
+      joiningDate: clean(req.body?.joiningDate, 10), monthlyGrossSalary, annualCtc,
       status: ["Active", "On leave", "Inactive"].includes(req.body?.status) ? req.body.status : "Active",
       createdBy: req.user.id
     });
@@ -65,6 +67,11 @@ router.patch("/employees/:id", async (req, res) => {
       const n = Number(req.body.monthlyGrossSalary);
       if (!Number.isFinite(n) || n < 0 || n > 100000000) return res.status(400).json({ message: "Invalid salary amount" });
       updates.monthlyGrossSalary = n;
+    }
+    if (req.body?.annualCtc !== undefined) {
+      const n = Number(req.body.annualCtc);
+      if (!Number.isFinite(n) || n < 0 || n > 1000000000) return res.status(400).json({ message: "Invalid annual CTC amount" });
+      updates.annualCtc = n;
     }
     if (req.body?.status !== undefined) {
       if (!["Active","On leave","Inactive"].includes(req.body.status)) return res.status(400).json({ message: "Invalid employee status" });
