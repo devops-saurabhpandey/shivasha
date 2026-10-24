@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="hi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#102a56">
+<meta name="description" content="Shivasha Ad Network: create campaigns, submit ads for review and track approved campaign activity.">
+<title>Shivasha Ad Network</title>
+<style>
+:root{font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif;color:#17233b;background:#f4f7fc;--blue:#245bdb;--navy:#102a56;--line:#dfe6f1;--muted:#65718a}*{box-sizing:border-box}body{margin:0}header{background:#fff;border-bottom:1px solid var(--line);padding:16px clamp(16px,4vw,42px);display:flex;align-items:center;justify-content:space-between;gap:12px;position:sticky;top:0}header b{font-size:20px;color:var(--navy)}header small{display:block;color:var(--muted);font-size:12px}.wrap{max-width:1120px;margin:auto;padding:28px 16px 60px}.hero{background:linear-gradient(125deg,#102a56,#245bdb);color:#fff;border-radius:22px;padding:clamp(22px,4vw,40px);margin-bottom:20px}.hero .tag{font-size:11px;letter-spacing:1.5px;font-weight:800;opacity:.8}.hero h1{font-size:clamp(27px,4vw,40px);margin:8px 0}.hero p{max-width:740px;line-height:1.65;color:#e4ecff;margin:0}.cards{display:grid;grid-template-columns:1.15fr .85fr;gap:18px}.card{background:#fff;border:1px solid var(--line);border-radius:17px;padding:22px;box-shadow:0 10px 28px #14264b0b;margin-bottom:18px}.card h2{margin:0 0 5px;font-size:19px}.muted{color:var(--muted);font-size:13px;line-height:1.55}.form{display:grid;grid-template-columns:1fr 1fr;gap:13px;margin-top:18px}.field{display:flex;flex-direction:column;gap:6px}.field.full{grid-column:1/-1}.field label{font-size:12px;font-weight:800;color:#43516a}.field input,.field select,.field textarea{width:100%;border:1px solid #d7dfeb;border-radius:10px;padding:11px 12px;font:inherit;background:white;color:#17233b}.field textarea{min-height:90px;resize:vertical}.btn{border:0;border-radius:10px;padding:11px 15px;font-weight:800;cursor:pointer}.primary{background:var(--blue);color:white}.secondary{background:white;border:1px solid var(--line);color:#17233b}.btn:disabled{opacity:.55;cursor:not-allowed}.notice{border:1px solid #f2dfa6;background:#fff8e6;color:#755000;padding:13px 15px;border-radius:12px;font-size:12px;line-height:1.6;margin:18px 0}.status{display:inline-block;padding:5px 9px;border-radius:99px;font-size:11px;font-weight:800;background:#eef1f6;color:#46536b}.status.Approved{background:#dff8ed;color:#087f5b}.status.Rejected{background:#ffe8e8;color:#a12b2b}.status.Pending{background:#fff0d1;color:#8a5600}.campaign{border:1px solid var(--line);border-radius:12px;padding:14px;margin-top:12px}.campaign-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}.campaign h3{margin:0 0 4px;font-size:15px}.metrics{display:flex;flex-wrap:wrap;gap:14px;margin-top:10px;color:var(--muted);font-size:12px}.empty{padding:20px;text-align:center;color:var(--muted);border:1px dashed var(--line);border-radius:12px;margin-top:14px}.message{font-size:13px;margin:12px 0;white-space:pre-wrap}.error{color:#b42318}.success{color:#087f5b}.steps{display:grid;gap:12px;margin-top:18px}.step{display:flex;gap:12px;align-items:flex-start}.number{background:#eaf1ff;color:var(--blue);width:31px;height:31px;border-radius:10px;display:grid;place-items:center;font-weight:900;flex-shrink:0}.step b{display:block;font-size:13px}.step span{font-size:12px;color:var(--muted);line-height:1.5}@media(max-width:760px){.cards{grid-template-columns:1fr}.form{grid-template-columns:1fr}.field.full{grid-column:auto}header{position:static}.card{padding:17px}}
+</style>
+</head>
+<body>
+<header><div><b>SHIVASHA <span style="color:#245bdb">Ads</span></b><small>Business advertising network</small></div><a class="btn secondary" href="./">App / Login</a></header>
+<main class="wrap">
+<section class="hero"><div class="tag">SHIVASHA AD NETWORK</div><h1>Apne business ka promotion karein</h1><p>Campaign banayein, audience chunein aur review ke liye bhejein. Approval ke baad hi campaign Shivasha ke supported ad slots mein dikhaya ja sakta hai. Shuruaat mein campaign review manual hai.</p></section>
+<div class="notice"><b>Important:</b> Yeh Shivasha ke apne advertising platform ka initial version hai. Abhi Google/Meta par ads publish nahi hote, payment/billing collect nahi hoti, aur impressions/clicks ki reporting basic hai. Budget sirf campaign plan mein darj hota hai; yeh payment ya guaranteed reach nahi hai.</div>
+<div id="authNotice" class="card" hidden><h2>Login zaroori hai</h2><p class="muted">Campaign save karne ke liye pehle Shivasha app mein login karein. Login ke baad is page par wapas aayein.</p><a class="btn primary" href="./">Shivasha Login kholein</a></div>
+<div class="cards" id="workspace">
+<section class="card">
+<h2>Naya campaign banayein</h2><p class="muted">Sabhi fields sahi bharein. HTTPS destination URL optional hai.</p>
+<form id="campaignForm" class="form">
+<div class="field full"><label for="name">Campaign ka naam</label><input id="name" name="name" maxlength="80" required placeholder="Jaise Kanpur Business Promotion"></div>
+<div class="field"><label for="goal">Campaign goal</label><select id="goal" name="goal"><option value="leads">Customer leads</option><option value="traffic">Website traffic</option><option value="awareness">Brand awareness</option><option value="sales">Sales</option></select></div>
+<div class="field"><label for="format">Ad placement type</label><select id="format" name="format"><option>Shivasha Social</option><option>Search</option><option>Display</option><option>Video</option><option>Local business</option></select></div>
+<div class="field"><label for="dailyBudget">Planned daily budget (₹)</label><input id="dailyBudget" name="dailyBudget" type="number" min="50" max="10000000" step="1" value="100" required></div>
+<div class="field"><label for="durationDays">Duration (days)</label><input id="durationDays" name="durationDays" type="number" min="1" max="365" value="7" required></div>
+<div class="field"><label for="audience">Audience</label><select id="audience" name="audience"><option>All adults</option><option>Local customers</option><option>Business owners</option><option>Students</option><option>Creators</option></select></div>
+<div class="field"><label for="location">Target location</label><input id="location" name="location" maxlength="100" placeholder="Jaise Kanpur, Uttar Pradesh"></div>
+<div class="field full"><label for="destination">Website / landing page URL (optional)</label><input id="destination" name="destination" type="url" placeholder="https://example.com"></div>
+<div class="field full"><label for="adText">Ad message</label><textarea id="adText" name="adText" maxlength="500" required placeholder="Apne product ya service ke baare mein saaf aur sahi jaankari likhein."></textarea><span class="muted">Maximum 500 characters. Misleading claims, illegal products, scams, or harmful content are not allowed.</span></div>
+<div class="field full"><button class="btn primary" id="saveButton" type="submit">Campaign draft save karein</button><div id="formMessage" class="message" role="status"></div></div>
+</form>
+</section>
+<aside>
+<section class="card"><h2>Campaign kaise chalega?</h2><div class="steps">
+<div class="step"><div class="number">1</div><div><b>Draft save</b><span>Campaign details aur planned budget save honge.</span></div></div>
+<div class="step"><div class="number">2</div><div><b>Review ke liye bhejein</b><span>Shivasha admin content aur destination check karega.</span></div></div>
+<div class="step"><div class="number">3</div><div><b>Approval</b><span>Sirf approved campaign supported ad slots ke liye eligible hoga.</span></div></div>
+<div class="step"><div class="number">4</div><div><b>Metrics</b><span>Basic impressions/click counters available ho sakte hain; verified billing abhi nahi hai.</span></div></div>
+</div></section>
+<section class="card"><h2>Budget estimate</h2><p class="muted">Aapke plan ka estimated total budget:</p><h2 id="estimate">₹700</h2><p class="muted">Daily budget × duration. Yeh sirf planning estimate hai, charge nahi.</p></section>
+</aside>
+</div>
+<section class="card"><div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap"><div><h2>Mere campaigns</h2><p class="muted">Status, review notes aur basic activity dekhein.</p></div><button class="btn secondary" id="refreshButton" type="button">Refresh</button></div><div id="campaignList"><div class="empty">Campaigns load ho rahe hain...</div></div></section>
+<footer class="muted">Shivasha Ad Network • Manual review • Ads policy and billing integrations are not yet complete.</footer>
+</main>
+<script>
+const API_BASE=(localStorage.getItem("shivasha_ads_api_base")||"https://shivasha.onrender.com").replace(/\/$/,"");
+function getAuth(){try{return JSON.parse(localStorage.getItem("shivasha_auth")||"null")}catch{return null}}
+const auth=getAuth();
+const $=id=>document.getElementById(id);
+const workspace=$("workspace");
+if(!auth?.token){$("authNotice").hidden=false;workspace.style.display="none";$("campaignList").innerHTML='<div class="empty">Login karne ke baad aapke campaigns yahan dikhenge.</div>';}
+async function api(path,options={}){const response=await fetch(API_BASE+path,{...options,headers:{"Content-Type":"application/json",...(auth?.token?{Authorization:"Bearer "+auth.token}:{}),...(options.headers||{})}});const raw=await response.text();let data={};try{data=raw?JSON.parse(raw):{}}catch{}if(!response.ok)throw new Error(data.message||"API request failed ("+response.status+")");return data}
+function money(value){return new Intl.NumberFormat("en-IN",{style:"currency",currency:"INR",maximumFractionDigits:0}).format(Number(value)||0)}
+function updateEstimate(){$("estimate").textContent=money(Number($("dailyBudget").value)*Number($("durationDays").value))}
+$("dailyBudget").addEventListener("input",updateEstimate);$("durationDays").addEventListener("input",updateEstimate);updateEstimate();
+function showMessage(text,kind){const el=$("formMessage");el.textContent=text;el.className="message "+(kind||"")}
+function safeText(value){return String(value??"")}
+function campaignCard(c){const box=document.createElement("article");box.className="campaign";const head=document.createElement("div");head.className="campaign-head";const details=document.createElement("div");const title=document.createElement("h3");title.textContent=safeText(c.name);const summary=document.createElement("div");summary.className="muted";summary.textContent=safeText(c.format)+" • "+safeText(c.goal)+" • "+money(c.dailyBudget)+"/day × "+safeText(c.durationDays)+" days";details.append(title,summary);const status=document.createElement("span");status.className="status "+(c.status==="Pending review"?"Pending":safeText(c.status));status.textContent=safeText(c.status);head.append(details,status);box.append(head);const metrics=document.createElement("div");metrics.className="metrics";metrics.textContent="Planned total: "+money(Number(c.dailyBudget)*Number(c.durationDays))+" · Impressions: "+(c.impressions||0)+" · Clicks: "+(c.clicks||0);box.append(metrics);if(c.reviewNote){const note=document.createElement("p");note.className="muted";note.textContent="Review note: "+c.reviewNote;box.append(note)}if(["Draft","Rejected"].includes(c.status)){const actions=document.createElement("div");actions.style.marginTop="12px";const submit=document.createElement("button");submit.type="button";submit.className="btn primary";submit.textContent="Review ke liye bhejein";submit.addEventListener("click",async()=>{submit.disabled=true;try{const result=await api("/api/ads/"+encodeURIComponent(c._id)+"/submit-review",{method:"POST",body:"{}"});showMessage(result.message||"Review ke liye bhej diya gaya.","success");await loadCampaigns()}catch(e){showMessage(e.message,"error");submit.disabled=false}});actions.append(submit);box.append(actions)}return box}
+async function loadCampaigns(){if(!auth?.token)return;const list=$("campaignList");list.innerHTML='<div class="empty">Loading...</div>';try{const data=await api("/api/ads/");list.replaceChildren();if(!data.campaigns?.length){list.innerHTML='<div class="empty">Abhi koi campaign nahi hai. Pehla campaign upar banayein.</div>';return}data.campaigns.forEach(c=>list.append(campaignCard(c)))}catch(e){list.innerHTML="";const msg=document.createElement("div");msg.className="empty";msg.textContent=e.message;list.append(msg)}}
+$("campaignForm").addEventListener("submit",async e=>{e.preventDefault();if(!auth?.token){showMessage("Pehle Shivasha mein login karein.","error");return}const form=new FormData(e.currentTarget);const payload=Object.fromEntries(form.entries());payload.dailyBudget=Number(payload.dailyBudget);payload.durationDays=Number(payload.durationDays);const button=$("saveButton");button.disabled=true;showMessage("Saving...","");try{const result=await api("/api/ads/",{method:"POST",body:JSON.stringify(payload)});showMessage(result.message||"Draft saved.","success");e.currentTarget.reset();$("dailyBudget").value="100";$("durationDays").value="7";updateEstimate();await loadCampaigns()}catch(err){showMessage(err.message,"error")}finally{button.disabled=false}});
+$("refreshButton").addEventListener("click",loadCampaigns);
+loadCampaigns();
+</script>
+</body>
+</html>
