@@ -36,11 +36,17 @@ router.get("/serve", async (req, res, next) => {
       }
       filter.format = format;
     }
-    const count = await Campaign.countDocuments(filter);
-    if (!count) return res.status(204).end();
-    const skip = Math.floor(Math.random() * count);
-    const campaign = await Campaign.findOneAndUpdate(filter, { $inc: { impressions: 1 } }, { new: true })
-      .sort({ createdAt: -1 }).skip(skip).select("name goal format destination location audience adText").lean();
+    const [candidate] = await Campaign.aggregate([
+      { $match: filter },
+      { $sample: { size: 1 } },
+      { $project: { _id: 1 } }
+    ]);
+    if (!candidate) return res.status(204).end();
+    const campaign = await Campaign.findOneAndUpdate(
+      { _id: candidate._id, status: "Approved" },
+      { $inc: { impressions: 1 } },
+      { new: true }
+    ).select("name goal format destination location audience adText").lean();
     if (!campaign) return res.status(204).end();
     res.set("Cache-Control", "no-store");
     res.json({ ad: campaign });
