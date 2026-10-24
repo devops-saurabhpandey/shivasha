@@ -87,11 +87,27 @@ $("runRows").onclick=async e=>{
   const b=e.target.closest("[data-save-status]");if(!b)return;
   const id=b.dataset.saveStatus,select=$("runRows").querySelector('[data-run-status="'+CSS.escape(id)+'"]');
   if(!select)return;
+  const run=payrollRuns.find(item=>String(item._id||item.id)===String(id));
+  const nextStatus=select.value;
+  if(!run)return;
+  if(nextStatus===run.status)return;
+  const warnings={
+    Approved:"Approve "+run.month+" payroll? Verify employee names, attendance, gross salary, PF/ESIC estimates and net pay before approval. Approved payroll cannot be replaced.",
+    Paid:"Mark "+run.month+" payroll as PAID? Confirm that salary payment and related checks have actually been completed. Paid payroll cannot be reopened here.",
+    Draft:"Return payroll to Draft?"
+  };
+  if(!confirm(warnings[nextStatus]||"Update payroll status?")){
+    select.value=run.status;
+    return;
+  }
+  const button=b;
+  button.disabled=true;
   try{
-    const r=await fetch(base+"/api/hr/payroll-runs/"+encodeURIComponent(id)+"/status",{method:"PATCH",headers:{"Content-Type":"application/json",Authorization:"Bearer "+token},body:JSON.stringify({status:select.value})});
+    const r=await fetch(base+"/api/hr/payroll-runs/"+encodeURIComponent(id)+"/status",{method:"PATCH",headers:{"Content-Type":"application/json",Authorization:"Bearer "+token},body:JSON.stringify({status:nextStatus})});
     const d=await r.json();if(!r.ok)throw Error(d.message||"Status update failed");
-    await loadPayrollRuns();alert("Payroll status updated: "+select.value);
-  }catch(err){alert(err.message)}
+    await loadPayrollRuns();alert("Payroll status updated: "+nextStatus);
+  }catch(err){select.value=run.status;alert(err.message)}
+  finally{button.disabled=false}
 };
 $("savePayroll").onclick=saveMonthlyPayroll;
 
