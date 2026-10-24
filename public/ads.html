@@ -100,6 +100,28 @@
 <script>
 (() => {
   const KEY = "shivasha_ads_campaigns_v1";
+  const API_BASE = (localStorage.getItem("shivasha_ads_api_base") || "https://shivasha.onrender.com").replace(/\/$/, "");
+  let auth = null;
+  try { auth = JSON.parse(localStorage.getItem("shivasha_auth") || "null"); } catch {}
+  const hasAuth = () => Boolean(auth && auth.token);
+  async function adsApi(path, options = {}) {
+    const headers = {"Content-Type":"application/json"};
+    if (hasAuth()) headers.Authorization = "Bearer " + auth.token;
+    const response = await fetch(API_BASE + path, {...options, headers:{...headers,...(options.headers||{})}});
+    const text = await response.text();
+    let data = {};
+    try { data = text ? JSON.parse(text) : {}; } catch {}
+    if (!response.ok) throw new Error(data.message || "Ads API error (" + response.status + ")");
+    return data;
+  }
+  function mapServerCampaign(c) {
+    return {id:String(c._id || c.id),name:c.name,goal:c.goal,type:c.format || c.type || "Shivasha Social",destination:c.destination || "",dailyBudget:Number(c.dailyBudget)||0,duration:Number(c.durationDays || c.duration)||1,location:c.location||"",audience:c.audience||"All adults",adText:c.adText||"",status:c.status||"Draft",createdAt:c.createdAt};
+  }
+  async function loadAdsFromServer() {
+    if (!hasAuth()) return;
+    try { const data = await adsApi("/api/ads"); campaigns = (data.campaigns || []).map(mapServerCampaign); persist(); render(); showToast("Campaigns synced from server."); }
+    catch (error) { showToast("Server sync failed: " + error.message); }
+  }
   const $ = (id) => document.getElementById(id);
   const money = (n) => new Intl.NumberFormat("en-IN",{style:"currency",currency:"INR",maximumFractionDigits:0}).format(Number(n)||0);
   const num = (n) => new Intl.NumberFormat("en-IN",{maximumFractionDigits:0}).format(Number(n)||0);
