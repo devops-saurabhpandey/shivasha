@@ -2,7 +2,7 @@ import { Router } from "express";
 import mongoose from "mongoose";
 import { requireAuth } from "../middleware/auth.js";
 import User from "../models/User.js";
-import { HREmployee, HRAttendance, HRLeave } from "../models/HR.js";
+import { HREmployee, HRAttendance, HRLeave, HRChallan } from "../models/HR.js";
 
 const router = Router();
 router.use(requireAuth);
@@ -192,6 +192,34 @@ router.patch("/leaves/:id/review", async (req, res) => {
     if (!leave) return res.status(404).json({ message: "Leave request not found" });
     res.json({ leave });
   } catch { res.status(500).json({ message: "Could not review leave request" }); }
+});
+
+
+router.get("/challans", async (_req, res) => {
+  try { res.json({ challans: await HRChallan.find().sort({ month: -1, createdAt: -1 }).limit(1000).lean() }); }
+  catch { res.status(500).json({ message: "Could not load challan register" }); }
+});
+
+router.post("/challans", async (req, res) => {
+  const month = clean(req.body?.month, 7);
+  const type = ["PF", "ESIC", "Other"].includes(req.body?.type) ? req.body.type : "Other";
+  const status = ["Draft", "Generated", "Paid", "Pending"].includes(req.body?.status) ? req.body.status : "Draft";
+  const amount = Number(req.body?.amount);
+  if (!/^\\d{4}-\\d{2}$/.test(month) || Number(month.slice(5, 7)) < 1 || Number(month.slice(5, 7)) > 12) return res.status(400).json({ message: "Valid wage month is required" });
+  if (!Number.isFinite(amount) || amount < 0 || amount > 1000000000) return res.status(400).json({ message: "Valid challan amount is required" });
+  try {
+    const challan = await HRChallan.create({ month, type, status, amount, reference: clean(req.body?.reference, 100), notes: clean(req.body?.notes, 200), createdBy: req.user.id });
+    res.status(201).json({ challan });
+  } catch { res.status(500).json({ message: "Could not save challan register entry" }); }
+});
+
+router.delete("/challans/:id", async (req, res) => {
+  if (!validId(req.params.id)) return res.status(400).json({ message: "Invalid challan ID" });
+  try {
+    const challan = await HRChallan.findByIdAndDelete(req.params.id);
+    if (!challan) return res.status(404).json({ message: "Challan entry not found" });
+    res.json({ deleted: true });
+  } catch { res.status(500).json({ message: "Could not delete challan entry" }); }
 });
 
 export default router;
