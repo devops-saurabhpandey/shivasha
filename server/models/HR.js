@@ -9,6 +9,12 @@ const employeeSchema = new mongoose.Schema({
   joiningDate: { type: String, default: "" },
   monthlyGrossSalary: { type: Number, default: 0, min: 0, max: 100000000 },
   annualCtc: { type: Number, default: 0, min: 0, max: 1000000000 },
+  basicSalary: { type: Number, default: 0, min: 0, max: 100000000 },
+  hra: { type: Number, default: 0, min: 0, max: 100000000 },
+  da: { type: Number, default: 0, min: 0, max: 100000000 },
+  otherAllowances: { type: Number, default: 0, min: 0, max: 100000000 },
+  pfApplicable: { type: Boolean, default: false },
+  esiApplicable: { type: Boolean, default: false },
   status: { type: String, enum: ["Active", "On leave", "Inactive"], default: "Active" },
   createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true }
 }, { timestamps: true });
