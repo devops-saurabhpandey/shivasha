@@ -263,12 +263,13 @@ router.post("/payroll-runs", async (req, res) => {
     employeeESIC: sum("employeeESIC"), employerESIC: sum("employerESIC"), netPay: sum("netPay")
   };
   try {
+    const replacedExistingMonth = Boolean(await HRPayrollRun.exists({ month }));
     const run = await HRPayrollRun.findOneAndUpdate(
       { month },
       { $set: { month, status: "Draft", employeeCount: snapshot.length, totals, records: snapshot, createdBy: req.user.id } },
       { new: true, upsert: true, runValidators: true, setDefaultsOnInsert: true }
     );
-    res.status(201).json({ run, replacedExistingMonth: false });
+    res.status(201).json({ run, replacedExistingMonth });
   } catch { res.status(500).json({ message: "Could not save monthly payroll snapshot" }); }
 });
 
