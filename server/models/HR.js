@@ -1,0 +1,39 @@
+import mongoose from "mongoose";
+
+const employeeSchema = new mongoose.Schema({
+  employeeCode: { type: String, required: true, trim: true, maxlength: 30 },
+  name: { type: String, required: true, trim: true, maxlength: 100 },
+  department: { type: String, default: "Other", trim: true, maxlength: 80 },
+  jobTitle: { type: String, default: "", trim: true, maxlength: 80 },
+  workEmail: { type: String, default: "", trim: true, lowercase: true, maxlength: 120 },
+  joiningDate: { type: String, default: "" },
+  monthlyGrossSalary: { type: Number, default: 0, min: 0, max: 100000000 },
+  status: { type: String, enum: ["Active", "On leave", "Inactive"], default: "Active" },
+  createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true }
+}, { timestamps: true });
+employeeSchema.index({ employeeCode: 1 }, { unique: true });
+
+const attendanceSchema = new mongoose.Schema({
+  employee: { type: mongoose.Schema.Types.ObjectId, ref: "HREmployee", required: true },
+  date: { type: String, required: true },
+  status: { type: String, enum: ["Present", "Absent", "Half day", "Work from home", "Holiday"], required: true },
+  note: { type: String, default: "", maxlength: 160 },
+  recordedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true }
+}, { timestamps: true });
+attendanceSchema.index({ employee: 1, date: 1 }, { unique: true });
+
+const leaveSchema = new mongoose.Schema({
+  employee: { type: mongoose.Schema.Types.ObjectId, ref: "HREmployee", required: true },
+  type: { type: String, enum: ["Casual", "Sick", "Earned", "Unpaid", "Other"], default: "Casual" },
+  from: { type: String, required: true },
+  to: { type: String, required: true },
+  reason: { type: String, default: "", maxlength: 200 },
+  status: { type: String, enum: ["Pending", "Approved", "Rejected"], default: "Pending" },
+  requestedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+  reviewedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
+  reviewedAt: { type: Date, default: null }
+}, { timestamps: true });
+
+export const HREmployee = mongoose.models.HREmployee || mongoose.model("HREmployee", employeeSchema);
+export const HRAttendance = mongoose.models.HRAttendance || mongoose.model("HRAttendance", attendanceSchema);
+export const HRLeave = mongoose.models.HRLeave || mongoose.model("HRLeave", leaveSchema);
