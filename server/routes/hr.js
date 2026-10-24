@@ -223,6 +223,45 @@ router.delete("/challans/:id", async (req, res) => {
 });
 
 
+router.get("/payroll-attendance-summary", async (req, res) => {
+  const month = clean(req.query?.month, 7);
+  if (!/^[0-9]{4}-[0-9]{2}$/.test(month) || Number(month.slice(5, 7)) < 1 || Number(month.slice(5, 7)) > 12) {
+    return res.status(400).json({ message: "Valid payroll month is required (YYYY-MM)" });
+  }
+  try {
+    const start = month + "-01";
+    const end = month + "-" + String(new Date(Number(month.slice(0, 4)), Number(month.slice(5, 7)), 0).getDate()).padStart(2, "0");
+    const [attendance, unpaidLeaves] = await Promise.all([
+      HRAttendance.find({ date: { $gte: start, $lte: end } }).select("employee date status").lean(),
+      HRLeave.find({ type: "Unpaid", status: "Approved", from: { $lte: end }, to: { $gte: start } }).select("employee from to").lean()
+    ]);
+    const stats = new Map();
+    for (const row of attendance) {
+      const id = String(row.employee);
+      if (!stats.has(id)) stats.set(id, { employeeId: id, attendanceRecords: 0, presentDays: 0, halfDays: 0, absentDays: 0, workFromHomeDays: 0, holidayDays: 0, attendedEquivalentDays: 0 });
+      const s = stats.get(id);
+      s.attendanceRecords += 1;
+      if (row.status === "Present") { s.presentDays += 1; s.attendedEquivalentDays += 1; }
+      else if (row.status === "Half day") { s.halfDays += 1; s.attendedEquivalentDays += 0.5; }
+      else if (row.status === "Absent") s.absentDays += 1;
+      else if (row.status === "Work from home") { s.workFromHomeDays += 1; s.attendedEquivalentDays += 1; }
+      else if (row.status === "Holiday") { s.holidayDays += 1; s.attendedEquivalentDays += 1; }
+    }
+    const dayMs = 86400000;
+    for (const leave of unpaidLeaves) {
+      const from = leave.from > start ? leave.from : start;
+      const to = leave.to < end ? leave.to : end;
+      const days = Math.floor((Date.parse(to + "T00:00:00Z") - Date.parse(from + "T00:00:00Z")) / dayMs) + 1;
+      const id = String(leave.employee);
+      if (!stats.has(id)) stats.set(id, { employeeId: id, attendanceRecords: 0, presentDays: 0, halfDays: 0, absentDays: 0, workFromHomeDays: 0, holidayDays: 0, attendedEquivalentDays: 0 });
+      stats.get(id).approvedUnpaidLeaveCalendarDays = (stats.get(id).approvedUnpaidLeaveCalendarDays || 0) + Math.max(0, days);
+    }
+    res.json({ month, calendarDays: Number(end.slice(8, 10)), attendanceCoverage: "Recorded entries only; missing dates are not assumed present or absent. Approved unpaid leave counts calendar days and may include weekends.", summaries: [...stats.values()] });
+  } catch {
+    res.status(500).json({ message: "Could not calculate attendance summary" });
+  }
+});
+
 router.get("/payroll-runs", async (_req, res) => {
   try {
     const runs = await HRPayrollRun.find().sort({ month: -1 }).limit(120).lean();
