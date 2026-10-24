@@ -51,7 +51,7 @@ export const HRAttendance = mongoose.models.HRAttendance || mongoose.model("HRAt
 export const HRLeave = mongoose.models.HRLeave || mongoose.model("HRLeave", leaveSchema);
 
 const challanSchema = new mongoose.Schema({
-  month: { type: String, required: true, match: /^\\d{4}-\\d{2}$/ },
+  month: { type: String, required: true, match: /^[0-9]{4}-[0-9]{2}$/ },
   type: { type: String, enum: ["PF", "ESIC", "Other"], default: "PF" },
   amount: { type: Number, required: true, min: 0, max: 1000000000 },
   status: { type: String, enum: ["Draft", "Generated", "Paid", "Pending"], default: "Draft" },
@@ -64,7 +64,7 @@ export const HRChallan = mongoose.models.HRChallan || mongoose.model("HRChallan"
 
 
 const payrollRunSchema = new mongoose.Schema({
-  month: { type: String, required: true, match: /^\\d{4}-\\d{2}$/ },
+  month: { type: String, required: true, match: /^[0-9]{4}-[0-9]{2}$/ },
   status: { type: String, enum: ["Draft", "Approved", "Paid"], default: "Draft" },
   employeeCount: { type: Number, min: 0, required: true },
   totals: {

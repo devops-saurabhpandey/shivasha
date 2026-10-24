@@ -233,7 +233,7 @@ router.get("/payroll-runs", async (_req, res) => {
 router.post("/payroll-runs", async (req, res) => {
   const month = clean(req.body?.month, 7);
   const records = req.body?.records;
-  if (!/^\\d{4}-\\d{2}$/.test(month) || Number(month.slice(5, 7)) < 1 || Number(month.slice(5, 7)) > 12) {
+  if (!/^[0-9]{4}-[0-9]{2}$/.test(month) || Number(month.slice(5, 7)) < 1 || Number(month.slice(5, 7)) > 12) {
     return res.status(400).json({ message: "Valid payroll month is required" });
   }
   if (!Array.isArray(records) || records.length > 2000) {
@@ -263,14 +263,20 @@ router.post("/payroll-runs", async (req, res) => {
     employeeESIC: sum("employeeESIC"), employerESIC: sum("employerESIC"), netPay: sum("netPay")
   };
   try {
-    const replacedExistingMonth = Boolean(await HRPayrollRun.exists({ month }));
+    const existing = await HRPayrollRun.findOne({ month }).select("status").lean();
+    if (existing && existing.status !== "Draft") {
+      return res.status(409).json({ message: "This payroll month is " + existing.status + " and is locked. Only Draft payroll can be replaced." });
+    }
     const run = await HRPayrollRun.findOneAndUpdate(
       { month },
       { $set: { month, status: "Draft", employeeCount: snapshot.length, totals, records: snapshot, createdBy: req.user.id } },
       { new: true, upsert: true, runValidators: true, setDefaultsOnInsert: true }
     );
-    res.status(201).json({ run, replacedExistingMonth });
-  } catch { res.status(500).json({ message: "Could not save monthly payroll snapshot" }); }
+    res.status(existing ? 200 : 201).json({ run, replacedExistingMonth: Boolean(existing) });
+  } catch (e) {
+    if (e?.code === 11000) return res.status(409).json({ message: "Payroll month is already being saved. Refresh and try again." });
+    res.status(500).json({ message: "Could not save monthly payroll snapshot" });
+  }
 });
 
 router.patch("/payroll-runs/:id/status", async (req, res) => {
@@ -278,8 +284,14 @@ router.patch("/payroll-runs/:id/status", async (req, res) => {
   const status = req.body?.status;
   if (!["Draft", "Approved", "Paid"].includes(status)) return res.status(400).json({ message: "Status must be Draft, Approved or Paid" });
   try {
-    const run = await HRPayrollRun.findByIdAndUpdate(req.params.id, { status }, { new: true, runValidators: true });
+    const run = await HRPayrollRun.findById(req.params.id);
     if (!run) return res.status(404).json({ message: "Payroll run not found" });
+    const allowed = { Draft: ["Draft", "Approved"], Approved: ["Approved", "Paid"], Paid: ["Paid"] };
+    if (!allowed[run.status]?.includes(status)) {
+      return res.status(409).json({ message: "Invalid payroll status transition. Use Draft → Approved → Paid; approved or paid payroll cannot be reopened here." });
+    }
+    run.status = status;
+    await run.save();
     res.json({ run });
   } catch { res.status(500).json({ message: "Could not update payroll status" }); }
 });
