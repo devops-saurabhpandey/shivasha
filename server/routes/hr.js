@@ -2,7 +2,7 @@ import { Router } from "express";
 import mongoose from "mongoose";
 import { requireAuth } from "../middleware/auth.js";
 import User from "../models/User.js";
-import { HREmployee, HRAttendance, HRLeave, HRChallan } from "../models/HR.js";
+import { HREmployee, HRAttendance, HRLeave, HRChallan, HRPayrollRun } from "../models/HR.js";
 
 const router = Router();
 router.use(requireAuth);
@@ -220,6 +220,67 @@ router.delete("/challans/:id", async (req, res) => {
     if (!challan) return res.status(404).json({ message: "Challan entry not found" });
     res.json({ deleted: true });
   } catch { res.status(500).json({ message: "Could not delete challan entry" }); }
+});
+
+
+router.get("/payroll-runs", async (_req, res) => {
+  try {
+    const runs = await HRPayrollRun.find().sort({ month: -1 }).limit(120).lean();
+    res.json({ runs });
+  } catch { res.status(500).json({ message: "Could not load monthly payroll history" }); }
+});
+
+router.post("/payroll-runs", async (req, res) => {
+  const month = clean(req.body?.month, 7);
+  const records = req.body?.records;
+  if (!/^\\d{4}-\\d{2}$/.test(month) || Number(month.slice(5, 7)) < 1 || Number(month.slice(5, 7)) > 12) {
+    return res.status(400).json({ message: "Valid payroll month is required" });
+  }
+  if (!Array.isArray(records) || records.length > 2000) {
+    return res.status(400).json({ message: "Payroll records must be a valid list of up to 2000 employees" });
+  }
+  const fields = ["gross", "pfWage", "employeePF", "employerPF", "employeeESIC", "employerESIC", "netPay"];
+  const snapshot = [];
+  for (const row of records) {
+    const employeeCode = clean(row?.employeeCode, 30), name = clean(row?.name, 100);
+    if (!employeeCode || !name) return res.status(400).json({ message: "Each payroll row needs employee code and name" });
+    const record = {
+      employeeId: validId(String(row?.employeeId || "")) ? row.employeeId : undefined,
+      employeeCode, name, uan: clean(row?.uan, 12)
+    };
+    for (const field of fields) {
+      const value = Number(row?.[field]);
+      if (!Number.isFinite(value) || (field !== "netPay" && value < 0) || Math.abs(value) > 1000000000) {
+        return res.status(400).json({ message: "Invalid payroll amount: " + field });
+      }
+      record[field] = value;
+    }
+    snapshot.push(record);
+  }
+  const sum = key => Math.round(snapshot.reduce((total, row) => total + row[key], 0) * 100) / 100;
+  const totals = {
+    gross: sum("gross"), employeePF: sum("employeePF"), employerPF: sum("employerPF"),
+    employeeESIC: sum("employeeESIC"), employerESIC: sum("employerESIC"), netPay: sum("netPay")
+  };
+  try {
+    const run = await HRPayrollRun.findOneAndUpdate(
+      { month },
+      { $set: { month, status: "Draft", employeeCount: snapshot.length, totals, records: snapshot, createdBy: req.user.id } },
+      { new: true, upsert: true, runValidators: true, setDefaultsOnInsert: true }
+    );
+    res.status(201).json({ run, replacedExistingMonth: false });
+  } catch { res.status(500).json({ message: "Could not save monthly payroll snapshot" }); }
+});
+
+router.patch("/payroll-runs/:id/status", async (req, res) => {
+  if (!validId(req.params.id)) return res.status(400).json({ message: "Invalid payroll run ID" });
+  const status = req.body?.status;
+  if (!["Draft", "Approved", "Paid"].includes(status)) return res.status(400).json({ message: "Status must be Draft, Approved or Paid" });
+  try {
+    const run = await HRPayrollRun.findByIdAndUpdate(req.params.id, { status }, { new: true, runValidators: true });
+    if (!run) return res.status(404).json({ message: "Payroll run not found" });
+    res.json({ run });
+  } catch { res.status(500).json({ message: "Could not update payroll status" }); }
 });
 
 export default router;
