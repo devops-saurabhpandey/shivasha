@@ -69,6 +69,8 @@ const payrollRunSchema = new mongoose.Schema({
   employeeCount: { type: Number, min: 0, required: true },
   totals: {
     gross: { type: Number, default: 0, min: 0 },
+    otherEarnings: { type: Number, default: 0, min: 0 },
+    otherDeductions: { type: Number, default: 0, min: 0 },
     employeePF: { type: Number, default: 0, min: 0 },
     employerPF: { type: Number, default: 0, min: 0 },
     employeeESIC: { type: Number, default: 0, min: 0 },
@@ -82,6 +84,8 @@ const payrollRunSchema = new mongoose.Schema({
     name: { type: String, required: true, maxlength: 100 },
     uan: { type: String, default: "", maxlength: 12 },
     gross: { type: Number, min: 0, required: true },
+    otherEarnings: { type: Number, default: 0, min: 0 },
+    otherDeductions: { type: Number, default: 0, min: 0 },
     pfWage: { type: Number, min: 0, required: true },
     employeePF: { type: Number, min: 0, required: true },
     employerPF: { type: Number, min: 0, required: true },
