@@ -8,6 +8,7 @@ const employeeSchema = new mongoose.Schema({
   workEmail: { type: String, default: "", trim: true, lowercase: true, maxlength: 120 },
   joiningDate: { type: String, default: "" },
   monthlyGrossSalary: { type: Number, default: 0, min: 0, max: 100000000 },
+  annualCtc: { type: Number, default: 0, min: 0, max: 1000000000 },
   status: { type: String, enum: ["Active", "On leave", "Inactive"], default: "Active" },
   createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true }
 }, { timestamps: true });
