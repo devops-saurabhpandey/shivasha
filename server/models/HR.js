@@ -49,3 +49,15 @@ const leaveSchema = new mongoose.Schema({
 export const HREmployee = mongoose.models.HREmployee || mongoose.model("HREmployee", employeeSchema);
 export const HRAttendance = mongoose.models.HRAttendance || mongoose.model("HRAttendance", attendanceSchema);
 export const HRLeave = mongoose.models.HRLeave || mongoose.model("HRLeave", leaveSchema);
+
+const challanSchema = new mongoose.Schema({
+  month: { type: String, required: true, match: /^\\d{4}-\\d{2}$/ },
+  type: { type: String, enum: ["PF", "ESIC", "Other"], default: "PF" },
+  amount: { type: Number, required: true, min: 0, max: 1000000000 },
+  status: { type: String, enum: ["Draft", "Generated", "Paid", "Pending"], default: "Draft" },
+  reference: { type: String, default: "", trim: true, maxlength: 100 },
+  notes: { type: String, default: "", trim: true, maxlength: 200 },
+  createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true }
+}, { timestamps: true });
+challanSchema.index({ month: 1, type: 1 });
+export const HRChallan = mongoose.models.HRChallan || mongoose.model("HRChallan", challanSchema);
