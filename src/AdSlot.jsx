@@ -38,7 +38,7 @@ export default function AdSlot({ apiBase }) {
       const data = await response.json();
       const url = new URL(data.destination);
       if (url.protocol !== "https:") throw new Error("Unsafe destination");
-      window.open(url.href, "_blank", "noopener,noreferrer");
+      window.location.assign(url.href);
     } catch {
       // Keep the feed usable if a campaign is paused or its destination is unavailable.
     }
