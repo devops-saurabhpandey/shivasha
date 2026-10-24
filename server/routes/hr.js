@@ -98,7 +98,7 @@ router.patch("/employees/:id", async (req, res) => {
     }
     if (req.body?.uan !== undefined) {
       const uan = clean(req.body.uan, 12);
-      if (uan && !/^\\d{12}$/.test(uan)) return res.status(400).json({ message: "UAN must be 12 digits" });
+      if (uan && !/^\d{12}$/.test(uan)) return res.status(400).json({ message: "UAN must be 12 digits" });
       updates.uan = uan;
     }
     for (const key of ["pfApplicable","esiApplicable"]) {
