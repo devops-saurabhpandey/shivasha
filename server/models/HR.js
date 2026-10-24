@@ -75,6 +75,7 @@ const payrollRunSchema = new mongoose.Schema({
     employerESIC: { type: Number, default: 0, min: 0 },
     netPay: { type: Number, default: 0 }
   },
+  createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
   records: [{
     employeeId: { type: mongoose.Schema.Types.ObjectId, ref: "HREmployee" },
     employeeCode: { type: String, required: true, maxlength: 30 },
