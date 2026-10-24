@@ -241,6 +241,9 @@ router.get("/payroll-attendance-summary", async (req, res) => {
       if (!stats.has(id)) stats.set(id, { employeeId: id, attendanceRecords: 0, presentDays: 0, halfDays: 0, absentDays: 0, workFromHomeDays: 0, holidayDays: 0, attendedEquivalentDays: 0, recordedDates: [], weekendAttendanceDays: 0, approvedUnpaidLeaveCalendarDays: 0, approvedUnpaidLeaveWeekdays: 0, approvedUnpaidLeaveWeekendDays: 0 });
       const s = stats.get(id);
       s.attendanceRecords += 1;
+      s.recordedDates.push(row.date);
+      const attendanceDay = new Date(row.date + "T00:00:00Z").getUTCDay();
+      if (attendanceDay === 0 || attendanceDay === 6) s.weekendAttendanceDays += 1;
       if (row.status === "Present") { s.presentDays += 1; s.attendedEquivalentDays += 1; }
       else if (row.status === "Half day") { s.halfDays += 1; s.attendedEquivalentDays += 0.5; }
       else if (row.status === "Absent") s.absentDays += 1;
@@ -253,8 +256,14 @@ router.get("/payroll-attendance-summary", async (req, res) => {
       const to = leave.to < end ? leave.to : end;
       const days = Math.floor((Date.parse(to + "T00:00:00Z") - Date.parse(from + "T00:00:00Z")) / dayMs) + 1;
       const id = String(leave.employee);
-      if (!stats.has(id)) stats.set(id, { employeeId: id, attendanceRecords: 0, presentDays: 0, halfDays: 0, absentDays: 0, workFromHomeDays: 0, holidayDays: 0, attendedEquivalentDays: 0 });
-      stats.get(id).approvedUnpaidLeaveCalendarDays = (stats.get(id).approvedUnpaidLeaveCalendarDays || 0) + Math.max(0, days);
+      if (!stats.has(id)) stats.set(id, { employeeId: id, attendanceRecords: 0, presentDays: 0, halfDays: 0, absentDays: 0, workFromHomeDays: 0, holidayDays: 0, attendedEquivalentDays: 0, recordedDates: [], weekendAttendanceDays: 0, approvedUnpaidLeaveCalendarDays: 0, approvedUnpaidLeaveWeekdays: 0, approvedUnpaidLeaveWeekendDays: 0 });
+      const leaveStats = stats.get(id);
+      leaveStats.approvedUnpaidLeaveCalendarDays += Math.max(0, days);
+      for (let cursor = Date.parse(from + "T00:00:00Z"); cursor <= Date.parse(to + "T00:00:00Z"); cursor += dayMs) {
+        const day = new Date(cursor).getUTCDay();
+        if (day === 0 || day === 6) leaveStats.approvedUnpaidLeaveWeekendDays += 1;
+        else leaveStats.approvedUnpaidLeaveWeekdays += 1;
+      }
     }
     const calendarDates = [];
     for (let cursor = Date.parse(start + "T00:00:00Z"); cursor <= Date.parse(end + "T00:00:00Z"); cursor += dayMs) calendarDates.push(new Date(cursor).toISOString().slice(0, 10));
