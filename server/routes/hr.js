@@ -290,7 +290,7 @@ router.post("/payroll-runs", async (req, res) => {
   if (!Array.isArray(records) || records.length > 2000) {
     return res.status(400).json({ message: "Payroll records must be a valid list of up to 2000 employees" });
   }
-  const fields = ["gross", "pfWage", "employeePF", "employerPF", "employeeESIC", "employerESIC", "netPay"];
+  const fields = ["gross", "pfWage", "employeePF", "employerPF", "employeeESIC", "employerESIC", "otherEarnings", "otherDeductions"];
   const snapshot = [];
   for (const row of records) {
     const employeeCode = clean(row?.employeeCode, 30), name = clean(row?.name, 100);
@@ -300,17 +300,19 @@ router.post("/payroll-runs", async (req, res) => {
       employeeCode, name, uan: clean(row?.uan, 12)
     };
     for (const field of fields) {
-      const value = Number(row?.[field]);
-      if (!Number.isFinite(value) || (field !== "netPay" && value < 0) || Math.abs(value) > 1000000000) {
+      const value = Number(row?.[field] ?? 0);
+      if (!Number.isFinite(value) || value < 0 || value > 1000000000) {
         return res.status(400).json({ message: "Invalid payroll amount: " + field });
       }
       record[field] = value;
     }
+    record.netPay = record.gross + record.otherEarnings - record.employeePF - record.employeeESIC - record.otherDeductions;
     snapshot.push(record);
   }
   const sum = key => Math.round(snapshot.reduce((total, row) => total + row[key], 0) * 100) / 100;
   const totals = {
-    gross: sum("gross"), employeePF: sum("employeePF"), employerPF: sum("employerPF"),
+    gross: sum("gross"), otherEarnings: sum("otherEarnings"), otherDeductions: sum("otherDeductions"),
+    employeePF: sum("employeePF"), employerPF: sum("employerPF"),
     employeeESIC: sum("employeeESIC"), employerESIC: sum("employerESIC"), netPay: sum("netPay")
   };
   try {
