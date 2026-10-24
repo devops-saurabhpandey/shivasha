@@ -7,7 +7,7 @@ const employeeSchema = new mongoose.Schema({
   jobTitle: { type: String, default: "", trim: true, maxlength: 80 },
   workEmail: { type: String, default: "", trim: true, lowercase: true, maxlength: 120 },
   joiningDate: { type: String, default: "" },
-  uan: { type: String, default: "", trim: true, match: [/^$|^\\d{12}$/, "UAN must be 12 digits"] },
+  uan: { type: String, default: "", trim: true, match: [/^$|^\d{12}$/, "UAN must be 12 digits"] },
   pfWage: { type: Number, default: 0, min: 0, max: 100000000 },
   epsWage: { type: Number, default: 0, min: 0, max: 100000000 },
   edliWage: { type: Number, default: 0, min: 0, max: 100000000 },
