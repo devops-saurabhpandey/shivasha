@@ -41,10 +41,18 @@ router.post("/employees", async (req, res) => {
     if (!employeeCode || !name) return res.status(400).json({ message: "Employee code and name are required" });
     if (!Number.isFinite(monthlyGrossSalary) || monthlyGrossSalary < 0 || monthlyGrossSalary > 100000000) return res.status(400).json({ message: "Invalid salary amount" });
     if (!Number.isFinite(annualCtc) || annualCtc < 0 || annualCtc > 1000000000) return res.status(400).json({ message: "Invalid annual CTC amount" });
+    const components = {};
+    for (const key of ["basicSalary","hra","da","otherAllowances"]) {
+      const n = Number(req.body?.[key] ?? 0);
+      if (!Number.isFinite(n) || n < 0 || n > 100000000) return res.status(400).json({ message: `Invalid ${key} amount` });
+      components[key] = n;
+    }
     const employee = await HREmployee.create({
       employeeCode, name, department: clean(req.body?.department, 80) || "Other",
       jobTitle: clean(req.body?.jobTitle, 80), workEmail: clean(req.body?.workEmail, 120).toLowerCase(),
-      joiningDate: clean(req.body?.joiningDate, 10), monthlyGrossSalary, annualCtc,
+      joiningDate: clean(req.body?.joiningDate, 10), monthlyGrossSalary, annualCtc, ...components,
+      pfApplicable: req.body?.pfApplicable === true,
+      esiApplicable: req.body?.esiApplicable === true,
       status: ["Active", "On leave", "Inactive"].includes(req.body?.status) ? req.body.status : "Active",
       createdBy: req.user.id
     });
@@ -67,6 +75,19 @@ router.patch("/employees/:id", async (req, res) => {
       const n = Number(req.body.monthlyGrossSalary);
       if (!Number.isFinite(n) || n < 0 || n > 100000000) return res.status(400).json({ message: "Invalid salary amount" });
       updates.monthlyGrossSalary = n;
+    }
+    for (const key of ["basicSalary","hra","da","otherAllowances"]) {
+      if (req.body?.[key] !== undefined) {
+        const n = Number(req.body[key]);
+        if (!Number.isFinite(n) || n < 0 || n > 100000000) return res.status(400).json({ message: `Invalid ${key} amount` });
+        updates[key] = n;
+      }
+    }
+    for (const key of ["pfApplicable","esiApplicable"]) {
+      if (req.body?.[key] !== undefined) {
+        if (typeof req.body[key] !== "boolean") return res.status(400).json({ message: `Invalid ${key} value` });
+        updates[key] = req.body[key];
+      }
     }
     if (req.body?.annualCtc !== undefined) {
       const n = Number(req.body.annualCtc);
