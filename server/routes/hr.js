@@ -51,6 +51,11 @@ router.post("/employees", async (req, res) => {
       employeeCode, name, department: clean(req.body?.department, 80) || "Other",
       jobTitle: clean(req.body?.jobTitle, 80), workEmail: clean(req.body?.workEmail, 120).toLowerCase(),
       joiningDate: clean(req.body?.joiningDate, 10), monthlyGrossSalary, annualCtc, ...components,
+      uan: clean(req.body?.uan, 12),
+      pfWage: Number(req.body?.pfWage ?? components.basicSalary + components.da),
+      epsWage: Number(req.body?.epsWage ?? 0),
+      edliWage: Number(req.body?.edliWage ?? 0),
+      ncpDays: Number(req.body?.ncpDays ?? 0),
       pfApplicable: req.body?.pfApplicable === true,
       esiApplicable: req.body?.esiApplicable === true,
       status: ["Active", "On leave", "Inactive"].includes(req.body?.status) ? req.body.status : "Active",
@@ -82,6 +87,19 @@ router.patch("/employees/:id", async (req, res) => {
         if (!Number.isFinite(n) || n < 0 || n > 100000000) return res.status(400).json({ message: `Invalid ${key} amount` });
         updates[key] = n;
       }
+    }
+    for (const key of ["pfWage","epsWage","edliWage","ncpDays"]) {
+      if (req.body?.[key] !== undefined) {
+        const n = Number(req.body[key]);
+        const max = key === "ncpDays" ? 31 : 100000000;
+        if (!Number.isFinite(n) || n < 0 || n > max) return res.status(400).json({ message: `Invalid ${key} value` });
+        updates[key] = n;
+      }
+    }
+    if (req.body?.uan !== undefined) {
+      const uan = clean(req.body.uan, 12);
+      if (uan && !/^\\d{12}$/.test(uan)) return res.status(400).json({ message: "UAN must be 12 digits" });
+      updates.uan = uan;
     }
     for (const key of ["pfApplicable","esiApplicable"]) {
       if (req.body?.[key] !== undefined) {
