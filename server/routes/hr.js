@@ -205,7 +205,7 @@ router.post("/challans", async (req, res) => {
   const type = ["PF", "ESIC", "Other"].includes(req.body?.type) ? req.body.type : "Other";
   const status = ["Draft", "Generated", "Paid", "Pending"].includes(req.body?.status) ? req.body.status : "Draft";
   const amount = Number(req.body?.amount);
-  if (!/^\\d{4}-\\d{2}$/.test(month) || Number(month.slice(5, 7)) < 1 || Number(month.slice(5, 7)) > 12) return res.status(400).json({ message: "Valid wage month is required" });
+  if (!/^\d{4}-\d{2}$/.test(month) || Number(month.slice(5, 7)) < 1 || Number(month.slice(5, 7)) > 12) return res.status(400).json({ message: "Valid wage month is required" });
   if (!Number.isFinite(amount) || amount < 0 || amount > 1000000000) return res.status(400).json({ message: "Valid challan amount is required" });
   try {
     const challan = await HRChallan.create({ month, type, status, amount, reference: clean(req.body?.reference, 100), notes: clean(req.body?.notes, 200), createdBy: req.user.id });
