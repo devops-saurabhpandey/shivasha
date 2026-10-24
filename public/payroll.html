@@ -43,7 +43,7 @@ async function loadAttendanceSummary(){
     const estimated=Math.max(0,Math.min(Number(d.calendarDays)||31,attended));
     $("paidDays").value=estimated;
     $("unpaidDays").value=unpaid;
-    $("attendanceStatus").textContent="Records: "+s.attendanceRecords+" • Present: "+s.presentDays+" • Half-day: "+s.halfDays+" • Absent: "+s.absentDays+" • WFH: "+s.workFromHomeDays+" • Holiday: "+s.holidayDays+" • Approved unpaid leave (calendar days): "+unpaid+". Estimated paid days "+estimated+". Unpaid leave is shown for review only and is not subtracted again, to avoid double-counting when attendance already reflects the leave. "+d.attendanceCoverage+" Please review missing workdays, weekends, leave overlaps and correct paid days before generating the slip.";
+    $("attendanceStatus").textContent="Records: "+s.attendanceRecords+" • Present: "+s.presentDays+" • Half-day: "+s.halfDays+" • Absent: "+s.absentDays+" • WFH: "+s.workFromHomeDays+" • Holiday: "+s.holidayDays+" • Weekday attendance missing: "+(s.missingWeekdayAttendanceCount||0)+" • Attendance on weekends: "+(s.weekendAttendanceDays||0)+" • Unpaid leave weekdays/weekends: "+(s.approvedUnpaidLeaveWeekdays||0)+"/"+(s.approvedUnpaidLeaveWeekendDays||0)+" • Attendance dates overlapping approved unpaid leave: "+((s.attendanceOnApprovedUnpaidLeaveDates||[]).length)+". Estimated paid days "+estimated+". Unpaid leave is shown for review only and is not subtracted again. "+d.attendanceCoverage+" Please review the missing dates list in the API response, company weekly-off policy, and leave overlaps before generating the slip.";
     renderSlip();
   }catch(e){$("attendanceStatus").textContent="Attendance summary error: "+e.message}
   finally{b.disabled=false}
