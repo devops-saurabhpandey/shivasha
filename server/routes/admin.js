@@ -16,6 +16,36 @@ router.use(async (req, res, next) => {
   } catch (error) { next(error); }
 });
 
+router.get("/ads", async (_req, res, next) => {
+  try {
+    const Campaign = mongoose.models.ShivashaAdCampaign;
+    if (!Campaign) return res.json({ campaigns: [] });
+    const campaigns = await Campaign.find({ status: "Pending review" })
+      .populate("owner", "name email").sort({ createdAt: 1 }).lean();
+    res.json({ campaigns });
+  } catch (error) { next(error); }
+});
+
+router.patch("/ads/:id", async (req, res, next) => {
+  try {
+    if (!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({ message: "Invalid campaign ID." });
+    const status = String(req.body?.status || "");
+    const reviewNote = String(req.body?.reviewNote || "").trim().slice(0, 500);
+    if (!["Approved", "Rejected", "Pending review"].includes(status)) {
+      return res.status(400).json({ message: "Status must be Approved, Rejected, or Pending review." });
+    }
+    const Campaign = mongoose.models.ShivashaAdCampaign;
+    if (!Campaign) return res.status(404).json({ message: "Ad campaigns are not initialized." });
+    const campaign = await Campaign.findOneAndUpdate(
+      { _id: req.params.id, status: "Pending review" },
+      { $set: { status, reviewNote } },
+      { new: true, runValidators: true }
+    ).populate("owner", "name email");
+    if (!campaign) return res.status(404).json({ message: "Pending campaign not found." });
+    res.json({ campaign, message: status === "Approved" ? "Campaign approved for Shivasha ad slots." : status === "Rejected" ? "Campaign rejected." : "Campaign returned to review queue." });
+  } catch (error) { next(error); }
+});
+
 router.patch("/reports/:id", async (req, res) => {
   const status = String(req.body?.status || "");
   if (!["open", "reviewed", "dismissed"].includes(status)) {
@@ -57,8 +87,6 @@ router.get("/stats", async (_req, res, next) => {
       User.countDocuments(), Post.countDocuments(), Report.countDocuments({ status: "open" }), Report.countDocuments()
     ]);
 
-    // Business models are registered by routes/business.js. Keep this endpoint
-    // useful even if the business module has not been initialized in a test.
     const Lead = mongoose.models.ShivashaCRMLead;
     const Product = mongoose.models.ShivashaBusinessProduct;
     const Order = mongoose.models.ShivashaBusinessOrder;
