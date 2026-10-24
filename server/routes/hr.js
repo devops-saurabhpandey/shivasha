@@ -238,7 +238,7 @@ router.get("/payroll-attendance-summary", async (req, res) => {
     const stats = new Map();
     for (const row of attendance) {
       const id = String(row.employee);
-      if (!stats.has(id)) stats.set(id, { employeeId: id, attendanceRecords: 0, presentDays: 0, halfDays: 0, absentDays: 0, workFromHomeDays: 0, holidayDays: 0, attendedEquivalentDays: 0 });
+      if (!stats.has(id)) stats.set(id, { employeeId: id, attendanceRecords: 0, presentDays: 0, halfDays: 0, absentDays: 0, workFromHomeDays: 0, holidayDays: 0, attendedEquivalentDays: 0, recordedDates: [], weekendAttendanceDays: 0, approvedUnpaidLeaveCalendarDays: 0, approvedUnpaidLeaveWeekdays: 0, approvedUnpaidLeaveWeekendDays: 0 });
       const s = stats.get(id);
       s.attendanceRecords += 1;
       if (row.status === "Present") { s.presentDays += 1; s.attendedEquivalentDays += 1; }
@@ -256,7 +256,19 @@ router.get("/payroll-attendance-summary", async (req, res) => {
       if (!stats.has(id)) stats.set(id, { employeeId: id, attendanceRecords: 0, presentDays: 0, halfDays: 0, absentDays: 0, workFromHomeDays: 0, holidayDays: 0, attendedEquivalentDays: 0 });
       stats.get(id).approvedUnpaidLeaveCalendarDays = (stats.get(id).approvedUnpaidLeaveCalendarDays || 0) + Math.max(0, days);
     }
-    res.json({ month, calendarDays: Number(end.slice(8, 10)), attendanceCoverage: "Recorded entries only; missing dates are not assumed present or absent. Approved unpaid leave counts calendar days and may include weekends.", summaries: [...stats.values()] });
+    const calendarDates = [];
+    for (let cursor = Date.parse(start + "T00:00:00Z"); cursor <= Date.parse(end + "T00:00:00Z"); cursor += dayMs) calendarDates.push(new Date(cursor).toISOString().slice(0, 10));
+    const weekdayDates = calendarDates.filter(date => { const day = new Date(date + "T00:00:00Z").getUTCDay(); return day !== 0 && day !== 6; });
+    const summaries = [...stats.values()].map(s => {
+      const recorded = new Set(s.recordedDates);
+      s.recordedWeekdays = s.recordedDates.filter(date => weekdayDates.includes(date)).length;
+      s.missingWeekdayAttendanceDates = weekdayDates.filter(date => !recorded.has(date));
+      s.missingWeekdayAttendanceCount = s.missingWeekdayAttendanceDates.length;
+      s.attendanceOnApprovedUnpaidLeaveDates = s.recordedDates.filter(date => unpaidLeaves.some(leave => String(leave.employee) === s.employeeId && leave.from <= date && leave.to >= date));
+      delete s.recordedDates;
+      return s;
+    });
+    res.json({ month, calendarDays: Number(end.slice(8, 10)), weekdaysExcludingSaturdaySunday: weekdayDates.length, weekendDays: calendarDates.length - weekdayDates.length, attendanceCoverage: "Saturday/Sunday are informational only; your company work calendar may differ. Missing weekday dates require review. Approved unpaid leave uses calendar days and may overlap attendance.", summaries });
   } catch {
     res.status(500).json({ message: "Could not calculate attendance summary" });
   }
