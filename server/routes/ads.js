@@ -3,7 +3,6 @@ import mongoose from "mongoose";
 import { requireAuth } from "../middleware/auth.js";
 
 const router = express.Router();
-router.use(requireAuth);
 
 const campaignSchema = new mongoose.Schema({
   owner: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true, index: true },
@@ -16,11 +15,52 @@ const campaignSchema = new mongoose.Schema({
   location: { type: String, trim: true, maxlength: 100, default: "" },
   audience: { type: String, enum: ["All adults", "Local customers", "Business owners", "Students", "Creators"], default: "All adults" },
   adText: { type: String, required: true, trim: true, maxlength: 500 },
-  status: { type: String, enum: ["Draft", "Paused", "Pending review", "Approved", "Rejected"], default: "Draft", index: true }
+  status: { type: String, enum: ["Draft", "Paused", "Pending review", "Approved", "Rejected"], default: "Draft", index: true },
+  reviewNote: { type: String, trim: true, maxlength: 500, default: "" },
+  impressions: { type: Number, min: 0, default: 0 },
+  clicks: { type: Number, min: 0, default: 0 }
 }, { timestamps: true });
 
 const Campaign = mongoose.models.ShivashaAdCampaign || mongoose.model("ShivashaAdCampaign", campaignSchema);
 const safeId = id => mongoose.isValidObjectId(id);
+
+// Public ad slot API. Only reviewed, approved campaigns can be served.
+// This is an initial serving endpoint; the app UI must place the returned ad in a slot.
+router.get("/serve", async (req, res, next) => {
+  try {
+    const filter = { status: "Approved" };
+    const format = String(req.query.format || "").trim();
+    if (format) {
+      if (!["Shivasha Social", "Search", "Display", "Video", "Local business"].includes(format)) {
+        return res.status(400).json({ message: "Invalid ad format." });
+      }
+      filter.format = format;
+    }
+    const count = await Campaign.countDocuments(filter);
+    if (!count) return res.status(204).end();
+    const skip = Math.floor(Math.random() * count);
+    const campaign = await Campaign.findOneAndUpdate(filter, { $inc: { impressions: 1 } }, { new: true })
+      .sort({ createdAt: -1 }).skip(skip).select("name goal format destination location audience adText").lean();
+    if (!campaign) return res.status(204).end();
+    res.set("Cache-Control", "no-store");
+    res.json({ ad: campaign });
+  } catch (error) { next(error); }
+});
+
+router.post("/:id/click", async (req, res, next) => {
+  try {
+    if (!safeId(req.params.id)) return res.status(400).json({ message: "Invalid campaign ID." });
+    const campaign = await Campaign.findOneAndUpdate(
+      { _id: req.params.id, status: "Approved", destination: { $ne: "" } },
+      { $inc: { clicks: 1 } },
+      { new: true }
+    ).select("destination").lean();
+    if (!campaign) return res.status(404).json({ message: "Ad destination not available." });
+    res.json({ destination: campaign.destination });
+  } catch (error) { next(error); }
+});
+
+router.use(requireAuth);
 
 router.get("/", async (req, res, next) => {
   try {
@@ -65,17 +105,30 @@ router.post("/", async (req, res, next) => {
   } catch (error) { next(error); }
 });
 
+router.post("/:id/submit-review", async (req, res, next) => {
+  try {
+    if (!safeId(req.params.id)) return res.status(400).json({ message: "Invalid campaign ID." });
+    const campaign = await Campaign.findOneAndUpdate(
+      { _id: req.params.id, owner: req.user.id, status: { $in: ["Draft", "Rejected"] } },
+      { $set: { status: "Pending review", reviewNote: "" } },
+      { new: true, runValidators: true }
+    );
+    if (!campaign) return res.status(409).json({ message: "Only your Draft or Rejected campaigns can be submitted for review." });
+    res.json({ campaign, message: "Submitted for review. The ad will not be shown until Shivasha approves it." });
+  } catch (error) { next(error); }
+});
+
 router.patch("/:id/status", async (req, res, next) => {
   try {
     if (!safeId(req.params.id)) return res.status(400).json({ message: "Invalid campaign ID." });
     const status = String(req.body?.status || "");
-    if (!["Draft", "Paused"].includes(status)) return res.status(400).json({ message: "Only Draft or Paused status can be set by advertisers." });
+    if (!["Draft", "Paused"].includes(status)) return res.status(400).json({ message: "Advertisers can only set Draft or Paused status. Submit Drafts for review." });
     const campaign = await Campaign.findOneAndUpdate(
-      { _id: req.params.id, owner: req.user.id },
+      { _id: req.params.id, owner: req.user.id, status: { $in: ["Draft", "Paused", "Approved"] } },
       { $set: { status } },
       { new: true, runValidators: true }
     );
-    if (!campaign) return res.status(404).json({ message: "Campaign not found." });
+    if (!campaign) return res.status(404).json({ message: "Campaign not found or cannot be changed in its current status." });
     res.json({ campaign });
   } catch (error) { next(error); }
 });
@@ -83,8 +136,8 @@ router.patch("/:id/status", async (req, res, next) => {
 router.delete("/:id", async (req, res, next) => {
   try {
     if (!safeId(req.params.id)) return res.status(400).json({ message: "Invalid campaign ID." });
-    const campaign = await Campaign.findOneAndDelete({ _id: req.params.id, owner: req.user.id });
-    if (!campaign) return res.status(404).json({ message: "Campaign not found." });
+    const campaign = await Campaign.findOneAndDelete({ _id: req.params.id, owner: req.user.id, status: { $in: ["Draft", "Rejected"] } });
+    if (!campaign) return res.status(409).json({ message: "Only your Draft or Rejected campaigns can be deleted." });
     res.json({ deleted: true });
   } catch (error) { next(error); }
 });
