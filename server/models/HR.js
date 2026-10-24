@@ -61,3 +61,33 @@ const challanSchema = new mongoose.Schema({
 }, { timestamps: true });
 challanSchema.index({ month: 1, type: 1 });
 export const HRChallan = mongoose.models.HRChallan || mongoose.model("HRChallan", challanSchema);
+
+
+const payrollRunSchema = new mongoose.Schema({
+  month: { type: String, required: true, match: /^\\d{4}-\\d{2}$/ },
+  status: { type: String, enum: ["Draft", "Approved", "Paid"], default: "Draft" },
+  employeeCount: { type: Number, min: 0, required: true },
+  totals: {
+    gross: { type: Number, default: 0, min: 0 },
+    employeePF: { type: Number, default: 0, min: 0 },
+    employerPF: { type: Number, default: 0, min: 0 },
+    employeeESIC: { type: Number, default: 0, min: 0 },
+    employerESIC: { type: Number, default: 0, min: 0 },
+    netPay: { type: Number, default: 0 }
+  },
+  records: [{
+    employeeId: { type: mongoose.Schema.Types.ObjectId, ref: "HREmployee" },
+    employeeCode: { type: String, required: true, maxlength: 30 },
+    name: { type: String, required: true, maxlength: 100 },
+    uan: { type: String, default: "", maxlength: 12 },
+    gross: { type: Number, min: 0, required: true },
+    pfWage: { type: Number, min: 0, required: true },
+    employeePF: { type: Number, min: 0, required: true },
+    employerPF: { type: Number, min: 0, required: true },
+    employeeESIC: { type: Number, min: 0, required: true },
+    employerESIC: { type: Number, min: 0, required: true },
+    netPay: { type: Number, required: true }
+  }]
+}, { timestamps: true });
+payrollRunSchema.index({ month: 1 }, { unique: true });
+export const HRPayrollRun = mongoose.models.HRPayrollRun || mongoose.model("HRPayrollRun", payrollRunSchema);
