@@ -28,6 +28,20 @@ The existing backend must be deployed and connected to MongoDB. The frontend bui
 
 To approve campaigns, sign in with an account whose database `role` is `admin` and use the protected admin API. Never expose admin tokens in frontend source code.
 
+
+## Create the first admin account
+
+The repository includes `server/scripts/bootstrapAdmin.js`. Run it only from a trusted environment with the production MongoDB URI:
+
+```bash
+cd server
+MONGODB_URI="your-private-mongodb-uri" ADMIN_EMAIL="admin@example.com" ADMIN_PASSWORD="use-a-unique-password-at-least-12-characters" npm run admin:bootstrap
+```
+
+Use the same email and password to sign in to Shivasha. The script promotes that email to admin and resets its password if the account already exists, so run it intentionally. Do not commit the MongoDB URI or password to GitHub, and remove temporary environment values after running it. If the hosting provider does not provide a secure shell, run the script locally from a trusted computer using the private production database URI, then unset the variables.
+
+The GitHub Pages frontend does not automatically create or grant admin privileges. A 403 response from the admin page means the logged-in database account is not an admin (or the server policy denied the request).
+
 ## Production readiness checklist
 
 1. Add rate limiting, bot/duplicate detection, and server-side event validation.
