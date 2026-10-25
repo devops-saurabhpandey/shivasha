@@ -1,7 +1,21 @@
 services:
+  # Shivasha's API is a separate service from the GitHub Pages frontend.
+  # Configure MONGODB_URI and JWT_SECRET privately in the Render dashboard.
   - type: web
-    name: shivasha
+    name: shivasha-api
     runtime: node
-    buildCommand: npm install && npm run build
-    startCommand: node server.js
+    plan: free
+    rootDir: server
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /api/health
     autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: FRONTEND_URL
+        value: https://devops-saurabhpandey.github.io
+      - key: MONGODB_URI
+        sync: false
+      - key: JWT_SECRET
+        sync: false
