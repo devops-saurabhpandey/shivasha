@@ -20,6 +20,10 @@ router.patch("/me", requireAuth, async (req, res) => {
   if (typeof name === "string" && name.trim()) user.name = name.trim();
   if (typeof bio === "string") user.bio = bio.trim().slice(0, 280);
   if (typeof avatarUrl === "string") user.avatarUrl = avatarUrl.trim();
+  if (typeof req.body.businessName === "string") user.businessName = req.body.businessName.trim().slice(0, 120);
+  if (typeof req.body.businessCategory === "string") user.businessCategory = req.body.businessCategory.trim().slice(0, 80);
+  if (typeof req.body.businessDescription === "string") user.businessDescription = req.body.businessDescription.trim().slice(0, 500);
+  if (typeof req.body.businessListed === "boolean") user.businessListed = req.body.businessListed;
   await user.save();
   res.json({ user: await User.findById(user._id).select("-passwordHash") });
 });
@@ -27,6 +31,22 @@ router.patch("/me", requireAuth, async (req, res) => {
 router.get("/discover", requireAuth, async (req, res) => {
   const users = await publicUser(User.find({ _id: { $ne: req.user.id }, moderationBlocked: { $ne: true } }).sort({ createdAt: -1 }).limit(30));
   res.json(users);
+});
+
+router.get("/directory", requireAuth, async (req, res) => {
+  const q = String(req.query.q || "").trim().slice(0, 80);
+  const category = String(req.query.category || "").trim().slice(0, 80);
+  const filter = { businessListed: true, moderationBlocked: { $ne: true } };
+  if (q) {
+    const escaped = q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    filter.$or = [
+      { businessName: { $regex: escaped, $options: "i" } },
+      { businessDescription: { $regex: escaped, $options: "i" } }
+    ];
+  }
+  if (category) filter.businessCategory = category;
+  const businesses = await User.find(filter).select("name avatarUrl businessName businessCategory businessDescription createdAt").sort({ businessName: 1 }).limit(100).lean();
+  res.json({ businesses });
 });
 
 router.get("/search", requireAuth, async (req, res) => {
