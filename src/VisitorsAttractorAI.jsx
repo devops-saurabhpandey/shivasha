@@ -64,6 +64,10 @@ export default function VisitorsAttractorAI() {
       {notice && <p role="status" style={{color:"#16845b",fontWeight:700}}>{notice}</p>}
     </div>
     <div className="panel" style={{padding:22,borderRadius:18,marginTop:16}}>
+      <h3>📺 Find public YouTube videos</h3>
+      <YouTubeFinder />
+    </div>
+    <div className="panel" style={{padding:22,borderRadius:18,marginTop:16}}>
       <h3>📈 Today's organic growth plan</h3>
       <ol style={{lineHeight:1.9,paddingLeft:22}}>{(ideas[goal] || ideas.Social).map((x,i)=><li key={i}>{x}</li>)}<li>Reply thoughtfully to comments and invite interested people to follow.</li><li>Share your profile link with relevant groups only where promotion is welcome.</li></ol>
       <p style={{fontSize:13,color:"#64748b"}}>Saved drafts: {saved.length}. Drafts are stored in this browser on this device.</p>
@@ -72,6 +76,42 @@ export default function VisitorsAttractorAI() {
     </div>
     <GrowthTracker />
   </section>;
+}
+
+function YouTubeFinder() {
+  const [query, setQuery] = useState("SHIVASHA");
+  const [items, setItems] = useState([]);
+  const [message, setMessage] = useState("");
+  const [loading, setLoading] = useState(false);
+  const search = async (event) => {
+    event?.preventDefault();
+    const clean = query.trim();
+    if (clean.length < 2) { setMessage("कम से कम 2 अक्षर लिखें।"); return; }
+    setLoading(true); setMessage(""); setItems([]);
+    try {
+      const response = await fetch(API_BASE + "/api/news/youtube-search?q=" + encodeURIComponent(clean));
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || "YouTube search अभी उपलब्ध नहीं है।");
+      setItems(Array.isArray(data.items) ? data.items : []);
+      setMessage(data.items?.length ? `${data.items.length} वीडियो मिले।` : "इस विषय पर वीडियो नहीं मिले।");
+    } catch (error) { setMessage(error.message || "API उपलब्ध नहीं है।"); }
+    finally { setLoading(false); }
+  };
+  return <div>
+    <p style={{color:"#64748b",lineHeight:1.6}}>YouTube पर सार्वजनिक वीडियो खोजें। API key केवल backend में सुरक्षित रखी जाती है।</p>
+    <form onSubmit={search} style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+      <input value={query} onChange={e=>setQuery(e.target.value)} maxLength={120} placeholder="वीडियो का विषय खोजें" style={{...field,flex:"1 1 220px",marginTop:0}}/>
+      <button className="primary" type="submit" disabled={loading}>{loading ? "खोज रहे हैं…" : "YouTube खोजें"}</button>
+    </form>
+    {message && <p role="status" style={{color:"#475569"}}>{message}</p>}
+    {items.length>0 && <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(230px,1fr))",gap:12,marginTop:12}}>
+      {items.map(item=><article key={item.videoId} style={{border:"1px solid #e2e8f0",borderRadius:12,overflow:"hidden"}}>
+        {item.thumbnail && <a href={item.url} target="_blank" rel="noreferrer"><img src={item.thumbnail} alt="" loading="lazy" style={{width:"100%",aspectRatio:"16/9",objectFit:"cover"}}/></a>}
+        <div style={{padding:12}}><a href={item.url} target="_blank" rel="noreferrer" style={{fontWeight:800,color:"#0f766e"}}>{item.title}</a><p style={{fontSize:13,color:"#64748b",margin:"6px 0"}}>{item.channelTitle}</p><p style={{fontSize:13,lineHeight:1.5}}>{item.description}</p></div>
+      </article>)}
+    </div>}
+    <p style={{fontSize:12,color:"#64748b"}}>यह public video search है; private channel analytics या automatic posting के लिए अलग OAuth permission चाहिए।</p>
+  </div>;
 }
 
 function GrowthTracker() {
