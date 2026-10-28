@@ -38,6 +38,10 @@ function apiFetch(path, auth, options = {}) {
     });
 }
 export default function App() {
+  useEffect(() => {
+    // Record an aggregate app page view; the API does not store visitor identifiers or IP addresses.
+    fetch(API_BASE + "/api/analytics/pageview", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) }).catch(() => {});
+  }, []);
   const [auth,setAuth]=useState(()=>{try{return JSON.parse(localStorage.getItem("shivasha_auth"))||null}catch{return null}});
   const [showLogin,setShowLogin]=useState(false);
   if(!auth) return showLogin ? <Login onLogin={setAuth}/> : <PublicHome onGetStarted={()=>document.getElementById("services")?.scrollIntoView({behavior:"smooth"})} onLogin={()=>setShowLogin(true)}/>;
