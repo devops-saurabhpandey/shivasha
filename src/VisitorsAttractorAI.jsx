@@ -33,6 +33,19 @@ export default function VisitorsAttractorAI() {
     try { if (navigator.share) await navigator.share({ title: "Join SHIVASHA", text: "Connect, learn and grow with the SHIVASHA community.", url }); else { await navigator.clipboard.writeText(url); setNotice("SHIVASHA link copied. Send it to people who may genuinely be interested."); } }
     catch { /* user cancelled sharing */ }
   };
+  const shareTo = (platform) => {
+    const appUrl = window.location.origin + window.location.pathname;
+    const message = draft + "\\n\\nJoin SHIVASHA: " + appUrl;
+    const encodedMessage = encodeURIComponent(message);
+    const encodedUrl = encodeURIComponent(appUrl);
+    const targets = {
+      WhatsApp: "https://wa.me/?text=" + encodedMessage,
+      Telegram: "https://t.me/share/url?url=" + encodedUrl + "&text=" + encodeURIComponent(draft),
+      Facebook: "https://www.facebook.com/sharer/sharer.php?u=" + encodedUrl,
+      LinkedIn: "https://www.linkedin.com/sharing/share-offsite/?url=" + encodedUrl
+    };
+    if (targets[platform]) window.open(targets[platform], "_blank", "noopener,noreferrer");
+  };
   return <section className="content">
     <div className="panel" style={{padding:22,borderRadius:18}}>
       <div style={{fontSize:12,fontWeight:900,letterSpacing:".08em",color:"#16845b"}}>SHIVASHA GROWTH TOOLS</div>
@@ -44,7 +57,7 @@ export default function VisitorsAttractorAI() {
         <label>Writing tone<select value={tone} onChange={e=>setTone(e.target.value)} style={field}><option>Friendly</option><option>Professional</option><option>Energetic</option></select></label>
       </div>
       <label style={{display:"block",marginTop:14}}>Post topic<input value={topic} onChange={e=>setTopic(e.target.value)} placeholder="What do you want to share?" style={field}/></label>
-      <div style={{display:"flex",gap:10,flexWrap:"wrap",marginTop:14}}><button className="primary" onClick={copy}>Copy post</button><button className="secondary" onClick={save}>Save draft</button><button className="secondary" onClick={share}>Invite / share SHIVASHA</button></div>
+      <div style={{display:"flex",gap:10,flexWrap:"wrap",marginTop:14}}><button className="primary" onClick={copy}>Copy post</button><button className="secondary" onClick={save}>Save draft</button><button className="secondary" onClick={share}>Invite / share SHIVASHA</button><button className="secondary" onClick={()=>shareTo("WhatsApp")}>Share to WhatsApp</button><button className="secondary" onClick={()=>shareTo("Telegram")}>Share to Telegram</button><button className="secondary" onClick={()=>shareTo("Facebook")}>Share to Facebook</button><button className="secondary" onClick={()=>shareTo("LinkedIn")}>Share to LinkedIn</button></div>
       <label style={{display:"block",marginTop:18}}>Ready-to-share post<textarea readOnly value={draft} rows={7} style={{...field,resize:"vertical",fontFamily:"inherit"}}/></label>
       {notice && <p role="status" style={{color:"#16845b",fontWeight:700}}>{notice}</p>}
     </div>
