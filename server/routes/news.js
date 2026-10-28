@@ -19,23 +19,23 @@ const FEEDS = {
 };
 
 function decodeXml(value="") {
-  return value.replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g,"$1")
+  return value.replace(/<!\\[CDATA\\[([\\s\\S]*?)\\]\\]>/g,"$1")
     .replace(/<[^>]+>/g," ")
     .replace(/&amp;/g,"&").replace(/&lt;/g,"<").replace(/&gt;/g,">")
     .replace(/&quot;/g,'"').replace(/&#39;|&apos;/g,"'")
-    .replace(/&#(\d+);/g,(_,n)=>String.fromCodePoint(Number(n)))
-    .replace(/&#x([\da-f]+);/gi,(_,n)=>String.fromCodePoint(parseInt(n,16)))
-    .replace(/\s+/g," ").trim();
+    .replace(/&#(\\d+);/g,(_,n)=>String.fromCodePoint(Number(n)))
+    .replace(/&#x([\\da-f]+);/gi,(_,n)=>String.fromCodePoint(parseInt(n,16)))
+    .replace(/\\s+/g," ").trim();
 }
 
 function tagValue(xml, tag) {
-  const escaped=tag.replace(/[.*+?^${}()|[\]\\]/g,"\\$&");
-  const match=xml.match(new RegExp("<"+escaped+"(?:\\s[^>]*)?>([\\s\\S]*?)<\\/"+escaped+">","i"));
+  const escaped=tag.replace(/[.*+?^${}()|[\\]\\\\]/g,"\\\\$&");
+  const match=xml.match(new RegExp("<"+escaped+"(?:\\\\s[^>]*)?>([\\s\\S]*?)<\\\\/"+escaped+">","i"));
   return match ? decodeXml(match[1]) : "";
 }
 
 function parseItems(xml, source) {
-  const items=[...xml.matchAll(/<(item|entry)(?:\s[^>]*)?>([\s\S]*?)<\/\1>/gi)].map(match=>{
+  const items=[...xml.matchAll(/<(item|entry)(?:\\s[^>]*)?>([\\s\\S]*?)<\\/\\1>/gi)].map(match=>{
     const block=match[2];
     let link=tagValue(block,"link");
     if(!link){
@@ -45,11 +45,44 @@ function parseItems(xml, source) {
     const title=tagValue(block,"title");
     const description=tagValue(block,"description")||tagValue(block,"summary")||tagValue(block,"content:encoded")||tagValue(block,"content");
     const date=tagValue(block,"pubDate")||tagValue(block,"published")||tagValue(block,"updated")||tagValue(block,"dc:date");
-    if(!title||!link||!/^https?:\/\//i.test(link)) return null;
+    if(!title||!link||!/^https?:\\/\\//i.test(link)) return null;
     return {title,description:description.slice(0,420),url:link,date,source:source.name,category:source.category};
   });
   return items.filter(Boolean);
 }
+
+router.get("/youtube-search", async (req, res) => {
+  const query = typeof req.query.q === "string" ? req.query.q.trim().slice(0, 120) : "";
+  if (query.length < 2) return res.status(400).json({ message: "Enter at least 2 characters to search YouTube.", items: [] });
+  if (!process.env.YOUTUBE_API_KEY) {
+    return res.status(503).json({ message: "YouTube search is not connected yet. Add YOUTUBE_API_KEY to the private backend environment.", setupRequired: true, items: [] });
+  }
+  try {
+    const url = new URL("https://www.googleapis.com/youtube/v3/search");
+    url.search = new URLSearchParams({ part: "snippet", type: "video", maxResults: "8", safeSearch: "moderate", q: query, key: process.env.YOUTUBE_API_KEY }).toString();
+    const response = await fetch(url, { signal: AbortSignal.timeout(8000) });
+    const data = await response.json();
+    if (!response.ok) {
+      const status = response.status === 403 ? 502 : response.status;
+      console.warn("YouTube API request failed:", response.status, data?.error?.errors?.[0]?.reason || "unknown");
+      return res.status(status).json({ message: response.status === 403 ? "YouTube API access or quota is unavailable. Check the Google Cloud project and quota." : "YouTube search is temporarily unavailable.", items: [] });
+    }
+    const items = (data.items || []).map(item => ({
+      videoId: item.id?.videoId,
+      title: item.snippet?.title || "YouTube video",
+      description: String(item.snippet?.description || "").slice(0, 300),
+      channelTitle: item.snippet?.channelTitle || "",
+      publishedAt: item.snippet?.publishedAt || "",
+      thumbnail: item.snippet?.thumbnails?.medium?.url || item.snippet?.thumbnails?.default?.url || "",
+      url: item.id?.videoId ? "https://www.youtube.com/watch?v=" + encodeURIComponent(item.id.videoId) : ""
+    })).filter(item => item.videoId && item.url);
+    res.set("Cache-Control", "public, max-age=120, stale-while-revalidate=300");
+    return res.json({ query, items, count: items.length, source: "YouTube Data API v3" });
+  } catch (error) {
+    console.warn("YouTube search unavailable:", error.message);
+    return res.status(502).json({ message: "Could not reach YouTube right now. Please try again.", items: [] });
+  }
+});
 
 router.get("/",async(req,res)=>{
   const section=String(req.query.section||"current-affairs");
