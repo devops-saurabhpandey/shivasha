@@ -1,4 +1,6 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
+
+const API_BASE = (import.meta.env.VITE_API_URL || "https://shivasha.onrender.com").replace(/\/$/, "");
 
 const ideas = {
   Social: ["Ask a question your audience can answer in one line.", "Share a useful tip and invite people to follow for more.", "Introduce a community member and celebrate their work."],
@@ -84,12 +86,23 @@ function GrowthTracker() {
   ];
   const [done, setDone] = useState(() => { try { return JSON.parse(localStorage.getItem("shivasha_growth_tasks") || "{}"); } catch { return {}; } });
   const [stats, setStats] = useState(() => { try { return JSON.parse(localStorage.getItem("shivasha_growth_stats") || '{"visits":0,"followers":0,"posts":0}'); } catch { return {visits:0,followers:0,posts:0}; } });
+  const [analytics, setAnalytics] = useState(null);
+  useEffect(() => {
+    let active = true;
+    fetch(API_BASE + "/api/analytics/summary").then(response => response.ok ? response.json() : null).then(data => { if (active && data) setAnalytics(data); }).catch(() => {});
+    return () => { active = false; };
+  }, []);
   const toggle = i => { const next={...done,[i]:!done[i]}; setDone(next); localStorage.setItem("shivasha_growth_tasks",JSON.stringify(next)); };
   const update = (key,value) => { const next={...stats,[key]:Math.max(0,Number(value)||0)}; setStats(next); localStorage.setItem("shivasha_growth_stats",JSON.stringify(next)); };
   return <div className="panel" style={{padding:22,borderRadius:18,marginTop:16}}>
     <h3>📅 7-day growth tracker</h3>
     <p style={{color:"#64748b"}}>Daily checklist and simple metrics to see whether your content is bringing real people.</p>
     <div style={{display:"grid",gap:9}}>{tasks.map((task,i)=><label key={task} style={{display:"flex",gap:10,alignItems:"center",padding:10,border:"1px solid #e2e8f0",borderRadius:10}}><input type="checkbox" checked={!!done[i]} onChange={()=>toggle(i)}/><span style={{textDecoration:done[i]?"line-through":"none"}}>{task}</span></label>)}</div>
+    <div style={{margin:"14px 0",padding:14,border:"1px solid #bbf7d0",borderRadius:12,background:"#f0fdf4"}}>
+      <h4 style={{margin:"0 0 6px"}}>Automatic SHIVASHA page-view report</h4>
+      {analytics ? <><b style={{fontSize:24}}>{analytics.totalPageViews}</b><span> page views in the last 7 days</span><div style={{display:"grid",gridTemplateColumns:"repeat(7,minmax(0,1fr))",gap:5,marginTop:10}}>{analytics.days.map(row=><div key={row.day} style={{textAlign:"center",fontSize:11}}><div style={{height:Math.max(5,Math.min(60,row.views*5))+"px",background:"#16a34a",borderRadius:4,marginBottom:4}} title={row.views+" page views"}></div><b>{row.views}</b><div>{row.day.slice(5)}</div></div>)}</div></> : <p style={{margin:0}}>Automatic report will appear when the SHIVASHA API and database are available.</p>}
+      <p style={{fontSize:12,color:"#64748b",marginBottom:0}}>Counts are page views, not unique visitors or social followers. Aggregate totals only; no IP address or visitor identity is stored by this feature.</p>
+    </div>
     <h4 style={{marginBottom:8}}>Record your actual results</h4>
     <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(130px,1fr))",gap:10}}>{[["visits","Profile visits"],["followers","New followers"],["posts","Posts shared"]].map(([key,label])=><label key={key}>{label}<input type="number" min="0" value={stats[key]} onChange={e=>update(key,e.target.value)} style={field}/></label>)}</div>
     <p style={{fontSize:12,color:"#64748b"}}>Checklist and numbers are saved locally in this browser, not synced across devices. Enter only real results; follower growth is not guaranteed.</p>
