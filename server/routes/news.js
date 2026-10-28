@@ -19,23 +19,23 @@ const FEEDS = {
 };
 
 function decodeXml(value="") {
-  return value.replace(/<!\\[CDATA\\[([\\s\\S]*?)\\]\\]>/g,"$1")
+  return value.replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g,"$1")
     .replace(/<[^>]+>/g," ")
     .replace(/&amp;/g,"&").replace(/&lt;/g,"<").replace(/&gt;/g,">")
     .replace(/&quot;/g,'"').replace(/&#39;|&apos;/g,"'")
-    .replace(/&#(\\d+);/g,(_,n)=>String.fromCodePoint(Number(n)))
-    .replace(/&#x([\\da-f]+);/gi,(_,n)=>String.fromCodePoint(parseInt(n,16)))
-    .replace(/\\s+/g," ").trim();
+    .replace(/&#(\d+);/g,(_,n)=>String.fromCodePoint(Number(n)))
+    .replace(/&#x([\da-f]+);/gi,(_,n)=>String.fromCodePoint(parseInt(n,16)))
+    .replace(/\s+/g," ").trim();
 }
 
 function tagValue(xml, tag) {
-  const escaped=tag.replace(/[.*+?^${}()|[\\]\\\\]/g,"\\\\$&");
-  const match=xml.match(new RegExp("<"+escaped+"(?:\\\\s[^>]*)?>([\\s\\S]*?)<\\\\/"+escaped+">","i"));
+  const escaped=tag.replace(/[.*+?^${}()|[\]\\]/g,"\\$&");
+  const match=xml.match(new RegExp("<"+escaped+"(?:\\s[^>]*)?>([\\s\\S]*?)<\\/"+escaped+">","i"));
   return match ? decodeXml(match[1]) : "";
 }
 
 function parseItems(xml, source) {
-  const items=[...xml.matchAll(/<(item|entry)(?:\\s[^>]*)?>([\\s\\S]*?)<\\/\\1>/gi)].map(match=>{
+  const items=[...xml.matchAll(/<(item|entry)(?:\s[^>]*)?>([\s\S]*?)<\/\1>/gi)].map(match=>{
     const block=match[2];
     let link=tagValue(block,"link");
     if(!link){
@@ -45,7 +45,7 @@ function parseItems(xml, source) {
     const title=tagValue(block,"title");
     const description=tagValue(block,"description")||tagValue(block,"summary")||tagValue(block,"content:encoded")||tagValue(block,"content");
     const date=tagValue(block,"pubDate")||tagValue(block,"published")||tagValue(block,"updated")||tagValue(block,"dc:date");
-    if(!title||!link||!/^https?:\\/\\//i.test(link)) return null;
+    if(!title||!link||!/^https?:\/\//i.test(link)) return null;
     return {title,description:description.slice(0,420),url:link,date,source:source.name,category:source.category};
   });
   return items.filter(Boolean);
