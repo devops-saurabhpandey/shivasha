@@ -37,7 +37,7 @@ export default function VisitorsAttractorAI() {
   };
   const shareTo = (platform) => {
     const appUrl = window.location.origin + window.location.pathname;
-    const message = draft + "\\n\\nJoin SHIVASHA: " + appUrl;
+    const message = draft + "\n\nJoin SHIVASHA: " + appUrl;
     const encodedMessage = encodeURIComponent(message);
     const encodedUrl = encodeURIComponent(appUrl);
     const targets = {
