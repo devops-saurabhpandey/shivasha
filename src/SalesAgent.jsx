@@ -6,6 +6,7 @@ const field = {display:"block",width:"100%",boxSizing:"border-box",marginTop:6,p
 export default function SalesAgent({auth}) {
   const [form,setForm]=useState({product:"",customerType:"Small business",customerNeed:"",price:"",language:"Hinglish",channel:"WhatsApp",customerName:"",customerContact:"",businessName:""});
   const [result,setResult]=useState(null);
+  const [resultMode,setResultMode]=useState("");
   const [loading,setLoading]=useState(false);
   const [saving,setSaving]=useState(false);
   const [message,setMessage]=useState("");
@@ -17,6 +18,8 @@ export default function SalesAgent({auth}) {
       const data=await response.json();
       if(!response.ok)throw new Error(data.message||"Sales agent is not available.");
       setResult(data.result);
+      setResultMode(data.mode || "ai");
+      setMessage(data.disclaimer || "Review the suggestions before use.");
     }catch(error){setMessage(error.message||"Could not generate a sales plan.");}
     finally{setLoading(false);}
   };
@@ -52,6 +55,7 @@ export default function SalesAgent({auth}) {
       {message&&<p role="status" style={{color:"#16845b",fontWeight:700}}>{message}</p>}
     </div>
     {result&&<div className="panel" style={{padding:22,borderRadius:18,marginTop:16}}>
+      <p role="status" style={{padding:12,borderRadius:10,background:resultMode==="basic_template"?"#fff7ed":"#ecfdf5",color:resultMode==="basic_template"?"#9a3412":"#166534"}}>{resultMode==="basic_template"?"🆓 Basic template mode — no external AI API is used, so no AI API charge. Personalize the draft yourself.":"✨ AI-generated mode — review all claims before sending."}</p>
       <h3>🎯 Sales approach</h3><p style={{whiteSpace:"pre-wrap",lineHeight:1.7}}>{result.approach}</p>
       <h3>❓ Customer discovery questions</h3><ol style={{lineHeight:1.8}}>{(result.questions||[]).map((x,i)=><li key={i}>{x}</li>)}</ol>
       <h3>💬 Ready-to-review message</h3><div style={{whiteSpace:"pre-wrap",padding:14,background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:12,lineHeight:1.7}}>{result.message}</div><button className="secondary" style={{marginTop:8}} onClick={()=>copy(result.message)}>Copy message</button>
