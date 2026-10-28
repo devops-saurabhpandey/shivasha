@@ -27,6 +27,7 @@ import subscriptionRoutes from "./routes/subscriptions.js";
 import adsRoutes from "./routes/ads.js";
 import aiAssistantRoutes from "./routes/aiAssistant.js";
 import hrRoutes from "./routes/hr.js";
+import analyticsRoutes from "./routes/analytics.js";
 
 dotenv.config();
 
@@ -189,6 +190,7 @@ app.use("/api/ayurveda-ai", ayurvedaAIRoutes);
 app.use("/api/subscriptions", subscriptionRoutes);
 app.use("/api/ads", adsRoutes);
 app.use("/api/hr", hrRoutes);
+app.use("/api/analytics", analyticsRoutes);
 
 app.get("/api", (_req, res) => res.json({ message: "SHIVASHA API is running" }));
 
