@@ -55,6 +55,31 @@ export default function VisitorsAttractorAI() {
       {saved.length>0 && <div style={{display:"grid",gap:8}}>{saved.slice(0,5).map(x=><div key={x.id} style={{padding:10,border:"1px solid #e2e8f0",borderRadius:10}}><b>{x.topic}</b><small style={{display:"block",color:"#64748b"}}>{x.createdAt}</small><button className="secondary" style={{marginTop:6}} onClick={()=>{setGoal(x.goal);setTopic(x.topic);setNotice("Draft loaded into the editor.");}}>Edit draft</button></div>)}</div>}
       <p style={{fontSize:12,color:"#64748b",marginTop:14}}>Note: this tool helps attract genuine visitors; it does not create fake followers, auto-follow people, or send unsolicited messages. Actual automatic follower growth cannot be guaranteed and requires real user interest and supported platform integrations.</p>
     </div>
+    <GrowthTracker />
   </section>;
+}
+
+function GrowthTracker() {
+  const tasks = [
+    "Publish one helpful original post",
+    "Share your SHIVASHA profile with 3 relevant people",
+    "Reply to every genuine comment or inquiry",
+    "Comment helpfully on 3 relevant community posts",
+    "Invite interested people to follow SHIVASHA",
+    "Share one useful tip, poll or question",
+    "Review profile visits, follows and best-performing post"
+  ];
+  const [done, setDone] = useState(() => { try { return JSON.parse(localStorage.getItem("shivasha_growth_tasks") || "{}"); } catch { return {}; } });
+  const [stats, setStats] = useState(() => { try { return JSON.parse(localStorage.getItem("shivasha_growth_stats") || '{"visits":0,"followers":0,"posts":0}'); } catch { return {visits:0,followers:0,posts:0}; } });
+  const toggle = i => { const next={...done,[i]:!done[i]}; setDone(next); localStorage.setItem("shivasha_growth_tasks",JSON.stringify(next)); };
+  const update = (key,value) => { const next={...stats,[key]:Math.max(0,Number(value)||0)}; setStats(next); localStorage.setItem("shivasha_growth_stats",JSON.stringify(next)); };
+  return <div className="panel" style={{padding:22,borderRadius:18,marginTop:16}}>
+    <h3>📅 7-day growth tracker</h3>
+    <p style={{color:"#64748b"}}>Daily checklist and simple metrics to see whether your content is bringing real people.</p>
+    <div style={{display:"grid",gap:9}}>{tasks.map((task,i)=><label key={task} style={{display:"flex",gap:10,alignItems:"center",padding:10,border:"1px solid #e2e8f0",borderRadius:10}}><input type="checkbox" checked={!!done[i]} onChange={()=>toggle(i)}/><span style={{textDecoration:done[i]?"line-through":"none"}}>{task}</span></label>)}</div>
+    <h4 style={{marginBottom:8}}>Record your actual results</h4>
+    <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(130px,1fr))",gap:10}}>{[["visits","Profile visits"],["followers","New followers"],["posts","Posts shared"]].map(([key,label])=><label key={key}>{label}<input type="number" min="0" value={stats[key]} onChange={e=>update(key,e.target.value)} style={field}/></label>)}</div>
+    <p style={{fontSize:12,color:"#64748b"}}>Checklist and numbers are saved locally in this browser, not synced across devices. Enter only real results; follower growth is not guaranteed.</p>
+  </div>;
 }
 const field = {display:"block",width:"100%",boxSizing:"border-box",marginTop:6,padding:"11px 12px",border:"1px solid #cbd5e1",borderRadius:10,background:"#fff",color:"#0f172a"};
