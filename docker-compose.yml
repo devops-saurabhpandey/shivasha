@@ -1,3 +1,5 @@
+name: shivasha
+
 services:
   mongo:
     image: mongo:8
