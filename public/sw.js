@@ -1,4 +1,4 @@
-const VERSION = "shivasha-pwa-v2";
+const VERSION = "shivasha-pwa-v3";
 const APP_SHELL = ["./", "./manifest.webmanifest", "./images/shivasha-icon.svg"];
 
 self.addEventListener("install", (event) => {
