@@ -4,6 +4,8 @@
 
 **Product plan:** [Global Super App Master Plan](./docs/SHIVASHA_GLOBAL_SUPER_APP_PLAN.md)
 
+**Self-host on your own computer:** [Self-hosting guide](./docs/SELF_HOSTING.md) — Docker Compose runs the frontend, API and a local MongoDB database.
+
 The existing React-based social community app, Node.js/Express API and MongoDB data store are the starting point for this wider ecosystem.
 
 ## Links
@@ -21,7 +23,7 @@ The existing React-based social community app, Node.js/Express API and MongoDB d
 - Database: MongoDB/Mongoose
 - Authentication: JSON Web Tokens (JWT)
 - Real-time features: Socket.IO
-- Frontend hosting: GitHub Pages
+- Frontend hosting: GitHub Pages or self-hosted Nginx container
 
 ## Features in the current codebase
 
@@ -68,9 +70,9 @@ npm start
 
 Configure the backend environment variables before starting it:
 
-- `MONGODB_URI` — MongoDB Atlas connection string
+- `MONGODB_URI` — MongoDB Atlas connection string or a reachable MongoDB server
 - `JWT_SECRET` — long, random private secret
-- `FRONTEND_URL` — `https://devops-saurabhpandey.github.io/shivasha`
+- `FRONTEND_URL` — allowed frontend origin
 - `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` — required for persistent image/video uploads
 
 See [server/.env.example](./server/.env.example) for the variable names. Create a private local `.env` file; do not commit secrets.
