@@ -1,0 +1,38 @@
+{
+  "feature": "SHIVASHA City-Wise AI Job Search",
+  "version": 1,
+  "exampleSearch": {
+    "query": "Python Developer",
+    "city": "Kanpur",
+    "state": "Uttar Pradesh",
+    "country": "India",
+    "experience": "fresher",
+    "workMode": "any",
+    "salaryMin": 15000,
+    "page": 1,
+    "pageSize": 20
+  },
+  "exampleJob": {
+    "title": "Junior Python Developer",
+    "company": "Example Company",
+    "city": "Kanpur",
+    "state": "Uttar Pradesh",
+    "workMode": "onsite",
+    "employmentType": "full-time",
+    "experienceMin": 0,
+    "experienceMax": 1,
+    "skills": ["Python", "REST APIs"],
+    "salaryMin": 15000,
+    "salaryMax": 22000,
+    "currency": "INR",
+    "sourceType": "shivasha",
+    "status": "pending_review",
+    "applyUrl": ""
+  },
+  "exampleMatch": {
+    "score": 82,
+    "matchedSkills": ["Python"],
+    "missingSkills": ["REST APIs"],
+    "notice": "Estimated match only; not a hiring guarantee."
+  }
+}
