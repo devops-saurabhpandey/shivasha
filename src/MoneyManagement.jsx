@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import "./money-management.css";
 
 const STORAGE_PREFIX = "shivasha_money_management_v1";
 const CATEGORIES = ["Food", "Housing", "Travel", "Bills", "Shopping", "Health", "Education", "Family", "Business", "Other"];
@@ -95,7 +96,7 @@ export default function MoneyManagement({ auth }) {
     <div className="module-grid">
       <form className="panel" onSubmit={addEntry}>
         <div className="panel-head"><h3>नया लेन-देन जोड़ें</h3></div>
-        <label>प्रकार<select value={form.type} onChange={event => setForm({ ...form, type: event.target.value })}><option value="income">आय (Income)</option><option value="expense">खर्च (Expense)</option></select></label>
+        <label>प्रकार<select value={form.type} onChange={event => setForm({ ...form, type: event.target.value, category: event.target.value === "income" ? "Salary" : "Food" })}><option value="income">आय (Income)</option><option value="expense">खर्च (Expense)</option></select></label>
         <label>राशि (₹)<input required type="number" min="1" step="0.01" inputMode="decimal" value={form.amount} onChange={event => setForm({ ...form, amount: event.target.value })} placeholder="उदाहरण: 1500" /></label>
         <label>श्रेणी<select value={form.category} onChange={event => setForm({ ...form, category: event.target.value })}>{(form.type === "income" ? ["Salary", "Business income", "Interest", "Gift", "Other"] : CATEGORIES).map(category => <option key={category}>{category}</option>)}</select></label>
         <label>तारीख<input required type="date" value={form.date} onChange={event => setForm({ ...form, date: event.target.value })} /></label>
