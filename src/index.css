@@ -878,3 +878,20 @@ a, .hashtag-link, .switch-auth { color: #287d79; }
 
 /* SHIVASHA Pooja Book */
 .pooja-page{max-width:980px;padding-bottom:40px}.pooja-hero{padding:30px 22px;text-align:center;border:1px solid #ead7b6;border-radius:22px;background:linear-gradient(145deg,#fffaf0,#f8e5c6);color:#4b2e19}.pooja-kicker{font-size:11px;letter-spacing:.12em;font-weight:900;color:#987044}.pooja-symbol{font-size:42px;margin:12px auto}.pooja-hero h2{margin:4px 0 8px}.pooja-hero p{margin:0 0 8px;color:#765638}.pooja-hero small{font-weight:800;color:#8c6a43}.pooja-tabs,.pooja-filters{display:flex;gap:8px;flex-wrap:wrap;margin:16px 0}.pooja-tabs button,.pooja-filters button{border:1px solid #eadfcf;border-radius:20px;background:#fff;padding:9px 14px;font-weight:800;cursor:pointer;color:#654a2e}.pooja-tabs button.selected,.pooja-filters button.selected{background:#4b3425;color:#fff;border-color:#4b3425}.pooja-library{margin-bottom:16px}.pooja-library input{margin:4px 0 12px}.pooja-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin-top:12px}.pooja-list button{padding:12px;border:1px solid #ece5dc;border-radius:10px;background:#fff;text-align:left;cursor:pointer}.pooja-list button.selected{border-color:#a87942;background:#fff7e9}.pooja-list b,.pooja-list small{display:block}.pooja-list small{color:#81715f;margin-top:4px}.pooja-detail{line-height:1.7}.pooja-detail-head{display:flex;justify-content:space-between;gap:14px;align-items:flex-start}.pooja-detail h3{margin:5px 0}.pooja-detail h4{margin:18px 0 6px;color:#63472c}.pooja-detail li{margin:6px 0}.pooja-mantra{padding:18px;margin-top:18px;border-radius:14px;background:#fff6e8;border:1px solid #ead7b6}.pooja-mantra small,.pooja-mantra-card small{font-weight:900;color:#987044}.pooja-mantra p{font-size:22px;font-weight:800;color:#5c3b20;margin:8px 0}.pooja-mantra span,.pooja-mantra-card span{color:#74614c}.pooja-mantra-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.pooja-mantra-card h3{font-size:19px;line-height:1.7;color:#5c3b20}.pooja-mantra-card p{color:#88745d;font-size:13px}.pooja-mantra-card button{margin-top:14px}.pooja-aarti-row{padding:12px 0;border-bottom:1px solid #eee6dc}.pooja-aarti-row p{margin:5px 0;color:#75685b}.pooja-note,.pooja-disclaimer{margin-top:16px;padding:14px;border-radius:10px;background:#fff8ec;color:#725333;line-height:1.6;font-size:13px}.pooja-notice{padding:10px 14px;background:#edf8f0;color:#24613c;border-radius:8px}.pooja-disclaimer{background:#f6f3ee}@media(max-width:650px){.pooja-list,.pooja-mantra-grid{grid-template-columns:1fr}.pooja-detail-head{display:block}.pooja-detail-head button{margin-top:10px}.pooja-hero{padding:24px 16px}}
+
+
+/* Global degree-course explorer */
+.global-education{max-width:1180px;margin:0 auto;padding:20px}
+.global-education-hero{padding:28px;border-radius:20px;background:linear-gradient(135deg,#123d5a,#246c80);color:#fff;margin-bottom:20px}
+.global-education-hero h2{margin:8px 0;font-size:clamp(25px,4vw,36px)}
+.global-education-hero p{max-width:760px;line-height:1.65;color:#e2f4f7}
+.global-education-filters{display:grid;grid-template-columns:2fr 1fr 1fr;gap:10px;margin:18px 0}
+.global-education-filters input,.global-education-filters select{min-width:0;padding:12px;border:1px solid #d7e0e8;border-radius:10px;background:var(--panel,#fff);color:inherit}
+.global-education-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(245px,1fr));gap:14px}
+.global-degree-card{border:1px solid #e0e7ed;border-radius:15px;padding:18px;background:var(--panel,#fff);box-shadow:0 4px 16px #18354a0a}
+.global-degree-card h3{margin:8px 0;font-size:18px}
+.global-degree-card p{line-height:1.5;color:var(--muted,#687587)}
+.global-degree-meta{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}
+.global-degree-meta span{font-size:11px;padding:5px 8px;border-radius:20px;background:#eaf4f6;color:#24586b}
+.global-education-note{padding:14px;border-radius:12px;background:#fff7e7;color:#75551d;line-height:1.6;margin:18px 0}
+@media(max-width:650px){.global-education{padding:12px}.global-education-hero{padding:20px}.global-education-filters{grid-template-columns:1fr}}
