@@ -20,21 +20,24 @@ export default function MoneyManagement({ auth }) {
   const userKey = auth?.user?._id || auth?.user?.id || auth?.user?.email || "local-user";
   const storageKey = STORAGE_PREFIX + ":" + userKey;
   const [entries, setEntries] = useState(() => readEntries(storageKey));
+  const [loadedKey, setLoadedKey] = useState(storageKey);
   const [month, setMonth] = useState(monthKey(today()));
   const [form, setForm] = useState({ type: "expense", amount: "", category: "Food", note: "", date: today() });
   const [notice, setNotice] = useState("");
 
   useEffect(() => {
     setEntries(readEntries(storageKey));
+    setLoadedKey(storageKey);
   }, [storageKey]);
 
   useEffect(() => {
+    if (loadedKey !== storageKey) return;
     try {
       localStorage.setItem(storageKey, JSON.stringify(entries));
     } catch {
       setNotice("इस डिवाइस में डेटा सेव नहीं हो पाया। कुछ जगह खाली करके दोबारा कोशिश करें।");
     }
-  }, [entries, storageKey]);
+  }, [entries, storageKey, loadedKey]);
 
   const visible = useMemo(() => entries.filter(item => monthKey(item.date) === month), [entries, month]);
   const income = visible.filter(item => item.type === "income").reduce((sum, item) => sum + item.amount, 0);
