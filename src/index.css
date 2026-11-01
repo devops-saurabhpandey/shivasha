@@ -837,3 +837,40 @@ a, .hashtag-link, .switch-auth { color: #287d79; }
     min-width: 0;
   }
 }
+
+
+/* SHIVASHA Daily Motivation */
+.motivation-page{max-width:1120px;padding-bottom:36px}
+.motivation-hero{position:relative;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;min-height:330px;margin:4px 0 20px;padding:34px 28px;border-radius:22px;background:radial-gradient(circle at 12% 10%,rgba(255,255,255,.18),transparent 30%),linear-gradient(130deg,#142b45,#245b67 58%,#98733d);color:#fff;text-align:center;box-shadow:0 14px 34px rgba(23,36,59,.13)}
+.motivation-hero:after{content:"";position:absolute;inset:12px;border:1px solid rgba(255,255,255,.2);border-radius:15px;pointer-events:none}
+.motivation-kicker{font-size:10px;font-weight:850;letter-spacing:2px;color:#f3dba9}
+.motivation-hero-mark{display:grid;place-items:center;width:48px;height:48px;border:1px solid rgba(255,255,255,.55);border-radius:50%;font-size:27px;color:#f6dfad}
+.motivation-hero h2{margin:0;color:#fff!important;font-size:clamp(23px,4vw,32px)}
+.motivation-date{margin:0;color:#e3eaf0;font-size:12px}
+.motivation-hero blockquote{max-width:760px;margin:8px auto;color:#fff;font-size:clamp(19px,3vw,27px);font-weight:750;line-height:1.65}
+.motivation-category{padding:6px 13px;border:1px solid rgba(255,255,255,.42);border-radius:999px;color:#fff;font-size:11px}
+.motivation-actions{display:flex;justify-content:center;gap:9px;flex-wrap:wrap;margin-top:8px}
+.motivation-actions .secondary{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.45);color:#fff}
+.motivation-notice{padding:11px 14px;border-radius:10px;background:#eaf6ef;color:#17613d;font-size:13px}
+.motivation-library,.motivation-favorites{padding:20px;margin-top:18px}
+.motivation-library .panel-head,.motivation-favorites .panel-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.motivation-library .panel-head h3,.motivation-favorites .panel-head h3{margin:0}
+.motivation-library .panel-head p{margin:5px 0 0;color:#718096;font-size:12px}
+.motivation-search{width:100%;margin:16px 0 12px;padding:12px 14px;border:1px solid #dce3ec;border-radius:10px;background:#fff;color:#17243b;font:inherit}
+.motivation-filters{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:16px}
+.motivation-filters button{border:1px solid #d9e1eb;border-radius:999px;background:#fff;color:#526176;padding:7px 11px;font-size:11px;font-weight:750;cursor:pointer}
+.motivation-filters button.selected{border-color:#17243b;background:#17243b;color:#fff}
+.motivation-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.motivation-quote-card{display:flex;flex-direction:column;justify-content:space-between;min-width:0;padding:16px;border:1px solid #e4eaf1;border-radius:14px;background:linear-gradient(145deg,#fff,#f8fafc)}
+.motivation-quote-top{display:flex;justify-content:space-between;gap:8px;align-items:center;color:#8793a4}
+.motivation-quote-top span{font-size:10px;font-weight:850;letter-spacing:1px}
+.motivation-quote-top small{padding:4px 8px;border-radius:999px;background:#edf3f6;color:#47616b;font-size:10px}
+.motivation-quote-card blockquote{margin:15px 0 18px;color:#23354b;font-size:15px;font-weight:700;line-height:1.75}
+.motivation-card-actions{display:flex;gap:8px;flex-wrap:wrap}
+.motivation-card-actions button{padding:7px 10px;font-size:11px}
+.motivation-favorite-list{display:grid;gap:8px}
+.motivation-favorite-list>div{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid #edf0f4;font-size:13px;line-height:1.6}
+.motivation-favorite-list>div:last-child{border-bottom:0}
+.motivation-favorite-list button{flex:0 0 auto;padding:6px 10px;font-size:11px}
+.motivation-footnote{margin:14px 2px;color:#758196;font-size:11px;line-height:1.6}
+@media(max-width:650px){.motivation-page{padding:12px}.motivation-hero{min-height:300px;padding:28px 20px}.motivation-grid{grid-template-columns:1fr}.motivation-library,.motivation-favorites{padding:15px}.motivation-library .panel-head{align-items:flex-start}.motivation-quote-card blockquote{font-size:14px}.motivation-favorite-list>div{align-items:flex-start}}
