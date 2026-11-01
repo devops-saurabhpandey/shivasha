@@ -895,3 +895,36 @@ a, .hashtag-link, .switch-auth { color: #287d79; }
 .global-degree-meta span{font-size:11px;padding:5px 8px;border-radius:20px;background:#eaf4f6;color:#24586b}
 .global-education-note{padding:14px;border-radius:12px;background:#fff7e7;color:#75551d;line-height:1.6;margin:18px 0}
 @media(max-width:650px){.global-education{padding:12px}.global-education-hero{padding:20px}.global-education-filters{grid-template-columns:1fr}}
+
+
+/* Global degree course catalogue */
+.global-education{max-width:1240px;margin:0 auto;padding:18px;color:var(--text,#172b3a)}
+.education-hero{padding:28px;border-radius:18px;background:linear-gradient(130deg,#123b55,#176b70);color:#fff}
+.education-eyebrow{font-size:11px;font-weight:800;letter-spacing:.12em;opacity:.85}
+.education-hero h1{margin:8px 0;font-size:clamp(26px,4vw,38px)}
+.education-hero p{line-height:1.6;color:#e2f4f7}
+.education-search{display:flex;gap:10px;align-items:center;margin-top:18px;padding:10px 14px;border-radius:12px;background:#fff;color:#243746}
+.education-search input{width:100%;border:0;outline:0;background:transparent;color:#172b3a}
+.education-filters{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:16px 0}
+.education-filters select,.education-enquiry-panel input,.education-enquiry-panel textarea{min-width:0;width:100%;box-sizing:border-box;padding:11px;border:1px solid #d6e0e8;border-radius:9px;background:var(--panel,#fff);color:inherit}
+.education-results{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:14px 0;color:var(--muted,#64748b);font-size:13px}
+.education-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(245px,1fr));gap:14px}
+.education-card{display:flex;flex-direction:column;gap:9px;padding:18px;border:1px solid var(--border,#dce5eb);border-radius:15px;background:var(--panel,#fff);box-shadow:0 4px 16px #18354a0a}
+.education-card h2{margin:0;font-size:19px}
+.education-card p{margin:0;line-height:1.5;color:var(--muted,#687587)}
+.education-card-top{display:flex;align-items:center;justify-content:space-between}
+.education-card-top button{border:0;background:transparent;font-size:23px;cursor:pointer}
+.education-icon{font-size:25px}
+.education-tag{align-self:flex-start;padding:4px 9px;border-radius:20px;background:#eaf4f6;color:#24586b;font-size:12px}
+.education-meta{display:flex;flex-wrap:wrap;gap:7px}
+.education-meta span{padding:5px 8px;border-radius:20px;background:#f0f4f7;font-size:11px}
+.education-source{font-size:12px}
+.education-card .primary,.education-card .secondary{display:inline-flex;justify-content:center;align-items:center;padding:10px 12px;border-radius:9px;text-decoration:none;cursor:pointer}
+.education-disclaimer{margin:18px 0;padding:14px;border-radius:12px;background:#fff7e7;color:#75551d;line-height:1.6;font-size:13px}
+.education-enquiry-overlay{position:fixed;inset:0;z-index:1000;display:grid;place-items:center;padding:16px;background:#0b1724a8}
+.education-enquiry-panel{position:relative;display:grid;gap:12px;width:min(100%,480px);max-height:90vh;overflow:auto;padding:22px;border-radius:16px;background:var(--panel,#fff);color:var(--text,#172b3a);box-shadow:0 18px 55px #0004}
+.education-enquiry-panel label{display:grid;gap:6px;font-size:13px;font-weight:650}
+.education-enquiry-panel label input[type=checkbox]{width:auto}
+.education-enquiry-panel button{padding:10px 12px;border-radius:9px;cursor:pointer}
+.education-enquiry-panel p{margin:0;line-height:1.5}
+@media(max-width:650px){.global-education{padding:12px}.education-hero{padding:20px}.education-filters{grid-template-columns:1fr}.education-results{display:grid}}
