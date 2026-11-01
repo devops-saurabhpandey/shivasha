@@ -193,6 +193,24 @@ export default function HinduCalendar() {
   ].filter(([,value]) => value != null) : [];
 
   const selectedCity = CITIES.find(c => c.value === city)?.label || city;
+  const selectedDateKey = isoDate(selected);
+  const selectedObservances = festivals.filter(item => {
+    const date = findValue(item, ["date", "gregorianDate", "gregorian_date", "observanceDate"]);
+    return date && String(date).slice(0, 10) === selectedDateKey;
+  });
+  const selectedObservanceNames = selectedObservances.map(item =>
+    formatValue(findValue(item, ["nameHi", "name_hi", "hindi", "name", "festival", "title"]) || "व्रत / त्योहार")
+  );
+  const vratNameText = selectedObservanceNames.join(" ");
+  const upvaasGuidance = /ekadashi|एकादशी/i.test(vratNameText)
+    ? { title: "एकादशी उपवास", items: ["परंपरा के अनुसार संकल्प लेकर भगवान विष्णु का स्मरण और पूजा करें।", "अनाज और दाल से परहेज़ कई परंपराओं में किया जाता है; फलाहार के नियम परिवार/सम्प्रदाय के अनुसार बदलते हैं।", "द्वादशी पारण का समय स्थानीय पंचांग से अवश्य जाँचें।"] }
+    : /pradosh|प्रदोष/i.test(vratNameText)
+      ? { title: "प्रदोष व्रत", items: ["प्रदोष काल सूर्यास्त के आसपास होता है; शिव पूजा का समय स्थानीय पंचांग से देखें।", "उपवास, फलाहार या एक समय भोजन—अपनी परंपरा और क्षमता के अनुसार चुनें।", "पूजा और व्रत के नियम क्षेत्रीय परंपराओं में अलग हो सकते हैं।"] }
+      : /purnima|पूर्णिमा|amavasya|अमावस्या/i.test(vratNameText)
+        ? { title: "पूर्णिमा / अमावस्या व्रत", items: ["स्नान, ध्यान, दान और अपनी परंपरा के अनुसार पूजा करें।", "उपवास अनिवार्य मानने से पहले अपने परिवार की परंपरा और स्वास्थ्य का ध्यान रखें।", "विशेष पूजा का मुहूर्त स्थानीय पंचांग से जाँचें।"] }
+        : /sankashti|संकष्टी|chaturthi|चतुर्थी/i.test(vratNameText)
+          ? { title: "चतुर्थी व्रत", items: ["गणेश जी की पूजा और संकष्टी परंपरा में चंद्र दर्शन का महत्व है।", "चंद्र उदय और व्रत खोलने का समय शहर के अनुसार बदलता है; पंचांग से पुष्टि करें।", "व्रत का भोजन और नियम अपनी परंपरा के अनुसार रखें।"] }
+          : { title: "सामान्य उपवास मार्गदर्शन", items: ["व्रत का संकल्प और पूजा अपनी पारिवारिक/क्षेत्रीय परंपरा के अनुसार करें।", "फलाहार, जल और भोजन के नियम हर व्रत में एक जैसे नहीं होते।", "पारण या व्रत खोलने का सटीक समय स्थानीय पंचांग से ही जाँचें।"] };
   const shubhPeriods = getShubhPeriods(panchang);
   const abhijit = panchang ? findValue(panchang, ["abhijitMuhurta", "abhijit_muhurta", "abhijit"]) : null;
   const monthFestivals = festivals.filter(item => {
@@ -227,6 +245,28 @@ export default function HinduCalendar() {
         </div>
         <p className="calendar-source">पंचांग डेटा: <a href="https://astrotathya.com/developers" target="_blank" rel="noreferrer">AstroTathya</a> · शहर बदलने पर समय बदल सकता है।</p>
       </aside>
+    </div>
+    <div className="panel calendar-upvaas">
+      <div className="panel-head"><h3>🪔 दैनिक तिथि, व्रत एवं उपवास · Daily Tithi & Vrat</h3><span>{selectedCity}</span></div>
+      <div className="calendar-upvaas-date">{formatLong(selected)}</div>
+      <div className="calendar-upvaas-tithi">
+        <span>आज की तिथि</span>
+        <b>{panchang ? formatValue(findValue(panchang, ["tithi", "tithiName"]) || "पंचांग में उपलब्ध नहीं") : "पंचांग डेटा की प्रतीक्षा है…"}</b>
+        <small>{panchang ? formatValue(findValue(panchang, ["paksha", "fortnight"]) || "") : ""}</small>
+      </div>
+      <h4 className="calendar-section-title">इस दिन के व्रत / उपवास</h4>
+      {festivalStatus === "loading" || festivalStatus === "computing"
+        ? <p className="muted">व्रत सूची लोड हो रही है…</p>
+        : festivalStatus === "error"
+          ? <p className="muted">व्रत सूची अभी उपलब्ध नहीं है। {festivalError}</p>
+          : selectedObservanceNames.length
+            ? <ul className="calendar-upvaas-events">{selectedObservanceNames.map((name,index)=><li key={name+"-"+index}>{name}</li>)}</ul>
+            : <p className="muted">चुनी हुई तारीख के लिए स्रोत में कोई विशेष व्रत दर्ज नहीं है। मासिक सूची नीचे देखें।</p>}
+      <div className="calendar-upvaas-guide">
+        <h4>{upvaasGuidance.title}</h4>
+        <ul>{upvaasGuidance.items.map(item=><li key={item}>{item}</li>)}</ul>
+      </div>
+      <p className="calendar-source">पारण का समय तभी दिखाएँगे जब पंचांग स्रोत से प्रमाणित समय मिले। व्रत के नियम परंपरा, स्थान और व्यक्तिगत स्वास्थ्य के अनुसार बदल सकते हैं। अस्वस्थता, गर्भावस्था, दवा या चिकित्सकीय स्थिति में उपवास से पहले योग्य स्वास्थ्य-विशेषज्ञ से सलाह लें।</p>
     </div>
     <div className="panel calendar-festivals"><div className="panel-head"><h3>🎉 {MONTHS[view.getMonth()]} के व्रत और त्योहार</h3><span>{selectedCity}</span></div>
       {festivalStatus === "loading" && <p className="muted">त्योहारों की सूची लोड हो रही है…</p>}
