@@ -1,10 +1,10 @@
 import React, { useMemo, useState } from "react";
 
-const API_BASE = (import.meta.env.VITE_API_URL || "https://shivasha.onrender.com").replace(/\\/$/, "");
+const API_BASE = (import.meta.env.VITE_API_URL || "https://shivasha.onrender.com").replace(/\/$/, "");
 
 const COURSES = [
   { title: "B.Sc. Computer Science", degree: "Bachelor", field: "Computer Science & IT", country: "India", mode: "On-campus", duration: "3 years", level: "Undergraduate", institution: "UGC", officialUrl: "https://www.ugc.gov.in/", note: "Verify institution recognition and current program details with the university." },
-  { title: "BCA", degree: "Bachelor", field: "Computer Science & IT", country: "India", mode: "Online / On-campus", duration: "3 years", level: "Undergraduate", institution: "UGC Distance Education Bureau", officialUrl: "https://deb.ugc.ac.in/", note: "Verify online/distance program recognition and current details." },
+  { title: "BCA", degree: "Bachelor", field: "Computer Science & IT", country: "India", mode: "Online / On-campus", duration: "3 years", level: "Undergraduate", institution: "UGC Distance Education Bureau", officialUrl: "https://deb.ugc.ac.in/Home/HEI_Prog_List", note: "Verify online/distance program recognition and current details." },
   { title: "B.Tech Computer Science", degree: "Bachelor", field: "Engineering", country: "India", mode: "On-campus", duration: "4 years", level: "Undergraduate", institution: "AICTE", officialUrl: "https://www.aicte-india.org/", note: "Verify institution approval and admission criteria." },
   { title: "M.Sc. Data Science", degree: "Master", field: "Data & AI", country: "United Kingdom", mode: "On-campus / Online", duration: "1–2 years", level: "Postgraduate", institution: "UCAS", officialUrl: "https://www.ucas.com/", note: "Search current courses; verify fees and requirements with the university." },
   { title: "M.S. Computer Science", degree: "Master", field: "Computer Science & IT", country: "United States", mode: "On-campus", duration: "1–2 years", level: "Postgraduate", institution: "EducationUSA", officialUrl: "https://educationusa.state.gov/", note: "Confirm course, accreditation and total cost with the university." },
@@ -21,7 +21,12 @@ const countries = ["All countries", ...new Set(COURSES.map(c => c.country))];
 const fields = ["All subjects", ...new Set(COURSES.map(c => c.field))];
 const degrees = ["All degrees", "Bachelor", "Master", "PhD"];
 
-export default function GlobalEducation({ auth }) {\n  const [selected, setSelected] = useState(null);\n  const [form, setForm] = useState({ name: "", contact: "", consent: false });\n  const [notice, setNotice] = useState("");\n  const [saving, setSaving] = useState(false);\n  const submitEnquiry = async e => { e.preventDefault(); if (!auth?.token) { setNotice("Please sign in to save to CRM."); return; } setSaving(true); try { const r = await fetch(API_BASE + "/api/business/leads", { method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer " + auth.token }, body: JSON.stringify({ name: form.name.trim(), contact: form.contact.trim(), business: "Course enquiry: " + selected.title + " | " + selected.country, stage: "New", notes: "Consent given. Official source: " + selected.officialUrl }) }); const d = await r.json().catch(() => ({})); if (!r.ok) throw new Error(d.message || "CRM save failed"); setNotice("Enquiry saved to SHIVASHA CRM."); setSelected(null); setForm({ name: "", contact: "", consent: false }); } catch(err) { setNotice(err.message); } finally { setSaving(false); } };
+export default function GlobalEducation({ auth }) {
+  const [selected, setSelected] = useState(null);
+  const [form, setForm] = useState({ name: "", contact: "", consent: false });
+  const [notice, setNotice] = useState("");
+  const [saving, setSaving] = useState(false);
+  const submitEnquiry = async e => { e.preventDefault(); if (!auth?.token) { setNotice("Please sign in to save to CRM."); return; } setSaving(true); try { const r = await fetch(API_BASE + "/api/business/leads", { method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer " + auth.token }, body: JSON.stringify({ name: form.name.trim(), contact: form.contact.trim(), business: "Course enquiry: " + selected.title + " | " + selected.country, stage: "New", notes: "Consent given. Official source: " + selected.officialUrl }) }); const d = await r.json().catch(() => ({})); if (!r.ok) throw new Error(d.message || "CRM save failed"); setNotice("Enquiry saved to SHIVASHA CRM."); setSelected(null); setForm({ name: "", contact: "", consent: false }); } catch(err) { setNotice(err.message); } finally { setSaving(false); } };
   const [search, setSearch] = useState("");
   const [country, setCountry] = useState("All countries");
   const [field, setField] = useState("All subjects");
@@ -54,10 +59,15 @@ export default function GlobalEducation({ auth }) {\n  const [selected, setSelec
         <h2>{course.title}</h2>
         <p>{course.field}</p>
         <div className="education-meta"><span>{course.duration}</span><span>{course.mode}</span></div>
-        <small>{course.note}</small>\n        <p className="education-source">Official reference: <b>{course.institution}</b></p>\n        <a className="primary" href={course.officialUrl} target="_blank" rel="noopener noreferrer">Official details ↗</a>\n        <button type="button" className="secondary" onClick={() => { setSelected(course); setNotice(""); }}>Enquire / Add to CRM</button>
+        <small>{course.note}</small>
+        <p className="education-source">Official reference: <b>{course.institution}</b></p>
+        <a className="primary" href={course.officialUrl} target="_blank" rel="noopener noreferrer">Official details ↗</a>
+        <button type="button" className="secondary" onClick={() => { setSelected(course); setNotice(""); }}>Enquire / Add to CRM</button>
       </article>)}
       {!filtered.length && <p className="education-empty">No matching pathways. Try changing your filters.</p>}
     </div>
-    {selected && <div className="education-enquiry-overlay" role="dialog" aria-modal="true"><form className="education-enquiry-panel" onSubmit={submitEnquiry}><button type="button" onClick={() => setSelected(null)}>Close ×</button><h2>Course enquiry: {selected.title}</h2><label>Student name *<input required value={form.name} onChange={e=>setForm({...form,name:e.target.value})}/></label><label>Contact (optional)<input value={form.contact} onChange={e=>setForm({...form,contact:e.target.value})}/></label><label><input type="checkbox" required checked={form.consent} onChange={e=>setForm({...form,consent:e.target.checked})}/> I consent to save this enquiry in SHIVASHA CRM for follow-up.</label><button className="primary" disabled={saving}>{saving ? "Saving…" : "Save enquiry"}</button>{notice && <p role="status">{notice}</p>}</form></div>}\n    {notice && !selected && <p role="status">{notice}</p>}\n    <footer className="education-disclaimer">SHIVASHA listings are informational examples, not admissions offers. Before applying, verify current fees, deadlines, accreditation, eligibility and visa rules through official university sources.</footer>
+    {selected && <div className="education-enquiry-overlay" role="dialog" aria-modal="true"><form className="education-enquiry-panel" onSubmit={submitEnquiry}><button type="button" onClick={() => setSelected(null)}>Close ×</button><h2>Course enquiry: {selected.title}</h2><label>Student name *<input required value={form.name} onChange={e=>setForm({...form,name:e.target.value})}/></label><label>Contact (optional)<input value={form.contact} onChange={e=>setForm({...form,contact:e.target.value})}/></label><label><input type="checkbox" required checked={form.consent} onChange={e=>setForm({...form,consent:e.target.checked})}/> I consent to save this enquiry in SHIVASHA CRM for follow-up.</label><button className="primary" disabled={saving}>{saving ? "Saving…" : "Save enquiry"}</button>{notice && <p role="status">{notice}</p>}</form></div>}
+    {notice && !selected && <p role="status">{notice}</p>}
+    <footer className="education-disclaimer">SHIVASHA listings are informational examples, not admissions offers. Before applying, verify current fees, deadlines, accreditation, eligibility and visa rules through official university sources.</footer>
   </section>;
 }
