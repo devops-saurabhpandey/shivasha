@@ -17,7 +17,7 @@ const COURSES = [
   { title: "M.Ed.", degree: "Master", field: "Education", country: "India", mode: "On-campus / Online", duration: "2 years", level: "Postgraduate", institution: "NCTE", officialUrl: "https://ncte.gov.in/", note: "Verify institution recognition and program details." }
 ];
 
-const countries = ["All countries", ...new Set(COURSES.map(c => c.country))];
+  { title: "BCA — Chhatrapati Shahu Ji Maharaj University, Kanpur", degree: "Bachelor", field: "Computer Science & IT", country: "India", mode: "Open & Distance Learning", duration: "3 years (6 semesters)", level: "Undergraduate", institution: "CSJMU, Kanpur", officialUrl: "https://csjmu.ac.in/decode-courses/bca-2/", recognitionUrl: "https://deb.ugc.ac.in/Home/HEI_Prog_List", note: "University programme page: eligibility 10+2 with Mathematics; published tuition ₹20,000 per annum. UGC-DEB directory shows CSJMU BCA in 2025-26; verify recognition for the admission session you apply to.", eligibility: "Passed 10+2 with Mathematics from a recognised board", fee: "₹20,000 per annum (as published on the university programme page)", verified: true },\nconst countries = ["All countries", ...new Set(COURSES.map(c => c.country))];
 const fields = ["All subjects", ...new Set(COURSES.map(c => c.field))];
 const degrees = ["All degrees", "Bachelor", "Master", "PhD"];
 
@@ -36,7 +36,7 @@ export default function GlobalEducation({ auth }) {
     (country === "All countries" || c.country === country) &&
     (field === "All subjects" || c.field === field) &&
     (degree === "All degrees" || c.degree === degree) &&
-    (c.title + " " + c.field + " " + c.country).toLowerCase().includes(search.toLowerCase())
+    (c.title + " " + c.field + " " + c.country + " " + c.institution).toLowerCase().includes(search.toLowerCase())
   ), [search, country, field, degree]);
 
   return <section className="global-education">
@@ -51,17 +51,17 @@ export default function GlobalEducation({ auth }) {
       <select aria-label="Subject" value={field} onChange={e => setField(e.target.value)}>{fields.map(x => <option key={x}>{x}</option>)}</select>
       <select aria-label="Degree" value={degree} onChange={e => setDegree(e.target.value)}>{degrees.map(x => <option key={x}>{x}</option>)}</select>
     </div>
-    <div className="education-results"><b>{filtered.length} course pathways</b><span>Sample listings • verify details with the institution</span></div>
+    <div className="education-results"><b>{filtered.length} course pathways</b><span>Official details are marked; other entries are course pathways</span></div>
     <div className="education-grid">
       {filtered.map((course, i) => <article className="education-card" key={course.title + course.country}>
         <div className="education-card-top"><span className="education-icon">🎓</span><button type="button" aria-label="Save course" className={saved.includes(course.title) ? "saved" : ""} onClick={() => setSaved(prev => prev.includes(course.title) ? prev.filter(x => x !== course.title) : [...prev, course.title])}>{saved.includes(course.title) ? "♥" : "♡"}</button></div>
-        <span className="education-tag">{course.country}</span>
+        <span className="education-tag">{course.country}</span>\n        {course.verified && <span className="education-tag">Official university details</span>}
         <h2>{course.title}</h2>
         <p>{course.field}</p>
         <div className="education-meta"><span>{course.duration}</span><span>{course.mode}</span></div>
-        <small>{course.note}</small>
+        <small>{course.note}</small>\n        {course.eligibility && <p className="education-source"><b>Eligibility:</b> {course.eligibility}</p>}\n        {course.fee && <p className="education-source"><b>Published fee:</b> {course.fee}</p>}
         <p className="education-source">Official reference: <b>{course.institution}</b></p>
-        <a className="primary" href={course.officialUrl} target="_blank" rel="noopener noreferrer">Official details ↗</a>
+        <a className="primary" href={course.officialUrl} target="_blank" rel="noopener noreferrer">University course details ↗</a>\n        {course.recognitionUrl && <a className="secondary" href={course.recognitionUrl} target="_blank" rel="noopener noreferrer">Check UGC-DEB listing ↗</a>}
         <button type="button" className="secondary" onClick={() => { setSelected(course); setNotice(""); }}>Enquire / Add to CRM</button>
       </article>)}
       {!filtered.length && <p className="education-empty">No matching pathways. Try changing your filters.</p>}
