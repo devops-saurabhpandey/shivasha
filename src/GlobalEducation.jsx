@@ -1,25 +1,27 @@
 import React, { useMemo, useState } from "react";
 
+const API_BASE = (import.meta.env.VITE_API_URL || "https://shivasha.onrender.com").replace(/\\/$/, "");
+
 const COURSES = [
-  { title: "B.Sc. Computer Science", degree: "Bachelor", field: "Computer Science & IT", country: "India", mode: "On-campus", duration: "3 years", level: "Undergraduate", note: "Check university-specific eligibility and recognition." },
-  { title: "BCA", degree: "Bachelor", field: "Computer Science & IT", country: "India", mode: "Online / On-campus", duration: "3 years", level: "Undergraduate", note: "Compare curriculum, accreditation and fees." },
-  { title: "B.Tech Computer Science", degree: "Bachelor", field: "Engineering", country: "India", mode: "On-campus", duration: "4 years", level: "Undergraduate", note: "Admission requirements vary by institution." },
-  { title: "M.Sc. Data Science", degree: "Master", field: "Data & AI", country: "United Kingdom", mode: "On-campus / Online", duration: "1–2 years", level: "Postgraduate", note: "Check entry requirements and international tuition." },
-  { title: "M.S. Computer Science", degree: "Master", field: "Computer Science & IT", country: "United States", mode: "On-campus", duration: "1–2 years", level: "Postgraduate", note: "Review program accreditation and total cost." },
-  { title: "MBA", degree: "Master", field: "Business & Management", country: "Canada", mode: "On-campus / Online", duration: "1–2 years", level: "Postgraduate", note: "Work experience and admission tests may be required." },
-  { title: "B.Sc. Nursing", degree: "Bachelor", field: "Medical & Healthcare", country: "Australia", mode: "On-campus", duration: "3 years", level: "Undergraduate", note: "Verify professional registration requirements." },
-  { title: "Bachelor of Laws (LLB)", degree: "Bachelor", field: "Law", country: "India", mode: "On-campus", duration: "3 years", level: "Undergraduate", note: "Confirm recognition with the relevant legal authority." },
-  { title: "PhD in Artificial Intelligence", degree: "PhD", field: "Data & AI", country: "Germany", mode: "Research", duration: "3–5 years", level: "Research", note: "Funding and supervisor availability vary." },
-  { title: "Master of Public Health", degree: "Master", field: "Medical & Healthcare", country: "Singapore", mode: "On-campus", duration: "1–2 years", level: "Postgraduate", note: "Check entry criteria and recognition." },
-  { title: "BA Psychology", degree: "Bachelor", field: "Arts & Humanities", country: "United States", mode: "On-campus / Online", duration: "3–4 years", level: "Undergraduate", note: "Professional licensing usually requires further study." },
-  { title: "M.Ed.", degree: "Master", field: "Education", country: "India", mode: "On-campus / Online", duration: "2 years", level: "Postgraduate", note: "Check university and regulatory recognition." }
+  { title: "B.Sc. Computer Science", degree: "Bachelor", field: "Computer Science & IT", country: "India", mode: "On-campus", duration: "3 years", level: "Undergraduate", institution: "UGC", officialUrl: "https://www.ugc.gov.in/", note: "Verify institution recognition and current program details with the university." },
+  { title: "BCA", degree: "Bachelor", field: "Computer Science & IT", country: "India", mode: "Online / On-campus", duration: "3 years", level: "Undergraduate", institution: "UGC Distance Education Bureau", officialUrl: "https://deb.ugc.ac.in/", note: "Verify online/distance program recognition and current details." },
+  { title: "B.Tech Computer Science", degree: "Bachelor", field: "Engineering", country: "India", mode: "On-campus", duration: "4 years", level: "Undergraduate", institution: "AICTE", officialUrl: "https://www.aicte-india.org/", note: "Verify institution approval and admission criteria." },
+  { title: "M.Sc. Data Science", degree: "Master", field: "Data & AI", country: "United Kingdom", mode: "On-campus / Online", duration: "1–2 years", level: "Postgraduate", institution: "UCAS", officialUrl: "https://www.ucas.com/", note: "Search current courses; verify fees and requirements with the university." },
+  { title: "M.S. Computer Science", degree: "Master", field: "Computer Science & IT", country: "United States", mode: "On-campus", duration: "1–2 years", level: "Postgraduate", institution: "EducationUSA", officialUrl: "https://educationusa.state.gov/", note: "Confirm course, accreditation and total cost with the university." },
+  { title: "MBA", degree: "Master", field: "Business & Management", country: "Canada", mode: "On-campus / Online", duration: "1–2 years", level: "Postgraduate", institution: "Universities Canada", officialUrl: "https://univcan.ca/", note: "Verify current program and admission requirements with the institution." },
+  { title: "B.Sc. Nursing", degree: "Bachelor", field: "Medical & Healthcare", country: "Australia", mode: "On-campus", duration: "3 years", level: "Undergraduate", institution: "Study Australia", officialUrl: "https://www.studyaustralia.gov.au/", note: "Verify course availability and professional registration requirements." },
+  { title: "Bachelor of Laws (LLB)", degree: "Bachelor", field: "Law", country: "India", mode: "On-campus", duration: "3 years", level: "Undergraduate", institution: "Bar Council of India", officialUrl: "https://www.barcouncilofindia.org/", note: "Verify college recognition and legal education requirements." },
+  { title: "PhD in Artificial Intelligence", degree: "PhD", field: "Data & AI", country: "Germany", mode: "Research", duration: "3–5 years", level: "Research", institution: "DAAD", officialUrl: "https://www.daad.de/en/", note: "Verify research position, supervisor and funding with the university." },
+  { title: "Master of Public Health", degree: "Master", field: "Medical & Healthcare", country: "Singapore", mode: "On-campus", duration: "1–2 years", level: "Postgraduate", institution: "NUS Saw Swee Hock School of Public Health", officialUrl: "https://sph.nus.edu.sg/", note: "Check current program structure and admission criteria." },
+  { title: "BA Psychology", degree: "Bachelor", field: "Arts & Humanities", country: "United States", mode: "On-campus / Online", duration: "3–4 years", level: "Undergraduate", institution: "EducationUSA", officialUrl: "https://educationusa.state.gov/", note: "Check university program details; licensing may require further study." },
+  { title: "M.Ed.", degree: "Master", field: "Education", country: "India", mode: "On-campus / Online", duration: "2 years", level: "Postgraduate", institution: "NCTE", officialUrl: "https://ncte.gov.in/", note: "Verify institution recognition and program details." }
 ];
 
 const countries = ["All countries", ...new Set(COURSES.map(c => c.country))];
 const fields = ["All subjects", ...new Set(COURSES.map(c => c.field))];
 const degrees = ["All degrees", "Bachelor", "Master", "PhD"];
 
-export default function GlobalEducation() {
+export default function GlobalEducation({ auth }) {\n  const [selected, setSelected] = useState(null);\n  const [form, setForm] = useState({ name: "", contact: "", consent: false });\n  const [notice, setNotice] = useState("");\n  const [saving, setSaving] = useState(false);\n  const submitEnquiry = async e => { e.preventDefault(); if (!auth?.token) { setNotice("Please sign in to save to CRM."); return; } setSaving(true); try { const r = await fetch(API_BASE + "/api/business/leads", { method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer " + auth.token }, body: JSON.stringify({ name: form.name.trim(), contact: form.contact.trim(), business: "Course enquiry: " + selected.title + " | " + selected.country, stage: "New", notes: "Consent given. Official source: " + selected.officialUrl }) }); const d = await r.json().catch(() => ({})); if (!r.ok) throw new Error(d.message || "CRM save failed"); setNotice("Enquiry saved to SHIVASHA CRM."); setSelected(null); setForm({ name: "", contact: "", consent: false }); } catch(err) { setNotice(err.message); } finally { setSaving(false); } };
   const [search, setSearch] = useState("");
   const [country, setCountry] = useState("All countries");
   const [field, setField] = useState("All subjects");
@@ -52,10 +54,10 @@ export default function GlobalEducation() {
         <h2>{course.title}</h2>
         <p>{course.field}</p>
         <div className="education-meta"><span>{course.duration}</span><span>{course.mode}</span></div>
-        <small>{course.note}</small>
+        <small>{course.note}</small>\n        <p className="education-source">Official reference: <b>{course.institution}</b></p>\n        <a className="primary" href={course.officialUrl} target="_blank" rel="noopener noreferrer">Official details ↗</a>\n        <button type="button" className="secondary" onClick={() => { setSelected(course); setNotice(""); }}>Enquire / Add to CRM</button>
       </article>)}
       {!filtered.length && <p className="education-empty">No matching pathways. Try changing your filters.</p>}
     </div>
-    <footer className="education-disclaimer">SHIVASHA listings are informational examples, not admissions offers. Before applying, verify current fees, deadlines, accreditation, eligibility and visa rules through official university sources.</footer>
+    {selected && <div className="education-enquiry-overlay" role="dialog" aria-modal="true"><form className="education-enquiry-panel" onSubmit={submitEnquiry}><button type="button" onClick={() => setSelected(null)}>Close ×</button><h2>Course enquiry: {selected.title}</h2><label>Student name *<input required value={form.name} onChange={e=>setForm({...form,name:e.target.value})}/></label><label>Contact (optional)<input value={form.contact} onChange={e=>setForm({...form,contact:e.target.value})}/></label><label><input type="checkbox" required checked={form.consent} onChange={e=>setForm({...form,consent:e.target.checked})}/> I consent to save this enquiry in SHIVASHA CRM for follow-up.</label><button className="primary" disabled={saving}>{saving ? "Saving…" : "Save enquiry"}</button>{notice && <p role="status">{notice}</p>}</form></div>}\n    {notice && !selected && <p role="status">{notice}</p>}\n    <footer className="education-disclaimer">SHIVASHA listings are informational examples, not admissions offers. Before applying, verify current fees, deadlines, accreditation, eligibility and visa rules through official university sources.</footer>
   </section>;
 }
