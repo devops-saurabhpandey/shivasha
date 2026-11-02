@@ -81,6 +81,27 @@ router.patch("/projects/:id", async (req, res) => {
 });
 
 
+router.post("/projects/:id/render-job", async (req, res) => {
+  if (!validId(req.params.id)) return res.status(400).json({ message: "Invalid project ID" });
+  try {
+    const project = await YouTubeProject.findOne({ _id: req.params.id, user: req.user.id });
+    if (!project) return res.status(404).json({ message: "Project not found" });
+    if (!project.script?.trim() || !project.storyboard?.trim() || !project.captions?.includes("-->") || !project.voiceoverUrl?.trim() || !project.sceneAssets?.length) {
+      return res.status(400).json({ message: "Complete render preflight requirements first." });
+    }
+    if (project.renderStatus === "queued" || project.renderStatus === "running") {
+      return res.status(409).json({ message: "A render job is already active.", status: project.renderStatus });
+    }
+    project.renderStatus = "queued";
+    project.renderOutputUrl = "";
+    project.renderError = "";
+    await project.save();
+    res.status(202).json({ projectId: String(project._id), status: "queued", message: "Render job queued. A configured worker must process it." });
+  } catch {
+    res.status(500).json({ message: "Could not queue render job" });
+  }
+});
+
 router.get("/projects/:id/render-status", async (req, res) => {
   if (!validId(req.params.id)) return res.status(400).json({ message: "Invalid project ID" });
   try {
