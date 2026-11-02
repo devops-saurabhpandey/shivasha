@@ -1,0 +1,14 @@
+services:
+  youtube-render-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.youtube-worker
+    image: shivasha-youtube-worker:local
+    container_name: shivasha-youtube-worker
+    restart: unless-stopped
+    init: true
+    env_file:
+      - .env.worker
+    environment:
+      NODE_ENV: production
+    stop_grace_period: 30s
