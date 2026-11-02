@@ -11,6 +11,7 @@ const YouTubeProjectSchema = new mongoose.Schema({
   status: { type: String, enum: ["Draft", "Script ready", "In review", "Approved", "Scheduled", "Published"], default: "Draft" },
   script: { type: String, maxlength: 30000, default: "" },
   captions: { type: String, maxlength: 100000, default: "" },
+  voiceoverUrl: { type: String, maxlength: 2000, default: "" },
   description: { type: String, maxlength: 5000, default: "" },
   tags: { type: [String], default: [] }
 }, { timestamps: true });
