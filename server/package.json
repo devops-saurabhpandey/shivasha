@@ -10,7 +10,8 @@
     "admin:bootstrap": "node scripts/bootstrapAdmin.js",
     "migrate:guardian-index": "node scripts/migrateEducationGuardianLinkIndex.js",
     "migrate:guardian-index:check": "node scripts/migrateEducationGuardianLinkIndex.js --dry-run",
-    "youtube:render": "node scripts/renderYouTubeProject.js"
+    "youtube:render": "node scripts/renderYouTubeProject.js",
+    "youtube:worker": "node scripts/pollYouTubeRenderQueue.js"
   },
   "dependencies": {
     "bcryptjs": "^3.0.2",
