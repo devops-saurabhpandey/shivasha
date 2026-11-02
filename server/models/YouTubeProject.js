@@ -13,6 +13,9 @@ const YouTubeProjectSchema = new mongoose.Schema({
   captions: { type: String, maxlength: 100000, default: "" },
   voiceoverUrl: { type: String, maxlength: 2000, default: "" },
   storyboard: { type: String, maxlength: 30000, default: "" },
+  renderStatus: { type: String, enum: ["idle", "queued", "running", "completed", "failed"], default: "idle" },
+  renderOutputUrl: { type: String, maxlength: 2000, default: "" },
+  renderError: { type: String, maxlength: 1000, default: "" },
   sceneAssets: { type: [{ scene: { type: Number, min: 1, max: 30 }, type: { type: String, enum: ["video", "image"], default: "video" }, url: { type: String, maxlength: 2000, default: "" }, duration: { type: Number, min: 1, max: 600, default: 5 }, attribution: { type: String, maxlength: 500, default: "" } }], default: [] },
   description: { type: String, maxlength: 5000, default: "" },
   tags: { type: [String], default: [] }
