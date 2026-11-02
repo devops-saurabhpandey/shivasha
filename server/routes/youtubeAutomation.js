@@ -81,6 +81,24 @@ router.patch("/projects/:id", async (req, res) => {
 });
 
 
+router.get("/projects/:id/render-status", async (req, res) => {
+  if (!validId(req.params.id)) return res.status(400).json({ message: "Invalid project ID" });
+  try {
+    const project = await YouTubeProject.findOne({ _id: req.params.id, user: req.user.id })
+      .select("_id renderStatus renderOutputUrl renderError updatedAt").lean();
+    if (!project) return res.status(404).json({ message: "Project not found" });
+    res.json({
+      projectId: String(project._id),
+      status: project.renderStatus || "idle",
+      outputUrl: project.renderOutputUrl || "",
+      error: project.renderError || "",
+      updatedAt: project.updatedAt
+    });
+  } catch {
+    res.status(500).json({ message: "Could not load render status" });
+  }
+});
+
 router.post("/projects/:id/render-preflight", async (req, res) => {
   if (!validId(req.params.id)) return res.status(400).json({ message: "Invalid project ID" });
   try {
