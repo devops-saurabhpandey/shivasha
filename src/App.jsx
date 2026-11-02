@@ -26,7 +26,8 @@ import CustomerFinder from "./CustomerFinder.jsx";
 import BusinessPlatform from "./BusinessPlatform.jsx";
 import AdSlot from "./AdSlot.jsx";
 import MoneyManagement from "./MoneyManagement.jsx";
-import GlobalEducation from "./GlobalEducation.jsx";\nimport YouTubeAutomation from "./YouTubeAutomation.jsx";
+import GlobalEducation from "./GlobalEducation.jsx";
+import YouTubeAutomation from "./YouTubeAutomation.jsx";
 
 const API_BASE = (import.meta.env.VITE_API_URL || "https://shivasha.onrender.com").replace(/\/$/, "");
 function apiFetch(path, auth, options = {}) {
