@@ -69,6 +69,38 @@ router.patch("/projects/:id", async (req, res) => {
   }
 });
 
+
+router.post("/projects/:id/generate-script", async (req, res) => {
+  if (!validId(req.params.id)) return res.status(400).json({ message: "Invalid project ID" });
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) return res.status(503).json({ message: "AI is not configured. Add OPENAI_API_KEY to the backend environment." });
+  try {
+    const project = await YouTubeProject.findOne({ _id: req.params.id, user: req.user.id });
+    if (!project) return res.status(404).json({ message: "Project not found" });
+    const prompt = `Write a complete, engaging YouTube video script in ${project.language} for the topic: ${project.topic}. Format: ${project.format === "short" ? "Short vertical video" : "Long-form video"}. Target duration: ${project.duration} seconds. Audience: ${project.audience || "general"}. Include a strong opening hook, clear narration, and a natural closing. Avoid fabricated facts and mark claims needing verification.`;
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 45000);
+    let response;
+    try {
+      response = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+        signal: controller.signal,
+        body: JSON.stringify({ model: process.env.OPENAI_MODEL || "gpt-4o-mini", messages: [{ role: "system", content: "You write accurate, engaging video scripts. Do not invent sources or facts." }, { role: "user", content: prompt }], max_tokens: 3500 })
+      });
+    } finally { clearTimeout(timeout); }
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) return res.status(response.status === 429 ? 429 : 502).json({ message: response.status === 429 ? "AI quota/rate limit reached. Try again later." : "AI script provider failed." });
+    project.script = clean(payload.choices?.[0]?.message?.content, 30000);
+    if (!project.script) return res.status(502).json({ message: "AI returned an empty script." });
+    project.status = "Script ready";
+    await project.save();
+    res.json({ project, disclaimer: "Script generated and saved. Review factual claims before publishing." });
+  } catch (error) {
+    res.status(error.name === "AbortError" ? 504 : 502).json({ message: error.name === "AbortError" ? "Script generation timed out." : "Could not generate script. Please try again." });
+  }
+});
+
 router.post("/projects/:id/generate-seo", async (req, res) => {
   if (!validId(req.params.id)) return res.status(400).json({ message: "Invalid project ID" });
   const apiKey = process.env.OPENAI_API_KEY;
