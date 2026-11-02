@@ -81,6 +81,42 @@ router.patch("/projects/:id", async (req, res) => {
 });
 
 
+router.post("/projects/:id/render-preflight", async (req, res) => {
+  if (!validId(req.params.id)) return res.status(400).json({ message: "Invalid project ID" });
+  try {
+    const project = await YouTubeProject.findOne({ _id: req.params.id, user: req.user.id }).lean();
+    if (!project) return res.status(404).json({ message: "Project not found" });
+    const missing = [];
+    if (!project.script?.trim()) missing.push("script");
+    if (!project.storyboard?.trim()) missing.push("storyboard");
+    if (!project.captions?.includes("-->")) missing.push("valid SRT captions");
+    if (!project.voiceoverUrl?.trim()) missing.push("voice-over audio");
+    if (!Array.isArray(project.sceneAssets) || !project.sceneAssets.length) missing.push("scene media");
+    else if (project.sceneAssets.some(asset => !/^https:\/\//i.test(asset.url || ""))) missing.push("valid HTTPS URL for every scene asset");
+    const manifest = {
+      projectId: String(project._id),
+      title: project.title,
+      format: project.format,
+      durationSeconds: project.duration,
+      aspectRatio: project.format === "short" ? "9:16" : "16:9",
+      script: project.script,
+      storyboard: project.storyboard,
+      captionsSrt: project.captions,
+      voiceoverUrl: project.voiceoverUrl,
+      sceneAssets: project.sceneAssets || [],
+      seo: { title: project.title, description: project.description || "", tags: project.tags || [] }
+    };
+    res.json({
+      ready: missing.length === 0,
+      missing,
+      manifest,
+      message: missing.length ? "Complete the listed items before rendering." : "Preflight passed. This endpoint prepares the manifest; video rendering is not enabled yet."
+    });
+  } catch {
+    res.status(500).json({ message: "Could not check render readiness" });
+  }
+});
+
 router.post("/projects/:id/generate-script", async (req, res) => {
   if (!validId(req.params.id)) return res.status(400).json({ message: "Invalid project ID" });
   const apiKey = process.env.OPENAI_API_KEY;
