@@ -15,6 +15,7 @@ export default function YouTubeAutomation({ auth }) {
   const [generatingId, setGeneratingId] = useState("");
   const [scriptEdits, setScriptEdits] = useState({});
   const [savingScriptId, setSavingScriptId] = useState("");
+  const [generatingSeoId, setGeneratingSeoId] = useState("");
   const selected = formats.find(x => x.id === form.format);
   const update = (key, value) => setForm(prev => ({ ...prev, [key]: value }));
   const headers = { "Content-Type": "application/json", ...(auth?.token ? { Authorization: "Bearer " + auth.token } : {}) };
@@ -76,6 +77,22 @@ export default function YouTubeAutomation({ auth }) {
       setNotice(data.disclaimer || "Script generated and saved.");
     } catch (error) { setNotice(error.message || "Script generation failed"); }
     finally { setGeneratingId(""); }
+  };
+
+  const generateSeo = async id => {
+    if (!auth?.token) { setNotice("Please sign in to generate SEO metadata."); return; }
+    setGeneratingSeoId(id);
+    setNotice("");
+    try {
+      const response = await fetch(API_BASE + "/api/youtube-automation/projects/" + id + "/generate-seo", {
+        method: "POST", headers: { Authorization: "Bearer " + auth.token }
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.message || "SEO generation failed");
+      setProjects(prev => prev.map(project => project._id === id ? data.project : project));
+      setNotice(data.disclaimer || "SEO metadata generated and saved.");
+    } catch (error) { setNotice(error.message || "SEO generation failed"); }
+    finally { setGeneratingSeoId(""); }
   };
 
   const saveScript = async project => {
@@ -145,7 +162,7 @@ export default function YouTubeAutomation({ auth }) {
     <div className="panel yt-projects">
       <div className="yt-projects-head"><h3>Your video projects</h3><span>{loading ? "Loading…" : projects.length + " projects"}</span></div>
       {!loading && !projects.length ? <div className="yt-empty"><span>▧</span><b>No saved projects yet</b><p>Create a project above to start your content workflow.</p></div> : projects.map(project=><article className="yt-project" key={project._id}>
-        <div className="yt-project-thumb">{project.format === "short" ? "▯" : "▶"}</div><div className="yt-project-info"><b>{project.title}</b><p>{project.language} · {project.format === "short" ? "Short" : "Long video"} · {project.duration}s target</p><small>{project.topic}</small>{project.script && <details className="yt-script-preview"><summary>Edit / review script</summary><textarea rows="10" value={scriptEdits[project._id] ?? project.script} onChange={e=>setScriptEdits(prev=>({...prev,[project._id]:e.target.value}))} aria-label={"Edit script for "+project.title}/><button type="button" className="primary" disabled={savingScriptId === project._id || (scriptEdits[project._id] ?? project.script) === project.script} onClick={()=>saveScript(project)}>{savingScriptId === project._id ? "Saving…" : "Save script edits"}</button></details>}</div><span className="yt-draft-badge">{project.status}</span><button type="button" className="primary" disabled={generatingId === project._id} onClick={()=>generateScript(project._id)}>{generatingId === project._id ? "Generating…" : project.script ? "Regenerate script" : "Generate AI script"}</button><button type="button" className="yt-remove" onClick={()=>removeProject(project._id)} aria-label="Remove project">×</button>
+        <div className="yt-project-thumb">{project.format === "short" ? "▯" : "▶"}</div><div className="yt-project-info"><b>{project.title}</b><p>{project.language} · {project.format === "short" ? "Short" : "Long video"} · {project.duration}s target</p><small>{project.topic}</small>{(project.description || project.tags?.length) && <details className="yt-script-preview"><summary>View SEO title, description & tags</summary><p><b>Title:</b> {project.title}</p><p>{project.description}</p><p><b>Tags:</b> {(project.tags || []).join(", ")}</p></details>}{<button type="button" className="primary" disabled={generatingSeoId === project._id} onClick={()=>generateSeo(project._id)}>{generatingSeoId === project._id ? "Generating SEO…" : "Generate SEO metadata"}</button>}{project.script && <details className="yt-script-preview"><summary>Edit / review script</summary><textarea rows="10" value={scriptEdits[project._id] ?? project.script} onChange={e=>setScriptEdits(prev=>({...prev,[project._id]:e.target.value}))} aria-label={"Edit script for "+project.title}/><button type="button" className="primary" disabled={savingScriptId === project._id || (scriptEdits[project._id] ?? project.script) === project.script} onClick={()=>saveScript(project)}>{savingScriptId === project._id ? "Saving…" : "Save script edits"}</button></details>}</div><span className="yt-draft-badge">{project.status}</span><button type="button" className="primary" disabled={generatingId === project._id} onClick={()=>generateScript(project._id)}>{generatingId === project._id ? "Generating…" : project.script ? "Regenerate script" : "Generate AI script"}</button><button type="button" className="yt-remove" onClick={()=>removeProject(project._id)} aria-label="Remove project">×</button>
       </article>)}
     </div>
   </section>;
