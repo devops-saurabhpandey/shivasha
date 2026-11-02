@@ -12,12 +12,18 @@ function requireWorker(req, res, next) {
   next();
 }
 
-// Internal worker endpoint: atomically claims one queued project.
+// Internal worker endpoint: recover stale jobs, then atomically claim one queued project.
+// A worker that dies leaves a running job; after 45 minutes it becomes eligible again.
 router.post("/render-worker-claim", requireWorker, async (_req, res) => {
   try {
+    const staleBefore = new Date(Date.now() - 45 * 60 * 1000);
+    await YouTubeProject.updateMany(
+      { renderStatus: "running", renderStartedAt: { $lt: staleBefore } },
+      { $set: { renderStatus: "queued", renderStartedAt: null, renderError: "Previous worker timed out; job re-queued automatically." } }
+    );
     const project = await YouTubeProject.findOneAndUpdate(
       { renderStatus: "queued" },
-      { $set: { renderStatus: "running", renderError: "" } },
+      { $set: { renderStatus: "running", renderStartedAt: new Date(), renderError: "" } },
       { new: true, sort: { updatedAt: 1 } }
     ).lean();
 
