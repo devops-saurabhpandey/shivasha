@@ -175,6 +175,41 @@ router.post("/projects/:id/generate-captions", async (req, res) => {
   }
 });
 
+
+router.post("/projects/:id/generate-voiceover", async (req, res) => {
+  if (!validId(req.params.id)) return res.status(400).json({ message: "Invalid project ID" });
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) return res.status(503).json({ message: "AI is not configured. Add OPENAI_API_KEY to the backend environment." });
+  try {
+    const project = await YouTubeProject.findOne({ _id: req.params.id, user: req.user.id });
+    if (!project) return res.status(404).json({ message: "Project not found" });
+    const script = clean(project.script, 12000);
+    if (!script) return res.status(400).json({ message: "Create or save a script first." });
+    const voice = ["alloy", "echo", "fable", "onyx", "nova", "shimmer"].includes(req.body?.voice) ? req.body.voice : "alloy";
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 90000);
+    let response;
+    try {
+      response = await fetch("https://api.openai.com/v1/audio/speech", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+        signal: controller.signal,
+        body: JSON.stringify({ model: process.env.OPENAI_TTS_MODEL || "tts-1", voice, input: script, response_format: "mp3" })
+      });
+    } finally { clearTimeout(timeout); }
+    if (!response.ok) {
+      const providerError = await response.json().catch(() => ({}));
+      return res.status(response.status === 429 ? 429 : 502).json({ message: response.status === 429 ? "AI quota/rate limit reached." : providerError.error?.message || "Voice-over provider failed." });
+    }
+    res.set({ "Content-Type": "audio/mpeg", "Content-Disposition": `attachment; filename="${(project.title || "shivasha-voiceover").replace(/[^a-z0-9-_]/gi, "_").slice(0, 80)}.mp3`, "Cache-Control": "no-store" });
+    const audio = Buffer.from(await response.arrayBuffer());
+    if (!audio.length) return res.status(502).json({ message: "AI returned empty audio." });
+    res.send(audio);
+  } catch (error) {
+    if (!res.headersSent) res.status(error.name === "AbortError" ? 504 : 502).json({ message: error.name === "AbortError" ? "Voice-over generation timed out." : "Could not generate voice-over." });
+  }
+});
+
 router.delete("/projects/:id", async (req, res) => {
   if (!validId(req.params.id)) return res.status(400).json({ message: "Invalid project ID" });
   try {
