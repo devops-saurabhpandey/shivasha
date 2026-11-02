@@ -10,6 +10,7 @@ const YouTubeProjectSchema = new mongoose.Schema({
   audience: { type: String, trim: true, maxlength: 300, default: "" },
   status: { type: String, enum: ["Draft", "Script ready", "In review", "Approved", "Scheduled", "Published"], default: "Draft" },
   script: { type: String, maxlength: 30000, default: "" },
+  captions: { type: String, maxlength: 100000, default: "" },
   description: { type: String, maxlength: 5000, default: "" },
   tags: { type: [String], default: [] }
 }, { timestamps: true });
