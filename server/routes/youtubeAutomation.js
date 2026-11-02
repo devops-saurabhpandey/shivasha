@@ -1,5 +1,6 @@
 import { Router } from "express";
 import mongoose from "mongoose";
+import { v2 as cloudinary } from "cloudinary";
 import { requireAuth } from "../middleware/auth.js";
 import YouTubeProject from "../models/YouTubeProject.js";
 
@@ -201,9 +202,20 @@ router.post("/projects/:id/generate-voiceover", async (req, res) => {
       const providerError = await response.json().catch(() => ({}));
       return res.status(response.status === 429 ? 429 : 502).json({ message: response.status === 429 ? "AI quota/rate limit reached." : providerError.error?.message || "Voice-over provider failed." });
     }
-    res.set({ "Content-Type": "audio/mpeg", "Content-Disposition": `attachment; filename="${(project.title || "shivasha-voiceover").replace(/[^a-z0-9-_]/gi, "_").slice(0, 80)}.mp3`, "Cache-Control": "no-store" });
     const audio = Buffer.from(await response.arrayBuffer());
     if (!audio.length) return res.status(502).json({ message: "AI returned empty audio." });
+    const cloudinaryConfigured = process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET;
+    if (cloudinaryConfigured) {
+      cloudinary.config({ cloud_name: process.env.CLOUDINARY_CLOUD_NAME, api_key: process.env.CLOUDINARY_API_KEY, api_secret: process.env.CLOUDINARY_API_SECRET, secure: true });
+      const uploaded = await new Promise((resolve, reject) => {
+        const stream = cloudinary.uploader.upload_stream({ resource_type: "video", folder: "shivasha/youtube-voiceovers", public_id: `project-${project._id}-${Date.now()}`, format: "mp3" }, (error, result) => error ? reject(error) : resolve(result));
+        stream.end(audio);
+      });
+      project.voiceoverUrl = uploaded.secure_url;
+      await project.save();
+      return res.json({ voiceoverUrl: project.voiceoverUrl, stored: true, message: "Voice-over generated and stored in Cloudinary." });
+    }
+    res.set({ "Content-Type": "audio/mpeg", "Content-Disposition": `attachment; filename="${(project.title || "shivasha-voiceover").replace(/[^a-z0-9-_]/gi, "_").slice(0, 80)}.mp3`, "Cache-Control": "no-store" });
     res.send(audio);
   } catch (error) {
     if (!res.headersSent) res.status(error.name === "AbortError" ? 504 : 502).json({ message: error.name === "AbortError" ? "Voice-over generation timed out." : "Could not generate voice-over." });
