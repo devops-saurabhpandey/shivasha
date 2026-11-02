@@ -142,6 +142,39 @@ router.post("/projects/:id/generate-seo", async (req, res) => {
   }
 });
 
+
+router.post("/projects/:id/generate-captions", async (req, res) => {
+  if (!validId(req.params.id)) return res.status(400).json({ message: "Invalid project ID" });
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) return res.status(503).json({ message: "AI is not configured. Add OPENAI_API_KEY to the backend environment." });
+  try {
+    const project = await YouTubeProject.findOne({ _id: req.params.id, user: req.user.id });
+    if (!project) return res.status(404).json({ message: "Project not found" });
+    if (!project.script?.trim()) return res.status(400).json({ message: "Create or save a script first." });
+    const prompt = `Create SRT subtitles from this script in ${project.language}, paced across approximately ${project.duration} seconds. Return only valid SRT with sequential indexes and timestamps HH:MM:SS,mmm. Keep captions concise and readable. Script:\n${project.script}`;
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 45000);
+    let response;
+    try {
+      response = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+        signal: controller.signal,
+        body: JSON.stringify({ model: process.env.OPENAI_MODEL || "gpt-4o-mini", messages: [{ role: "system", content: "Return only valid SRT subtitle text. Do not include markdown fences." }, { role: "user", content: prompt }], max_tokens: 4000 })
+      });
+    } finally { clearTimeout(timeout); }
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) return res.status(response.status === 429 ? 429 : 502).json({ message: response.status === 429 ? "AI quota/rate limit reached." : "AI caption provider failed." });
+    const captions = clean(payload.choices?.[0]?.message?.content, 100000).replace(/^```(?:srt)?\s*/i, "").replace(/\s*```$/, "");
+    if (!captions.includes("-->")) return res.status(502).json({ message: "AI returned invalid SRT captions." });
+    project.captions = captions;
+    await project.save();
+    res.json({ project, disclaimer: "SRT captions generated. Review timing and wording before publishing." });
+  } catch (error) {
+    res.status(error.name === "AbortError" ? 504 : 502).json({ message: error.name === "AbortError" ? "Caption generation timed out." : "Could not generate captions." });
+  }
+});
+
 router.delete("/projects/:id", async (req, res) => {
   if (!validId(req.params.id)) return res.status(400).json({ message: "Invalid project ID" });
   try {
