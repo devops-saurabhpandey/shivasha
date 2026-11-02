@@ -1,5 +1,6 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 
+const API_BASE = (import.meta.env.VITE_API_URL || "https://shivasha.onrender.com").replace(/\/$/, "");
 const formats = [
   { id: "short", label: "YouTube Shorts", ratio: "9:16", duration: "15–180 sec" },
   { id: "long", label: "Long Video", ratio: "16:9", duration: "3–60 min" },
@@ -9,37 +10,76 @@ export default function YouTubeAutomation({ auth }) {
   const [projects, setProjects] = useState([]);
   const [form, setForm] = useState({ title: "", topic: "", language: "Hindi", format: "short", audience: "", duration: "60" });
   const [notice, setNotice] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
   const selected = formats.find(x => x.id === form.format);
   const update = (key, value) => setForm(prev => ({ ...prev, [key]: value }));
+  const headers = { "Content-Type": "application/json", ...(auth?.token ? { Authorization: "Bearer " + auth.token } : {}) };
 
-  const createProject = event => {
+  useEffect(() => {
+    let cancelled = false;
+    if (!auth?.token) {
+      setProjects([]);
+      setNotice("Sign in to save and load projects securely.");
+      return () => { cancelled = true; };
+    }
+    setLoading(true);
+    fetch(API_BASE + "/api/youtube-automation/projects", { headers: { Authorization: "Bearer " + auth.token } })
+      .then(async response => {
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.message || "Could not load projects");
+        if (!cancelled) {
+          setProjects(Array.isArray(data.projects) ? data.projects : []);
+          setNotice("");
+        }
+      })
+      .catch(error => { if (!cancelled) setNotice(error.message || "Could not connect to SHIVASHA server"); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [auth?.token]);
+
+  const createProject = async event => {
     event.preventDefault();
     if (!form.topic.trim()) return;
-    const project = {
-      id: `yt-${Date.now()}`,
-      title: form.title.trim() || form.topic.trim(),
-      topic: form.topic.trim(),
-      language: form.language,
-      format: form.format,
-      duration: form.duration,
-      status: "Draft",
-      createdAt: new Date().toISOString(),
-    };
-    setProjects(prev => [project, ...prev]);
-    setNotice("Project draft created in this session. Persistent server storage is not connected yet.");
-    setForm(prev => ({ ...prev, title: "", topic: "" }));
+    if (!auth?.token) { setNotice("Please sign in before creating a saved project."); return; }
+    setSaving(true);
+    setNotice("");
+    try {
+      const response = await fetch(API_BASE + "/api/youtube-automation/projects", {
+        method: "POST", headers,
+        body: JSON.stringify({ ...form, duration: Number(form.duration), title: form.title.trim() || form.topic.trim() })
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.message || "Could not save project");
+      setProjects(prev => [data.project, ...prev]);
+      setNotice("Project saved to your SHIVASHA account.");
+      setForm(prev => ({ ...prev, title: "", topic: "" }));
+    } catch (error) {
+      setNotice(error.message || "Could not save project");
+    } finally { setSaving(false); }
   };
 
-  const removeProject = id => setProjects(prev => prev.filter(p => p.id !== id));
+  const removeProject = async id => {
+    if (!auth?.token) return;
+    try {
+      const response = await fetch(API_BASE + "/api/youtube-automation/projects/" + id, {
+        method: "DELETE", headers: { Authorization: "Bearer " + auth.token }
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.message || "Could not delete project");
+      setProjects(prev => prev.filter(project => project._id !== id));
+      setNotice("Project deleted.");
+    } catch (error) { setNotice(error.message || "Could not delete project"); }
+  };
 
   return <section className="content">
     <div className="feed-head">
       <div><h2>SHIVASHA YouTube Automation</h2><p>Create, organize, review and prepare Shorts and long-form video projects.</p></div>
-      <span className="yt-status">● Workspace preview</span>
+      <span className="yt-status">● Project workspace</span>
     </div>
     <div className="yt-hero panel">
       <div className="yt-hero-icon">▶</div>
-      <div><h3>From idea to YouTube-ready video</h3><p>Plan your content in Hindi, English and more languages. Publishing will be enabled after secure Google channel authorization and backend setup.</p></div>
+      <div><h3>From idea to YouTube-ready video</h3><p>Plan content in Hindi, English and more languages. Publishing requires secure Google channel authorization and further setup.</p></div>
     </div>
     <div className="yt-format-grid">
       {formats.map(item => <button type="button" key={item.id} className={form.format === item.id ? "yt-format selected" : "yt-format"} onClick={() => update("format", item.id)}>
@@ -55,19 +95,19 @@ export default function YouTubeAutomation({ auth }) {
           <label>Language<select value={form.language} onChange={e => update("language", e.target.value)}><option>Hindi</option><option>English</option><option>Hinglish</option><option>Bengali</option><option>Marathi</option><option>Tamil</option><option>Telugu</option><option>Other</option></select></label>
           <label>Target duration<select value={form.duration} onChange={e => update("duration", e.target.value)}>{(form.format === "short" ? [["30","30 sec"],["60","60 sec"],["90","90 sec"],["180","3 min"]] : [["180","3 min"],["300","5 min"],["600","10 min"],["1200","20 min"],["1800","30 min"]]).map(([v,l])=><option key={v} value={v}>{l}</option>)}</select></label>
         </div>
-        <button className="primary" type="submit">Create draft project</button>
+        <button className="primary" type="submit" disabled={saving || !auth?.token}>{saving ? "Saving…" : "Create saved project"}</button>
         {notice && <p className="yt-notice" role="status">{notice}</p>}
       </form>
       <div className="panel yt-pipeline">
         <h3>Automation pipeline</h3>
         {["1. Topic & audience","2. AI script + SEO metadata","3. Voice-over, captions & assets","4. Video render & preview","5. Your approval","6. Schedule / publish","7. Analytics"].map((step,i)=><div className="yt-pipeline-step" key={step}><span>{i+1}</span>{step}<small>{i===0?"Available":i===4?"Required":"Planned"}</small></div>)}
-        <p className="yt-disclaimer">No video is uploaded or published automatically in this preview. You remain in control of final approval.</p>
+        <p className="yt-disclaimer">This release saves project records. AI generation, video rendering and YouTube publishing are not yet active.</p>
       </div>
     </div>
     <div className="panel yt-projects">
-      <div className="yt-projects-head"><h3>Your video projects</h3><span>{projects.length} drafts</span></div>
-      {!projects.length ? <div className="yt-empty"><span>▧</span><b>No projects yet</b><p>Create a draft above to start your content workflow.</p></div> : projects.map(project=><article className="yt-project" key={project.id}>
-        <div className="yt-project-thumb">{project.format === "short" ? "▯" : "▶"}</div><div className="yt-project-info"><b>{project.title}</b><p>{project.language} · {project.format === "short" ? "Short" : "Long video"} · {project.duration}s target</p><small>{project.topic}</small></div><span className="yt-draft-badge">{project.status}</span><button type="button" className="yt-remove" onClick={()=>removeProject(project.id)} aria-label="Remove draft">×</button>
+      <div className="yt-projects-head"><h3>Your video projects</h3><span>{loading ? "Loading…" : projects.length + " projects"}</span></div>
+      {!loading && !projects.length ? <div className="yt-empty"><span>▧</span><b>No saved projects yet</b><p>Create a project above to start your content workflow.</p></div> : projects.map(project=><article className="yt-project" key={project._id}>
+        <div className="yt-project-thumb">{project.format === "short" ? "▯" : "▶"}</div><div className="yt-project-info"><b>{project.title}</b><p>{project.language} · {project.format === "short" ? "Short" : "Long video"} · {project.duration}s target</p><small>{project.topic}</small></div><span className="yt-draft-badge">{project.status}</span><button type="button" className="yt-remove" onClick={()=>removeProject(project._id)} aria-label="Remove project">×</button>
       </article>)}
     </div>
   </section>;
