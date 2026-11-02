@@ -1,0 +1,16 @@
+# Keep secrets and local runtime artifacts out of the worker image.
+.env
+.env.*
+!.env.example
+node_modules
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+*.mp4
+*.mov
+*.wav
+*.mp3
+*.srt
+*.tmp
+coverage
+.git
