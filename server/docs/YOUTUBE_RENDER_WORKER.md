@@ -13,12 +13,12 @@ It polls the authenticated backend worker-claim endpoint, renders a claimed mani
 
 ## Worker protocol
 
-1. Poll `POST /api/youtube/projects/:id/render-worker-claim` using the worker token.
+1. Poll `POST /api/youtube/projects/render-worker-claim` using the worker token.
 2. If a job is returned, write its manifest to a temporary JSON file.
 3. Run `npm run youtube:render -- <manifest.json> <output.mp4>`.
 4. Upload the MP4 to Cloudinary as a video resource.
-5. Report `completed` with its HTTPS URL to `POST /api/youtube/projects/:id/render-worker-result`.
-6. On any failure, report `failed` with a short error message.
+5. Report `completed` with its HTTPS URL to `POST /api/youtube/projects/render-worker-result`.
+6. On any failure, report `failed` with a short error message.\n\nThe backend automatically re-queues a `running` job whose `renderStartedAt` is older than 45 minutes. This is crash recovery, not a guarantee against duplicate work if a render exceeds that window.
 
 ## Important deployment notes
 
@@ -26,4 +26,4 @@ It polls the authenticated backend worker-claim endpoint, renders a claimed mani
 - The worker must run on a machine/container with FFmpeg installed and enough temporary disk.
 - Cloudinary and AI providers may have free-tier limits; this does not guarantee unlimited free operation.
 - Do not expose the worker token in the frontend or public repository.
-- Add retry/lease recovery before production so a worker crash cannot leave a job stuck as `running`.
+- Keep the worker process supervised (for example, with a container restart policy or process manager). The backend has a 45-minute stale-job recovery window; consider tuning it if long renders are expected.
