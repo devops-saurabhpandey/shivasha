@@ -5,7 +5,7 @@ const router = Router();
 
 function requireWorker(req, res, next) {
   const expected = process.env.YOUTUBE_RENDER_WORKER_TOKEN;
-  const supplied = req.get("authorization")?.replace(/^Bearer\\s+/i, "");
+  const supplied = req.get("authorization")?.replace(/^Bearer\s+/i, "");
   if (!expected || !supplied || supplied !== expected) {
     return res.status(401).json({ message: "Worker authentication failed." });
   }
