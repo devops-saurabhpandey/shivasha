@@ -27,3 +27,30 @@ It polls the authenticated backend worker-claim endpoint, renders a claimed mani
 - Cloudinary and AI providers may have free-tier limits; this does not guarantee unlimited free operation.
 - Do not expose the worker token in the frontend or public repository.
 - Keep the worker process supervised (for example, with a container restart policy or process manager). The backend has a 45-minute stale-job recovery window; consider tuning it if long renders are expected.
+
+
+## Docker deployment (dedicated worker)
+
+A worker image definition is provided at `server/Dockerfile.youtube-worker`.
+Build it from the repository root:
+
+```sh
+docker build -f server/Dockerfile.youtube-worker -t shivasha-youtube-worker ./server
+```
+
+Run it as a persistent container (not a one-shot/serverless function), supplying
+the required secrets through your host's environment/secret manager:
+
+```sh
+docker run --name shivasha-youtube-worker --restart unless-stopped \
+  -e SHIVASHA_API_URL \
+  -e YOUTUBE_RENDER_WORKER_TOKEN \
+  -e CLOUDINARY_CLOUD_NAME \
+  -e CLOUDINARY_API_KEY \
+  -e CLOUDINARY_API_SECRET \
+  shivasha-youtube-worker
+```
+
+Do not put real credentials in the Dockerfile, image, or Git repository. The container
+includes Node.js 20 and FFmpeg. This configuration is a reproducible starting point;
+it has not been validated by a live deployment or end-to-end render in this repository.
