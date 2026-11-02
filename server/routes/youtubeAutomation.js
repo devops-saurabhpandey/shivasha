@@ -56,6 +56,16 @@ router.patch("/projects/:id", async (req, res) => {
     if (!["short", "long"].includes(req.body.format)) return res.status(400).json({ message: "Invalid format" });
     updates.format = req.body.format;
   }
+  if (req.body?.sceneAssets !== undefined) {
+    if (!Array.isArray(req.body.sceneAssets) || req.body.sceneAssets.length > 30) return res.status(400).json({ message: "Scene assets must be an array with up to 30 items" });
+    updates.sceneAssets = req.body.sceneAssets.map((item, index) => ({
+      scene: Math.max(1, Math.min(30, Number(item?.scene) || index + 1)),
+      type: ["video", "image"].includes(item?.type) ? item.type : "video",
+      url: clean(item?.url, 2000),
+      duration: Math.max(1, Math.min(600, Number(item?.duration) || 5)),
+      attribution: clean(item?.attribution, 500)
+    }));
+  }
   if (req.body?.tags !== undefined) {
     if (!Array.isArray(req.body.tags)) return res.status(400).json({ message: "Tags must be an array" });
     updates.tags = req.body.tags.slice(0, 30).map(tag => clean(tag, 50)).filter(Boolean);
