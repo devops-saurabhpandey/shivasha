@@ -9,7 +9,8 @@
     "test": "node --test",
     "admin:bootstrap": "node scripts/bootstrapAdmin.js",
     "migrate:guardian-index": "node scripts/migrateEducationGuardianLinkIndex.js",
-    "migrate:guardian-index:check": "node scripts/migrateEducationGuardianLinkIndex.js --dry-run"
+    "migrate:guardian-index:check": "node scripts/migrateEducationGuardianLinkIndex.js --dry-run",
+    "youtube:render": "node scripts/renderYouTubeProject.js"
   },
   "dependencies": {
     "bcryptjs": "^3.0.2",
