@@ -54,3 +54,28 @@ docker run --name shivasha-youtube-worker --restart unless-stopped \
 Do not put real credentials in the Dockerfile, image, or Git repository. The container
 includes Node.js 20 and FFmpeg. This configuration is a reproducible starting point;
 it has not been validated by a live deployment or end-to-end render in this repository.
+
+
+## Docker Compose
+
+For a persistent Docker host, a Compose configuration is available at
+`server/docker-compose.youtube-worker.yml`. Create a local `.env.worker` from
+`.env.worker.example`, fill in the actual values on your host, then run from
+the `server/` directory:
+
+```sh
+cp .env.worker.example .env.worker
+# Edit .env.worker locally; do not commit it.
+docker compose -f docker-compose.youtube-worker.yml up -d --build
+docker compose -f docker-compose.youtube-worker.yml logs -f
+```
+
+Stop the worker with:
+
+```sh
+docker compose -f docker-compose.youtube-worker.yml down
+```
+
+The real `.env.worker` is excluded by `.dockerignore` patterns for `.env.*`.
+The example file contains placeholders only. Compose startup and live rendering
+still require validation on a host with Docker, valid backend credentials, and Cloudinary access.
