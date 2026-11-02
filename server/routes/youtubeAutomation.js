@@ -222,6 +222,39 @@ router.post("/projects/:id/generate-voiceover", async (req, res) => {
   }
 });
 
+router.post("/projects/:id/generate-storyboard", async (req, res) => {
+  if (!validId(req.params.id)) return res.status(400).json({ message: "Invalid project ID" });
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) return res.status(503).json({ message: "AI is not configured. Add OPENAI_API_KEY to the backend environment." });
+  try {
+    const project = await YouTubeProject.findOne({ _id: req.params.id, user: req.user.id });
+    if (!project) return res.status(404).json({ message: "Project not found" });
+    if (!project.script) return res.status(400).json({ message: "Generate or save a script first." });
+    const prompt = `Create a practical video storyboard as strict JSON: {"scenes":[{"start":0,"end":5,"visual":"visual description","onScreenText":"short overlay","assetSearch":"search phrase for footage"}]}. Make scenes cover exactly about ${project.duration} seconds, use 3-8 scenes for Shorts and 8-24 for long videos, avoid copyrighted character/brand imitation, and keep visual prompts suitable for ${project.format === "short" ? "9:16 vertical" : "16:9 landscape"} video. Language: ${project.language}. Script: ${project.script}`;
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 45000);
+    let response;
+    try {
+      response = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+        signal: controller.signal,
+        body: JSON.stringify({ model: process.env.OPENAI_MODEL || "gpt-4o-mini", messages: [{ role: "system", content: "You are a video editor and storyboard planner. Return strict JSON only." }, { role: "user", content: prompt }], response_format: { type: "json_object" }, max_tokens: 2500 })
+      });
+    } finally { clearTimeout(timeout); }
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) return res.status(response.status === 429 ? 429 : 502).json({ message: response.status === 429 ? "AI quota/rate limit reached." : "Storyboard provider failed." });
+    const raw = payload.choices?.[0]?.message?.content || "{}";
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed.scenes) || !parsed.scenes.length) return res.status(502).json({ message: "AI returned an empty storyboard." });
+    project.storyboard = JSON.stringify(parsed.scenes.slice(0, 24), null, 2).slice(0, 30000);
+    await project.save();
+    res.json({ project, disclaimer: "Storyboard saved. This is a shot plan; video rendering and asset licensing are separate steps." });
+  } catch (error) {
+    res.status(error.name === "AbortError" ? 504 : 502).json({ message: error.name === "AbortError" ? "Storyboard generation timed out." : "Could not generate storyboard." });
+  }
+});
+
 router.delete("/projects/:id", async (req, res) => {
   if (!validId(req.params.id)) return res.status(400).json({ message: "Invalid project ID" });
   try {
