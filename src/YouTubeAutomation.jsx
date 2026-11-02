@@ -94,7 +94,7 @@ export default function YouTubeAutomation({ auth }) {
           });
           if (!response.ok) continue;
           const data = await response.json();
-          setProjects(prev => prev.map(item => item._id === project._id ? { ...item, ...data.project, renderStatus: data.status || data.project?.renderStatus || item.renderStatus } : item));
+          setProjects(prev => prev.map(item => item._id === project._id ? { ...item, renderStatus: data.status || item.renderStatus, renderOutputUrl: data.outputUrl ?? item.renderOutputUrl ?? "", renderError: data.error ?? item.renderError ?? "" } : item));
         } catch { /* Retry on the next polling cycle. */ }
       }
     }, 5000);
