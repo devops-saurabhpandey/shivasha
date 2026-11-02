@@ -1,19 +1,23 @@
 # Dedicated SHIVASHA YouTube render worker image.
-# Build from the repository root: docker build -f server/Dockerfile.youtube-worker -t shivasha-youtube-worker ./server
+# Build from the repository root:
+# docker build -f server/Dockerfile.youtube-worker -t shivasha-youtube-worker ./server
 FROM node:20-bookworm-slim
 
 ENV NODE_ENV=production
 WORKDIR /app
 
-# FFmpeg is required by scripts/renderYouTubeProject.js.
+# FFmpeg handles video rendering; Liberation fonts provide a common font fallback
+# for FFmpeg's subtitles filter in minimal Linux containers.
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends ffmpeg ca-certificates \
+    && apt-get install -y --no-install-recommends ffmpeg ca-certificates fonts-liberation \
     && rm -rf /var/lib/apt/lists/*
 
 COPY package*.json ./
 RUN npm install --omit=dev
 
-COPY . .
+COPY --chown=node:node . .
 
-# Fail early with a clear message if required configuration is absent.
+# Run as the unprivileged Node user; temp files are written under /tmp.
+USER node
+
 CMD ["npm", "run", "youtube:worker"]
