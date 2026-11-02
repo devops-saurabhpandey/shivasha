@@ -17,6 +17,8 @@ export default function YouTubeAutomation({ auth }) {
   const [savingScriptId, setSavingScriptId] = useState("");
   const [generatingSeoId, setGeneratingSeoId] = useState("");
   const [generatingCaptionsId, setGeneratingCaptionsId] = useState("");
+  const [generatingVoiceoverId, setGeneratingVoiceoverId] = useState("");
+  const [voiceovers, setVoiceovers] = useState({});
   const selected = formats.find(x => x.id === form.format);
   const update = (key, value) => setForm(prev => ({ ...prev, [key]: value }));
   const headers = { "Content-Type": "application/json", ...(auth?.token ? { Authorization: "Bearer " + auth.token } : {}) };
@@ -110,6 +112,28 @@ export default function YouTubeAutomation({ auth }) {
     finally { setGeneratingCaptionsId(""); }
   };
 
+  const generateVoiceover = async id => {
+    if (!auth?.token) { setNotice("Please sign in to generate a voice-over."); return; }
+    setGeneratingVoiceoverId(id); setNotice("");
+    try {
+      const response = await fetch(API_BASE + "/api/youtube-automation/projects/" + id + "/generate-voiceover", {
+        method: "POST", headers, body: JSON.stringify({ voice: "alloy" })
+      });
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.message || "Voice-over generation failed");
+      }
+      const audioBlob = await response.blob();
+      if (!audioBlob.size) throw new Error("The voice-over file was empty.");
+      setVoiceovers(prev => {
+        if (prev[id]?.url) URL.revokeObjectURL(prev[id].url);
+        return { ...prev, [id]: { url: URL.createObjectURL(audioBlob), name: (projects.find(p => p._id === id)?.title || "shivasha-voiceover").replace(/[^a-z0-9-_]/gi, "_") + ".mp3" } };
+      });
+      setNotice("Voice-over generated. Play it or download the MP3; it is not stored permanently on the server.");
+    } catch (error) { setNotice(error.message || "Voice-over generation failed"); }
+    finally { setGeneratingVoiceoverId(""); }
+  };
+
   const saveScript = async project => {
     if (!auth?.token) return;
     const script = scriptEdits[project._id] ?? project.script ?? "";
@@ -177,7 +201,7 @@ export default function YouTubeAutomation({ auth }) {
     <div className="panel yt-projects">
       <div className="yt-projects-head"><h3>Your video projects</h3><span>{loading ? "Loading…" : projects.length + " projects"}</span></div>
       {!loading && !projects.length ? <div className="yt-empty"><span>▧</span><b>No saved projects yet</b><p>Create a project above to start your content workflow.</p></div> : projects.map(project=><article className="yt-project" key={project._id}>
-        <div className="yt-project-thumb">{project.format === "short" ? "▯" : "▶"}</div><div className="yt-project-info"><b>{project.title}</b><p>{project.language} · {project.format === "short" ? "Short" : "Long video"} · {project.duration}s target</p><small>{project.topic}</small>{(project.description || project.tags?.length) && <details className="yt-script-preview"><summary>View SEO title, description & tags</summary><p><b>Title:</b> {project.title}</p><p>{project.description}</p><p><b>Tags:</b> {(project.tags || []).join(", ")}</p></details>}{<button type="button" className="primary" disabled={generatingSeoId === project._id} onClick={()=>generateSeo(project._id)}>{generatingSeoId === project._id ? "Generating SEO…" : "Generate SEO metadata"}</button>}{project.script && <button type="button" className="primary" disabled={generatingCaptionsId === project._id} onClick={()=>generateCaptions(project._id)}>{generatingCaptionsId === project._id ? "Generating captions…" : project.captions ? "Regenerate SRT captions" : "Generate SRT captions"}</button>}{project.captions && <details className="yt-script-preview"><summary>Review / download SRT</summary><textarea rows="8" readOnly value={project.captions} aria-label={"SRT captions for "+project.title}/><a className="primary" download={(project.title || "video").replace(/[^a-z0-9-_]/gi,"_")+".srt"} href={"data:text/plain;charset=utf-8,"+encodeURIComponent(project.captions)}>Download .srt</a></details>}{project.script && <details className="yt-script-preview"><summary>Edit / review script</summary><textarea rows="10" value={scriptEdits[project._id] ?? project.script} onChange={e=>setScriptEdits(prev=>({...prev,[project._id]:e.target.value}))} aria-label={"Edit script for "+project.title}/><button type="button" className="primary" disabled={savingScriptId === project._id || (scriptEdits[project._id] ?? project.script) === project.script} onClick={()=>saveScript(project)}>{savingScriptId === project._id ? "Saving…" : "Save script edits"}</button></details>}</div><span className="yt-draft-badge">{project.status}</span><button type="button" className="primary" disabled={generatingId === project._id} onClick={()=>generateScript(project._id)}>{generatingId === project._id ? "Generating…" : project.script ? "Regenerate script" : "Generate AI script"}</button><button type="button" className="yt-remove" onClick={()=>removeProject(project._id)} aria-label="Remove project">×</button>
+        <div className="yt-project-thumb">{project.format === "short" ? "▯" : "▶"}</div><div className="yt-project-info"><b>{project.title}</b><p>{project.language} · {project.format === "short" ? "Short" : "Long video"} · {project.duration}s target</p><small>{project.topic}</small>{(project.description || project.tags?.length) && <details className="yt-script-preview"><summary>View SEO title, description & tags</summary><p><b>Title:</b> {project.title}</p><p>{project.description}</p><p><b>Tags:</b> {(project.tags || []).join(", ")}</p></details>}{<button type="button" className="primary" disabled={generatingSeoId === project._id} onClick={()=>generateSeo(project._id)}>{generatingSeoId === project._id ? "Generating SEO…" : "Generate SEO metadata"}</button>}{project.script && <button type="button" className="primary" disabled={generatingCaptionsId === project._id} onClick={()=>generateCaptions(project._id)}>{generatingCaptionsId === project._id ? "Generating captions…" : project.captions ? "Regenerate SRT captions" : "Generate SRT captions"}</button>}{project.script && <button type="button" className="primary" disabled={generatingVoiceoverId === project._id} onClick={()=>generateVoiceover(project._id)}>{generatingVoiceoverId === project._id ? "Generating voice-over…" : voiceovers[project._id] ? "Regenerate AI voice-over" : "Generate AI voice-over"}</button>}{voiceovers[project._id]?.url && <div className="yt-script-preview"><audio controls preload="none" src={voiceovers[project._id].url} aria-label={"AI voice-over for "+project.title}/><a className="primary" href={voiceovers[project._id].url} download={voiceovers[project._id].name}>Download MP3</a></div>}{project.captions && <details className="yt-script-preview"><summary>Review / download SRT</summary><textarea rows="8" readOnly value={project.captions} aria-label={"SRT captions for "+project.title}/><a className="primary" download={(project.title || "video").replace(/[^a-z0-9-_]/gi,"_")+".srt"} href={"data:text/plain;charset=utf-8,"+encodeURIComponent(project.captions)}>Download .srt</a></details>}{project.script && <details className="yt-script-preview"><summary>Edit / review script</summary><textarea rows="10" value={scriptEdits[project._id] ?? project.script} onChange={e=>setScriptEdits(prev=>({...prev,[project._id]:e.target.value}))} aria-label={"Edit script for "+project.title}/><button type="button" className="primary" disabled={savingScriptId === project._id || (scriptEdits[project._id] ?? project.script) === project.script} onClick={()=>saveScript(project)}>{savingScriptId === project._id ? "Saving…" : "Save script edits"}</button></details>}</div><span className="yt-draft-badge">{project.status}</span><button type="button" className="primary" disabled={generatingId === project._id} onClick={()=>generateScript(project._id)}>{generatingId === project._id ? "Generating…" : project.script ? "Regenerate script" : "Generate AI script"}</button><button type="button" className="yt-remove" onClick={()=>removeProject(project._id)} aria-label="Remove project">×</button>
       </article>)}
     </div>
   </section>;
