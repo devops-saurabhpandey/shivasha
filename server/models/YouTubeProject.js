@@ -12,6 +12,7 @@ const YouTubeProjectSchema = new mongoose.Schema({
   script: { type: String, maxlength: 30000, default: "" },
   captions: { type: String, maxlength: 100000, default: "" },
   voiceoverUrl: { type: String, maxlength: 2000, default: "" },
+  storyboard: { type: String, maxlength: 30000, default: "" },
   description: { type: String, maxlength: 5000, default: "" },
   tags: { type: [String], default: [] }
 }, { timestamps: true });
