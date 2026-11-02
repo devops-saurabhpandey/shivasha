@@ -24,8 +24,8 @@ router.post("/render-worker-result", async (req, res) => {
 
   try {
     const values = status === "completed"
-      ? { renderStatus: "completed", renderOutputUrl: outputUrl, renderError: "" }
-      : { renderStatus: "failed", renderOutputUrl: "", renderError: error || "Worker rendering failed." };
+      ? { renderStatus: "completed", renderOutputUrl: outputUrl, renderError: "", renderStartedAt: null }
+      : { renderStatus: "failed", renderOutputUrl: "", renderError: error || "Worker rendering failed.", renderStartedAt: null };
     const project = await YouTubeProject.findOneAndUpdate(
       { _id: projectId, renderStatus: "running" },
       { $set: values },
