@@ -30,6 +30,7 @@ import aiAssistantRoutes from "./routes/aiAssistant.js";
 import hrRoutes from "./routes/hr.js";
 import analyticsRoutes from "./routes/analytics.js";
 import youtubeAutomationRoutes from "./routes/youtubeAutomation.js";
+import youtubeRenderWorkerRoutes from "./routes/youtubeRenderWorker.js";
 
 dotenv.config();
 
@@ -195,6 +196,7 @@ app.use("/api/ads", adsRoutes);
 app.use("/api/hr", hrRoutes);
 app.use("/api/analytics", analyticsRoutes);
 app.use("/api/youtube-automation", youtubeAutomationRoutes);
+app.use("/api/youtube/projects", youtubeRenderWorkerRoutes);
 
 app.get("/api", (_req, res) => res.json({ message: "SHIVASHA API is running" }));
 
