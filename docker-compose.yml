@@ -15,6 +15,35 @@ services:
       start_period: 20s
     # Private SHIVASHA database: never publish port 27017 to the internet.
 
+  # Self-hosted inference runtime. CPU inference works; GPU acceleration can be
+  # configured separately for hosts with compatible NVIDIA hardware.
+  shivasha-ai:
+    image: ollama/ollama:latest
+    restart: unless-stopped
+    volumes:
+      - shivasha_ai_models:/root/.ollama
+    expose:
+      - "11434"
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+
+  # Pull the configured model once; completion gates API startup.
+  shivasha-ai-model-init:
+    image: ollama/ollama:latest
+    restart: "no"
+    environment:
+      OLLAMA_HOST: http://shivasha-ai:11434
+      AI_MODEL: ${AI_MODEL:-qwen2.5:3b}
+    entrypoint: ["/bin/sh", "-c"]
+    command: ["until ollama list >/dev/null 2>&1; do sleep 3; done; ollama pull \"$$AI_MODEL\""]
+    depends_on:
+      shivasha-ai:
+        condition: service_healthy
+
   shivasha-server:
     build:
       context: .
@@ -26,11 +55,16 @@ services:
       JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in your .env file}
       MONGODB_URI: ${MONGODB_URI:-mongodb://shivasha-database:27017/shivasha}
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:8080}
+      AI_BASE_URL: ${AI_BASE_URL:-http://shivasha-ai:11434/v1}
+      AI_MODEL: ${AI_MODEL:-qwen2.5:3b}
+      AI_API_KEY: ${AI_API_KEY:-}
     expose:
       - "5000"
     depends_on:
       shivasha-database:
         condition: service_healthy
+      shivasha-ai-model-init:
+        condition: service_completed_successfully
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:5000/api/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
       interval: 30s
@@ -51,3 +85,4 @@ services:
 
 volumes:
   shivasha_mongo_data:
+  shivasha_ai_models:
