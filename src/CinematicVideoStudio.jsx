@@ -77,7 +77,7 @@ export default function CinematicVideoStudio({ auth }) {
         {status && <p className="cinematic-status" role="status">{status}</p>}
       </div>
     </div>
-    <div className="cinematic-feature-row"><span>🎨 Film color grading</span><span>🌄 AI background replacement · planned</span><span>✂️ Smart cuts · planned</span><span>🎧 Audio tools · planned</span><span>💇 Hairstyle effects · planned</span><span>📽️ 1080p / 4K export · backend dependent</span></div>
-    <p className="cinematic-note">This is the initial in-app editor interface. Real AI background/hairstyle transformations, rendering and export are not active until a video-processing backend and models are connected.</p>
+    <div className="cinematic-feature-row"><span>🎨 FFmpeg film color grading · worker required</span><span>🌄 AI background replacement · planned</span><span>✂️ Smart cuts · planned</span><span>🎧 Audio tools · planned</span><span>💇 Hairstyle effects · planned</span><span>📽️ 1080p / 4K export · backend dependent</span></div>
+    <p className="cinematic-note">FFmpeg color grading is implemented in the worker script but runs only after the worker is installed and started. AI background replacement, hairstyle effects, advanced audio processing and 1080p/4K export profiles are not active yet.</p>
   </section>;
 }
