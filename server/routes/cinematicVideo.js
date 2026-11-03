@@ -56,13 +56,13 @@ router.get("/capabilities", (_req, res) => res.json({
   aiRendering: false,
   features: {
     upload: Boolean(process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET),
-    cinematicGrading: "planned",
+    cinematicGrading: "ffmpeg-worker",
     backgroundReplacement: "planned",
     hairstyleEffects: "planned",
     audioProcessing: "planned",
     export: "planned"
   },
-  message: "Video-processing worker is not connected yet."
+  message: "FFmpeg color grading is supported by the worker script when the worker is running; AI effects remain unavailable."
 }));
 
 function requireWorker(req, res, next) {
