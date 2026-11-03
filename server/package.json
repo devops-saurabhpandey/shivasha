@@ -12,7 +12,8 @@
     "migrate:guardian-index:check": "node scripts/migrateEducationGuardianLinkIndex.js --dry-run",
     "youtube:render": "node scripts/renderYouTubeProject.js",
     "youtube:worker": "node scripts/pollYouTubeRenderQueue.js",
-    "cinematic:check": "node scripts/checkCinematicWorker.js"
+    "cinematic:check": "node scripts/checkCinematicWorker.js",
+    "cinematic:worker": "node scripts/pollCinematicRenderQueue.js"
   },
   "dependencies": {
     "bcryptjs": "^3.0.2",
