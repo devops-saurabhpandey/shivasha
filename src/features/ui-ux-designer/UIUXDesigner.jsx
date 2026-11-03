@@ -23,6 +23,19 @@ export default function UIUXDesigner() {
     description: prompt.trim() || selected.description
   }), [selected, projectName, prompt]);
 
+  function generateConcept() {
+    const idea = prompt.trim();
+    if (!idea) { setNotice("Describe your idea first."); return; }
+    const lower = idea.toLowerCase();
+    const template = lower.includes("job") || lower.includes("career")
+      ? starterTemplates[1]
+      : lower.includes("business") || lower.includes("sales") || lower.includes("dashboard")
+        ? starterTemplates[2]
+        : starterTemplates[0];
+    setSelected({ ...template, target, name: projectName.trim() || template.name, description: idea });
+    setNotice("Concept created with SHIVASHA's built-in layout rules. This is not external AI generation.");
+  }
+
   function chooseTemplate(template) {
     setSelected(template);
     setTarget(template.target);
@@ -82,7 +95,7 @@ export default function UIUXDesigner() {
           <label className="uxd-label" htmlFor="uxd-prompt">Describe your idea</label>
           <textarea id="uxd-prompt" rows="4" value={prompt} onChange={e => setPrompt(e.target.value)} placeholder="E.g. a modern online learning dashboard..." />
           <p className="uxd-help">AI generation will be connected after a secure server-side provider is configured. For now, try a starter template.</p>
-          <div className="uxd-actions"><button className="uxd-primary" onClick={saveDesign}>Save design</button><button className="uxd-secondary" onClick={exportPreview}>Export HTML preview</button></div>
+          <div className="uxd-actions"><button className="uxd-primary" onClick={generateConcept}>Generate concept</button><button className="uxd-secondary" onClick={saveDesign}>Save design</button><button className="uxd-secondary" onClick={exportPreview}>Export HTML preview</button></div>
           {notice && <p className="uxd-notice" role="status">{notice}</p>}
         </aside>
         <div className="uxd-workspace">
