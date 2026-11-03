@@ -52,6 +52,7 @@ router.get("/capabilities", (_req, res) => res.json({
   success: true,
   editor: "prototype",
   jobApi: true,
+  workerConfigured: Boolean(process.env.CINEMATIC_RENDER_WORKER_TOKEN),
   aiRendering: false,
   features: {
     upload: Boolean(process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET),
