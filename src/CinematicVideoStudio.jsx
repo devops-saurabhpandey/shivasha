@@ -19,7 +19,7 @@ export default function CinematicVideoStudio({ auth }) {
   const [audio, setAudio] = useState("original");
   const [status, setStatus] = useState("");
   const [job, setJob] = useState(null);
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useState(false);\n  const [uploadProgress, setUploadProgress] = useState("");
 
   return <section className="content cinematic-studio">
     <header className="cinematic-hero">
@@ -44,7 +44,7 @@ export default function CinematicVideoStudio({ auth }) {
         <label className="cinematic-select">Audio
           <select value={audio} onChange={e => setAudio(e.target.value)}><option value="original">Keep original audio</option><option value="enhance">Voice enhancement (AI processing planned)</option><option value="score">Add cinematic score (planned)</option></select>
         </label>
-        <button className="cinematic-render" type="button" disabled={busy} onClick={async () => { if (!video) { setStatus("Import a video first."); return; } const token = readToken(auth); if (!token) { setStatus("Please sign in again to create a video job."); return; } setBusy(true); setStatus(""); try { const response = await fetch(`${API_BASE}/api/cinematic-video/jobs`, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify({ sourceUrl: "", settings: { look, intensity, background, audio } }) }); const data = await response.json(); if (!response.ok) throw new Error(data.message || "Could not create job"); setJob(data.job); setStatus(data.message || "Job created."); } catch (error) { setStatus(error.message || "API unavailable. Check server deployment."); } finally { setBusy(false); } }}>{busy ? "Creating job…" : "✦ Create cinematic job"}</button>
+        <button className="cinematic-render" type="button" disabled={busy} onClick={async () => { if (!video) { setStatus("Import a video first."); return; } const token = readToken(auth); if (!token) { setStatus("Please sign in again to create a video job."); return; } setBusy(true); setStatus(""); setUploadProgress(""); try { setUploadProgress("Uploading source video…"); const form = new FormData(); form.append("video", video); const uploadResponse = await fetch(`${API_BASE}/api/cinematic-video/upload`, { method: "POST", headers: { Authorization: `Bearer ${token}` }, body: form }); const uploadData = await uploadResponse.json(); if (!uploadResponse.ok) throw new Error(uploadData.message || "Video upload failed"); setUploadProgress("Creating job…"); const response = await fetch(`${API_BASE}/api/cinematic-video/jobs`, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify({ sourceUrl: uploadData.sourceUrl, settings: { look, intensity, background, audio } }) }); const data = await response.json(); if (!response.ok) throw new Error(data.message || "Could not create job"); setJob(data.job); setStatus(data.message || "Job created."); } catch (error) { setStatus(error.message || "API unavailable. Check server deployment."); } finally { setBusy(false); } }}>{busy ? (uploadProgress || "Working…") : "✦ Upload & create cinematic job"}</button>
         {job && <div className="cinematic-job"><b>Job: {job.id}</b><span>Status: {job.status} · {job.progress}%</span><small>Upload and rendering worker are not connected yet.</small></div>}
         {status && <p className="cinematic-status" role="status">{status}</p>}
       </div>
