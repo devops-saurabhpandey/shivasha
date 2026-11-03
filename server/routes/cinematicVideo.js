@@ -65,6 +65,61 @@ router.get("/capabilities", (_req, res) => res.json({
   message: "Video-processing worker is not connected yet."
 }));
 
+function requireWorker(req, res, next) {
+  const expected = process.env.CINEMATIC_RENDER_WORKER_TOKEN;
+  const supplied = (req.headers.authorization || "").startsWith("Bearer ")
+    ? req.headers.authorization.slice(7) : "";
+  if (!expected || !supplied || supplied !== expected) {
+    return res.status(401).json({ message: "Worker authentication required" });
+  }
+  next();
+}
+
+router.post("/render-worker-claim", requireWorker, async (_req, res) => {
+  try {
+    const staleBefore = new Date(Date.now() - 10 * 60 * 1000);
+    const job = await CinematicVideoJob.findOneAndUpdate(
+      { $or: [
+        { status: "queued" },
+        { status: "processing", workerClaimedAt: { $lt: staleBefore } }
+      ] },
+      { $set: { status: "processing", workerClaimedAt: new Date(), updatedAt: new Date() },
+        $inc: { attempts: 1 } },
+      { new: true, sort: { createdAt: 1 } }
+    ).lean();
+    if (!job) return res.json({ success: true, job: null });
+    return res.json({ success: true, job: {
+      id: job._id, sourceUrl: job.sourceUrl, settings: job.settings,
+      status: job.status, attempts: job.attempts
+    } });
+  } catch {
+    return res.status(500).json({ message: "Could not claim cinematic job" });
+  }
+});
+
+router.post("/render-worker-result", requireWorker, async (req, res) => {
+  const { jobId, status, outputUrl = "", error = "" } = req.body || {};
+  if (!mongoose.isValidObjectId(jobId) || !["completed", "failed"].includes(status)) {
+    return res.status(400).json({ message: "Invalid worker result" });
+  }
+  if (status === "completed" && (typeof outputUrl !== "string" || !outputUrl.startsWith("https://"))) {
+    return res.status(400).json({ message: "A valid outputUrl is required for completed jobs" });
+  }
+  try {
+    const job = await CinematicVideoJob.findOneAndUpdate(
+      { _id: jobId, status: "processing" },
+      { $set: { status, outputUrl: status === "completed" ? outputUrl : "",
+        error: String(error).slice(0, 900), progress: status === "completed" ? 100 : 0,
+        updatedAt: new Date() } },
+      { new: true }
+    ).lean();
+    if (!job) return res.status(404).json({ message: "Processing job not found" });
+    return res.json({ success: true, job: { id: job._id, status: job.status, progress: job.progress } });
+  } catch {
+    return res.status(500).json({ message: "Could not save worker result" });
+  }
+});
+
 router.use(requireAuth);
 
 router.post("/upload", videoUpload.single("video"), async (req, res) => {
