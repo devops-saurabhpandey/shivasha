@@ -12,6 +12,8 @@ const cinematicVideoJobSchema = new mongoose.Schema({
   },
   status: { type: String, enum: ["queued", "processing", "completed", "failed"], default: "queued", index: true },
   progress: { type: Number, min: 0, max: 100, default: 0 },
+  workerClaimedAt: { type: Date, default: null },
+  attempts: { type: Number, min: 0, default: 0 },
   error: { type: String, default: "" },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
