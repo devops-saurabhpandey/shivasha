@@ -51,12 +51,12 @@ services:
     environment:
       NODE_ENV: production
       SHIVASHA_API_URL: http://shivasha-server:5000
-      CINEMATIC_RENDER_WORKER_TOKEN: ${CINEMATIC_RENDER_WORKER_TOKEN:?Set CINEMATIC_RENDER_WORKER_TOKEN to enable the worker}
+      CINEMATIC_RENDER_WORKER_TOKEN: ${CINEMATIC_RENDER_WORKER_TOKEN:-}
       CINEMATIC_RENDER_POLL_MS: ${CINEMATIC_RENDER_POLL_MS:-15000}
       FFMPEG_PATH: ffmpeg
-      CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME:?Set Cloudinary credentials for cinematic rendering}
-      CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY:?Set Cloudinary credentials for cinematic rendering}
-      CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET:?Set Cloudinary credentials for cinematic rendering}
+      CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME:-}
+      CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY:-}
+      CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET:-}
     depends_on:
       shivasha-server:
         condition: service_healthy
