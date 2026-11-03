@@ -13,6 +13,9 @@ export default function UIUXDesigner() {
   const [selected, setSelected] = useState(starterTemplates[0]);
   const [projectName, setProjectName] = useState("My design");
   const [notice, setNotice] = useState("");
+  const [savedDesigns, setSavedDesigns] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("shivasha-uxd-saved") || "[]"); } catch { return []; }
+  });
 
   const preview = useMemo(() => ({
     ...selected,
@@ -24,6 +27,25 @@ export default function UIUXDesigner() {
     setSelected(template);
     setTarget(template.target);
     setNotice("Template loaded into preview.");
+  }
+
+  function saveDesign() {
+    const item = { id: Date.now(), projectName: preview.name, target, description: preview.description, templateId: selected.id, primary: selected.primary, savedAt: new Date().toISOString() };
+    const next = [item, ...savedDesigns].slice(0, 20);
+    setSavedDesigns(next);
+    try { localStorage.setItem("shivasha-uxd-saved", JSON.stringify(next)); setNotice("Design saved on this device."); }
+    catch { setNotice("Could not save locally. Check browser storage."); }
+  }
+
+  function loadDesign(item) {
+    setProjectName(item.projectName); setTarget(item.target); setPrompt(item.description);
+    setSelected(starterTemplates.find(t => t.id === item.templateId) || starterTemplates[0]);
+    setNotice("Saved design loaded.");
+  }
+
+  function deleteDesign(id) {
+    const next = savedDesigns.filter(item => item.id !== id); setSavedDesigns(next);
+    try { localStorage.setItem("shivasha-uxd-saved", JSON.stringify(next)); } catch {}
   }
 
   function exportPreview() {
@@ -60,7 +82,7 @@ export default function UIUXDesigner() {
           <label className="uxd-label" htmlFor="uxd-prompt">Describe your idea</label>
           <textarea id="uxd-prompt" rows="4" value={prompt} onChange={e => setPrompt(e.target.value)} placeholder="E.g. a modern online learning dashboard..." />
           <p className="uxd-help">AI generation will be connected after a secure server-side provider is configured. For now, try a starter template.</p>
-          <button className="uxd-primary" onClick={exportPreview}>Export HTML preview</button>
+          <div className="uxd-actions"><button className="uxd-primary" onClick={saveDesign}>Save design</button><button className="uxd-secondary" onClick={exportPreview}>Export HTML preview</button></div>
           {notice && <p className="uxd-notice" role="status">{notice}</p>}
         </aside>
         <div className="uxd-workspace">
@@ -72,6 +94,7 @@ export default function UIUXDesigner() {
               <div className="uxd-preview-cards"><div><b>Discover</b><p>Find what matters to you.</p></div><div><b>Learn</b><p>Build skills at your pace.</p></div></div>
             </div>
           </div>
+          {savedDesigns.length > 0 && <div className="uxd-saved"><h3>Saved on this device</h3>{savedDesigns.map(item => <div className="uxd-saved-row" key={item.id}><button className="uxd-saved-load" onClick={() => loadDesign(item)}><b>{item.projectName}</b><small>{item.target} · {new Date(item.savedAt).toLocaleDateString()}</small></button><button className="uxd-delete" aria-label={`Delete ${item.projectName}`} onClick={() => deleteDesign(item.id)}>×</button></div>)}</div>}
           <div className="uxd-templates"><h3>Start with a template</h3><div className="uxd-template-grid">{starterTemplates.map(t => <button key={t.id} className={selected.id === t.id ? "uxd-template selected" : "uxd-template"} onClick={() => chooseTemplate(t)}><span className="uxd-template-dot" style={{ background: t.primary }} /><b>{t.name}</b><small>{t.target}</small></button>)}</div></div>
         </div>
       </div>
