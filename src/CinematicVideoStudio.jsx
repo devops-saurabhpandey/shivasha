@@ -36,17 +36,38 @@ export default function CinematicVideoStudio({ auth }) {
     return () => { active = false; };
   }, []);
 
+  useEffect(() => {
+    if (!job?.id || !["queued", "processing"].includes(job.status)) return undefined;
+    const token = readToken(auth);
+    if (!token) return undefined;
+    let active = true;
+    const refreshJob = async () => {
+      try {
+        const response = await fetch(`${API_BASE}/api/cinematic-video/jobs/${job.id}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const data = await response.json();
+        if (response.ok && active && data.job) setJob(data.job);
+      } catch {
+        // Keep the last known job state; the manual refresh button remains available.
+      }
+    };
+    const timer = window.setInterval(refreshJob, 5000);
+    refreshJob();
+    return () => { active = false; window.clearInterval(timer); };
+  }, [job?.id, job?.status, auth]);
+
   return <section className="content cinematic-studio">
     <header className="cinematic-hero">
       <span className="cinematic-kicker">SHIVASHA CREATIVE AI · VIDEO</span>
       <h2>Make every moment <em>cinematic.</em></h2>
-      <p>Import a clip and choose a cinematic look. Create a tracked job while rendering integration is being built.</p>
+      <p>Import a clip and choose a cinematic look. Create a render job and follow its processing status.</p>
       <span className="cinematic-pill">✦ CINEMATIC MODE · DEFAULT</span>
     </header>
     <div className="cinematic-job" aria-live="polite">
       <b>Studio service status</b>
       {capabilities ? <>
-        <span>Job API: {capabilities.jobApi ? "Available" : "Unavailable"} · Upload storage: {capabilities.features?.upload ? "Configured" : "Not configured"} · Render worker: {capabilities.workerConfigured ? "Configured" : "Not connected"}</span>
+        <span>Job API: {capabilities.jobApi ? "Available" : "Unavailable"} · Upload storage: {capabilities.features?.upload ? "Configured" : "Not configured"} · Worker token: {capabilities.workerConfigured ? "Configured" : "Not configured"}</span>
         <small>AI rendering: {capabilities.aiRendering ? "Available" : "Not active"} · Editor: {capabilities.editor || "Unknown"}</small>
       </> : <small>{capabilityError || "Checking video service…"}</small>}
     </div>
@@ -72,7 +93,7 @@ export default function CinematicVideoStudio({ auth }) {
           {job.status === "completed" && job.outputUrl && <a href={job.outputUrl} target="_blank" rel="noreferrer">Open rendered video</a>}
           {job.status === "failed" && job.error && <small role="alert">Render failed: {job.error}</small>}
           <button type="button" disabled={busy} onClick={async () => { const token = readToken(auth); if (!token) { setStatus("Please sign in again to check this job."); return; } setBusy(true); try { const response = await fetch(`${API_BASE}/api/cinematic-video/jobs/${job.id}`, { headers: { Authorization: `Bearer ${token}` } }); const data = await response.json(); if (!response.ok) throw new Error(data.message || "Could not refresh job"); setJob(data.job); setStatus("Job status refreshed."); } catch (error) { setStatus(error.message || "Could not refresh job."); } finally { setBusy(false); } }}>↻ Refresh status</button>
-          <small>{capabilities?.workerConfigured ? "Worker token is configured; job processing still depends on a running worker." : "Rendering worker is not connected yet; refresh checks the saved job status."}</small>
+          <small>{capabilities?.workerConfigured ? "Worker token is configured; processing still requires the worker process to be running." : "Rendering worker is not connected yet; refresh checks the saved job status."}</small>
         </div>}
         {status && <p className="cinematic-status" role="status">{status}</p>}
       </div>
