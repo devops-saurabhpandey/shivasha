@@ -1,6 +1,9 @@
 import React, { useState } from "react";
 import "./cinematic-studio.css";
 
+const API_BASE = import.meta.env.VITE_API_URL || "https://ktl-rto-api.onrender.com";
+function readToken(auth) { return typeof auth === "string" ? auth : auth?.token || auth?.accessToken || auth?.user?.token || ""; }
+
 const looks = [
   { id: "cinematic", name: "Cinematic", detail: "Film contrast · rich tones" },
   { id: "natural", name: "Natural", detail: "Soft, realistic enhancement" },
@@ -8,19 +11,21 @@ const looks = [
   { id: "custom", name: "Custom", detail: "Tune your own style" }
 ];
 
-export default function CinematicVideoStudio() {
+export default function CinematicVideoStudio({ auth }) {
   const [video, setVideo] = useState(null);
   const [look, setLook] = useState("cinematic");
   const [intensity, setIntensity] = useState(65);
   const [background, setBackground] = useState("original");
   const [audio, setAudio] = useState("original");
   const [status, setStatus] = useState("");
+  const [job, setJob] = useState(null);
+  const [busy, setBusy] = useState(false);
 
   return <section className="content cinematic-studio">
     <header className="cinematic-hero">
       <span className="cinematic-kicker">SHIVASHA CREATIVE AI · VIDEO</span>
       <h2>Make every moment <em>cinematic.</em></h2>
-      <p>Import a clip, choose a film look, and prepare your cinematic edit in one workspace.</p>
+      <p>Import a clip and choose a cinematic look. Create a tracked job while rendering integration is being built.</p>
       <span className="cinematic-pill">✦ CINEMATIC MODE · DEFAULT</span>
     </header>
     <div className="cinematic-workspace">
@@ -39,7 +44,8 @@ export default function CinematicVideoStudio() {
         <label className="cinematic-select">Audio
           <select value={audio} onChange={e => setAudio(e.target.value)}><option value="original">Keep original audio</option><option value="enhance">Voice enhancement (AI processing planned)</option><option value="score">Add cinematic score (planned)</option></select>
         </label>
-        <button className="cinematic-render" type="button" onClick={() => setStatus(video ? "Editor prototype ready. AI rendering and export need a connected video-processing backend." : "Import a video first to prepare your edit.")}>✦ Prepare cinematic edit</button>
+        <button className="cinematic-render" type="button" disabled={busy} onClick={async () => { if (!video) { setStatus("Import a video first."); return; } const token = readToken(auth); if (!token) { setStatus("Please sign in again to create a video job."); return; } setBusy(true); setStatus(""); try { const response = await fetch(`${API_BASE}/api/cinematic-video/jobs`, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify({ sourceUrl: "", settings: { look, intensity, background, audio } }) }); const data = await response.json(); if (!response.ok) throw new Error(data.message || "Could not create job"); setJob(data.job); setStatus(data.message || "Job created."); } catch (error) { setStatus(error.message || "API unavailable. Check server deployment."); } finally { setBusy(false); } }}>{busy ? "Creating job…" : "✦ Create cinematic job"}</button>
+        {job && <div className="cinematic-job"><b>Job: {job.id}</b><span>Status: {job.status} · {job.progress}%</span><small>Upload and rendering worker are not connected yet.</small></div>}
         {status && <p className="cinematic-status" role="status">{status}</p>}
       </div>
     </div>
