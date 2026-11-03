@@ -78,10 +78,31 @@ function requireWorker(req, res, next) {
 router.post("/render-worker-claim", requireWorker, async (_req, res) => {
   try {
     const staleBefore = new Date(Date.now() - 10 * 60 * 1000);
-    const job = await CinematicVideoJob.findOneAndUpdate(
-      { $or: [
+    // Close jobs that exhausted their retry budget instead of leaving them
+    // permanently stuck in queued/processing state.
+    await CinematicVideoJob.updateMany(
+      { attempts: { $gte: 3 }, $or: [
         { status: "queued" },
-        { status: "processing", workerClaimedAt: { $lt: staleBefore } }
+        { status: "processing", $or: [
+          { workerClaimedAt: { $lt: staleBefore } },
+          { workerClaimedAt: null }
+        ] }
+      ] },
+      { $set: {
+        status: "failed",
+        error: "Render stopped after 3 unsuccessful worker attempts. Please create a new render job.",
+        progress: 0,
+        updatedAt: new Date()
+      } }
+    );
+
+    const job = await CinematicVideoJob.findOneAndUpdate(
+      { attempts: { $lt: 3 }, $or: [
+        { status: "queued" },
+        { status: "processing", $or: [
+          { workerClaimedAt: { $lt: staleBefore } },
+          { workerClaimedAt: null }
+        ] }
       ] },
       { $set: { status: "processing", workerClaimedAt: new Date(), updatedAt: new Date() },
         $inc: { attempts: 1 } },
@@ -126,7 +147,7 @@ router.post("/upload", videoUpload.single("video"), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ message: "Choose a video file first." });
     const sourceUrl = await uploadToCloudinary(req.file);
-    return res.status(201).json({ success: true, sourceUrl, message: "Video uploaded. Rendering worker is not connected yet." });
+    return res.status(201).json({ success: true, sourceUrl, message: "Video uploaded to storage. Create a render job to add it to the worker queue." });
   } catch (error) {
     return res.status(error.status || 502).json({ message: error.message || "Video upload failed." });
   }
@@ -143,7 +164,7 @@ router.post("/jobs", async (req, res) => {
       audio: allowedSettings.audio.includes(settings.audio) ? settings.audio : "original"
     };
     const job = await CinematicVideoJob.create({ userId: req.user.id, sourceUrl, settings: normalized });
-    return res.status(201).json({ success: true, job: { id: job._id, status: job.status, progress: job.progress, settings: job.settings, createdAt: job.createdAt }, message: "Job queued. Rendering worker is not connected yet." });
+    return res.status(201).json({ success: true, job: { id: job._id, status: job.status, progress: job.progress, settings: job.settings, createdAt: job.createdAt }, message: "Job queued. A running cinematic worker is required to process it." });
   } catch {
     return res.status(500).json({ message: "Could not create video job" });
   }
