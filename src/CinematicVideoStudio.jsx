@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import "./cinematic-studio.css";
 
-const API_BASE = import.meta.env.VITE_API_URL || "https://ktl-rto-api.onrender.com";
+const API_BASE = import.meta.env.VITE_API_URL || "https://shivasha.onrender.com";
 function readToken(auth) { return typeof auth === "string" ? auth : auth?.token || auth?.accessToken || auth?.user?.token || ""; }
 
 const looks = [
