@@ -4,7 +4,7 @@
 
 **Product plan:** [Global Super App Master Plan](./docs/SHIVASHA_GLOBAL_SUPER_APP_PLAN.md)
 
-**Self-host on your own computer:** [Self-hosting guide](./docs/SELF_HOSTING.md) — Docker Compose runs the frontend, API and a local MongoDB database.
+**Self-host on your own computer:** [Self-hosting guide](./docs/SELF_HOSTING.md) — Docker Compose runs the frontend, API and a local MongoDB database. [Cinematic render worker guide](./docs/CINEMATIC_RENDER_WORKER.md) — optional FFmpeg video grading worker.
 
 The existing React-based social community app, Node.js/Express API and MongoDB data store are the starting point for this wider ecosystem.
 
