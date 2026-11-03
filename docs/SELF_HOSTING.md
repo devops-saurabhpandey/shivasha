@@ -1,47 +1,60 @@
 # SHIVASHA self-hosting (your own computer)
 
-This setup runs the SHIVASHA web frontend, Node.js API, Socket.IO and MongoDB on one computer using Docker Compose. MongoDB data is kept in a named Docker volume and its port is not exposed to the network.
+This setup runs the SHIVASHA frontend, Node.js API, MongoDB and a self-hosted AI inference runtime on a computer you control using Docker Compose. MongoDB and AI model data use persistent Docker volumes; neither database nor model ports are published publicly.
 
 ## What you need
 
-- A desktop/laptop or mini-PC that you control.
-- A supported 64-bit OS (Ubuntu Linux is recommended for an always-on server; Windows can use Docker Desktop).
+- A 64-bit desktop/laptop or mini-PC. Ubuntu Linux is recommended for an always-on server; Windows can use Docker Desktop.
 - Docker Engine + Docker Compose plugin, or Docker Desktop.
-- Reliable power and internet. A computer that is switched off or loses internet cannot serve the app.
-- For access from outside your home/office, a domain/HTTPS reverse proxy and a network that permits inbound connections. Some ISPs use CGNAT, which prevents ordinary port forwarding.
+- Reliable power and internet. If the computer is off or disconnected, SHIVASHA is unavailable.
+- **AI hardware:** the default `qwen2.5:3b` model needs several GB of available RAM and storage; CPU inference works but can be slow. Larger models need more memory. A GPU is optional, not assumed.
+- For outside access: HTTPS reverse proxy/domain and a network that permits inbound connections. CGNAT may prevent ordinary port forwarding.
 
-## First run on your own computer
+## First run
 
 1. Install Docker.
-2. Clone this repository and open its folder:
+2. Clone the repository:
    `git clone https://github.com/devops-saurabhpandey/shivasha.git`
    `cd shivasha`
-3. Create a private `.env` file in the repository root. Do not upload it to GitHub:
-   `JWT_SECRET=put-a-long-random-secret-here`
-   `FRONTEND_URL=http://localhost:8080`
-   `SHIVASHA_PORT=8080`
-4. Start the services:
+3. Create a private root `.env` file. Never commit it:
+   ```env
+   JWT_SECRET=replace-with-a-long-random-secret
+   FRONTEND_URL=http://localhost:8080
+   SHIVASHA_PORT=8080
+   AI_MODEL=qwen2.5:3b
+   # Optional: override the default internal Ollama endpoint
+   # AI_BASE_URL=http://shivasha-ai:11434/v1
+   ```
+4. Start all services:
    `docker compose up -d --build`
-5. Open `http://localhost:8080` on that computer. On another device on the same Wi-Fi, use `http://SERVER-LAN-IP:8080`.
-6. Check health:
-   `http://localhost:8080/api/health`
+   First startup downloads the model; this may take time and substantial bandwidth.
+5. Check progress:
+   `docker compose ps`
+   `docker compose logs --tail=100 shivasha-ai-model-init shivasha-server`
+6. Open `http://localhost:8080`. From another device on the same Wi-Fi, use `http://SERVER-LAN-IP:8080`.
+7. Check API health at `http://localhost:8080/api/health`, then sign in and test SHIVASHA AI and UI/UX Designer.
 
-The compose file defaults to the private Docker network database URI `mongodb://mongo:27017/shivasha`; you do not need MongoDB Atlas for this local setup.
+The local Compose database defaults to `mongodb://shivasha-database:27017/shivasha`; MongoDB Atlas is not required for this setup.
+
+## Model configuration
+
+- `AI_BASE_URL`: OpenAI-compatible API base URL. Compose defaults to the private Ollama service.
+- `AI_MODEL`: Ollama model tag. Default: `qwen2.5:3b`.
+- `AI_API_KEY`: optional; leave empty for the local Ollama service.
+- For a different OpenAI-compatible hosted provider, set its endpoint/model/key privately. That provider may charge separately.
 
 ## Stop, restart and backup
 
-- Stop services without deleting data: `docker compose down`
+- Stop without deleting data: `docker compose down`
 - Start again: `docker compose up -d`
-- View logs: `docker compose logs --tail=100`
-- Back up the database before upgrades or hardware changes. One basic dump command is:
-  `docker compose exec -T mongo mongodump --db shivasha --archive > shivasha-backup.archive`
+- Logs: `docker compose logs --tail=100`
+- MongoDB backup: `docker compose exec -T shivasha-database mongodump --db shivasha --archive > shivasha-backup.archive`
 
-Never run `docker compose down -v` unless you intentionally want to delete the database volume.
+Never run `docker compose down -v` unless you intentionally want to delete database and AI model volumes.
 
-## Important limitations
+## Important limitations and security
 
-- This prepares the project for self-hosting; it does not install Docker or turn on a physical computer remotely. The computer must be available and running.
-- LAN access is suitable for initial testing. Do not expose port 8080 directly to the public internet or publish MongoDB port 27017.
-- Before storing real users' data or opening the app publicly, configure HTTPS, firewall and OS updates, secure backups, monitoring, rate limits, and review authorization/privacy controls.
-- AI, SMS, and image/video features still require their respective provider credentials/services (for example, OpenAI, MSG91, or Cloudinary) and may have separate costs. Self-hosting does not make those third-party services free.
-- GitHub Pages is not required for this Docker setup; the frontend is served by the local Nginx container and proxies API/Socket.IO traffic to the backend.
+- This config prepares self-hosting; it cannot power on a physical computer remotely. The machine must remain running for always-on access.
+- Test on your LAN first. Do not expose port 8080 directly to the public internet or publish MongoDB/Ollama ports.
+- Before public launch, configure HTTPS, firewall, OS updates, secure backups, monitoring, rate limits, and review authorization/privacy controls.
+- Local inference avoids per-request hosted AI API charges, but hardware, electricity, internet, and any public hosting/domain costs may remain.
