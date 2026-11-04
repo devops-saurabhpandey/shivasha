@@ -81,6 +81,30 @@ router.put("/data", async (req, res, next) => {
         id: cleanId(item.id), customer: cleanText(item.customer, 120), business: cleanText(item.business, 120),
         amount: cleanNumber(item.amount), status: cleanText(item.status, 40),
         createdAt: cleanText(item.createdAt, 40)
+      })),
+      workflows: (data.workflows || []).filter(isRecord).slice(0, 200).map(item => ({
+        id: cleanId(item.id), name: cleanText(item.name, 120), trigger: cleanText(item.trigger, 80),
+        action: cleanText(item.action, 80), enabled: item.enabled !== false, createdAt: cleanText(item.createdAt, 40)
+      })),
+      workflowRuns: (data.workflowRuns || []).filter(isRecord).slice(0, 500).map(item => ({
+        id: cleanId(item.id), workflowId: cleanId(item.workflowId), workflowName: cleanText(item.workflowName, 120),
+        trigger: cleanText(item.trigger, 80), action: cleanText(item.action, 80), status: cleanText(item.status, 40),
+        detail: cleanText(item.detail, 240), leadId: cleanId(item.leadId), createdAt: cleanText(item.createdAt, 40)
+      })),
+      tasks: (data.tasks || []).filter(isRecord).slice(0, 500).map(item => ({
+        id: cleanId(item.id), leadId: cleanId(item.leadId), leadName: cleanText(item.leadName, 120),
+        title: cleanText(item.title, 160), status: cleanText(item.status, 40), createdAt: cleanText(item.createdAt, 40), source: cleanText(item.source, 40)
+      })),
+      notifications: (data.notifications || []).filter(isRecord).slice(0, 500).map(item => ({
+        id: cleanId(item.id), leadId: cleanId(item.leadId), message: cleanText(item.message, 240),
+        read: item.read === true, createdAt: cleanText(item.createdAt, 40), source: cleanText(item.source, 40)
+      })),
+      activities: (data.activities || []).filter(isRecord).slice(0, 500).map(item => ({
+        id: cleanId(item.id), leadId: cleanId(item.leadId), note: cleanText(item.note, 240), createdAt: cleanText(item.createdAt, 40)
+      })),
+      messageDrafts: (data.messageDrafts || []).filter(isRecord).slice(0, 500).map(item => ({
+        id: cleanId(item.id), leadId: cleanId(item.leadId), leadName: cleanText(item.leadName, 120),
+        message: cleanText(item.message, 1000), status: cleanText(item.status, 40), createdAt: cleanText(item.createdAt, 40)
       }))
     };
 
