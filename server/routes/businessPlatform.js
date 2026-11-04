@@ -7,7 +7,7 @@ router.use(requireAuth);
 
 const schema = new mongoose.Schema({
   owner: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true, unique: true, index: true },
-  data: { type: mongoose.Schema.Types.Mixed, default: () => ({ leads: [], campaigns: [], sales: [] }) }
+  data: { type: mongoose.Schema.Types.Mixed, default: () => ({ leads: [], campaigns: [], sales: [], workflows: [], workflowRuns: [], tasks: [], notifications: [], activities: [], messageDrafts: [] }) }
 }, { timestamps: true, minimize: false });
 const Record = mongoose.models.ShivashaBusinessPlatformData || mongoose.model("ShivashaBusinessPlatformData", schema);
 
@@ -23,10 +23,38 @@ const cleanId = value => typeof value === "string" || (typeof value === "number"
 router.get("/data", async (req, res, next) => {
   try {
     const record = await Record.findOne({ owner: req.user.id }).lean();
-    res.json({ data: record?.data || { leads: [], campaigns: [], sales: [] } });
+    res.json({ data: { leads: [], campaigns: [], sales: [], workflows: [], workflowRuns: [], tasks: [], notifications: [], activities: [], messageDrafts: [], ...(record?.data || {}) } });
   } catch (error) { next(error); }
 });
 
+router.post("/workflows/trigger", async (req, res, next) => {
+  try {
+    const event = cleanText(req.body?.event, 80);
+    const leadId = cleanId(req.body?.leadId);
+    if (event !== "New lead created" || leadId === "") return res.status(400).json({ message: "Unsupported event or missing lead ID." });
+    const record = await Record.findOne({ owner: req.user.id });
+    if (!record) return res.json({ triggered: 0, runs: [] });
+    const data = { leads: [], campaigns: [], sales: [], workflows: [], workflowRuns: [], tasks: [], notifications: [], activities: [], messageDrafts: [], ...(record.data || {}) };
+    const lead = data.leads.find(item => String(item.id) === String(leadId));
+    if (!lead) return res.status(404).json({ message: "Lead not found in this account." });
+    const matching = data.workflows.filter(item => item && item.enabled !== false && item.trigger === event);
+    const now = new Date().toISOString();
+    const runs = matching.map(workflow => {
+      const runId = String(Date.now()) + "-" + Math.random().toString(36).slice(2, 8);
+      const base = { id: runId, workflowId: cleanId(workflow.id), workflowName: cleanText(workflow.name, 120), trigger: event, action: cleanText(workflow.action, 80), status: "completed", detail: "", leadId: cleanId(lead.id), createdAt: now };
+      if (workflow.action === "Create follow-up task") { data.tasks.unshift({ id: runId, leadId: cleanId(lead.id), leadName: cleanText(lead.name, 120), title: "Follow up with " + cleanText(lead.name, 120), status: "Open", createdAt: now, source: "workflow" }); base.detail = "Follow-up task created."; }
+      else if (workflow.action === "Notify lead owner") { data.notifications.unshift({ id: runId, leadId: cleanId(lead.id), message: "New lead: " + cleanText(lead.name, 120), read: false, createdAt: now, source: "workflow" }); base.detail = "In-app notification record created; external delivery is not configured."; }
+      else if (workflow.action === "Add activity note") { data.activities.unshift({ id: runId, leadId: cleanId(lead.id), note: "Workflow " + cleanText(workflow.name, 120) + " triggered for this lead.", createdAt: now }); base.detail = "CRM activity note added."; }
+      else if (workflow.action === "Prepare message draft") { data.messageDrafts.unshift({ id: runId, leadId: cleanId(lead.id), leadName: cleanText(lead.name, 120), message: "Hello " + cleanText(lead.name, 120) + ", thank you for your interest. May we learn more about your requirements?", status: "Needs review", createdAt: now }); base.detail = "Draft prepared; human review required."; }
+      else { base.status = "skipped"; base.detail = "Unsupported action."; }
+      return base;
+    });
+    data.workflowRuns = [...runs, ...(data.workflowRuns || [])].slice(0, 500);
+    record.data = data;
+    await record.save();
+    return res.json({ triggered: runs.length, runs, tasksCreated: runs.filter(run => run.action === "Create follow-up task" && run.status === "completed").length });
+  } catch (error) { next(error); }
+});
 router.put("/data", async (req, res, next) => {
   try {
     const data = req.body?.data;
