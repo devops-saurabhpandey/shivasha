@@ -10,7 +10,10 @@ const inputStyle = {width:"100%",padding:"11px 12px",border:"1px solid #dbe2ea",
 const buttonStyle = {padding:"10px 14px",border:0,borderRadius:10,background:"#4f46e5",color:"#fff",fontWeight:750,cursor:"pointer"};
 const cardStyle = {background:"#fff",border:"1px solid #e5eaf1",borderRadius:16,padding:18,boxShadow:"0 4px 18px rgba(15,23,42,.04)"};
 export default function BusinessPlatform({auth}){
- const [data,setData]=useState(loadData),[tab,setTab]=useState("overview"),[notice,setNotice]=useState("Loading saved business data…");\n const [workflow,setWorkflow]=useState({name:"",trigger:"New lead created",action:"Create follow-up task"});\n const [agentLead,setAgentLead]=useState("");\n const [agentDraft,setAgentDraft]=useState("");
+ const [data,setData]=useState(loadData),[tab,setTab]=useState("overview"),[notice,setNotice]=useState("Loading saved business data…");
+ const [workflow,setWorkflow]=useState({name:"",trigger:"New lead created",action:"Create follow-up task"});
+ const [agentLead,setAgentLead]=useState("");
+ const [agentDraft,setAgentDraft]=useState("");
  useEffect(()=>{let cancelled=false;(async()=>{try{const response=await fetch(API_BASE+"/api/business-platform/data",{headers:auth?.token?{Authorization:"Bearer "+auth.token}:{}});const body=await response.json().catch(()=>({}));if(!response.ok)throw new Error(body.message||"Could not load saved business data.");if(!cancelled){const loaded={...seed,...body.data};setData(loaded);localStorage.setItem(STORAGE_KEY,JSON.stringify(loaded));setNotice("Connected — data is saved to your Shivasha account.");}}catch(error){if(!cancelled)setNotice("API connection unavailable. Changes may only be saved on this device until the server is available.");}})();return()=>{cancelled=true};},[auth?.token]);
  const [lead,setLead]=useState({name:"",email:"",phone:"",business:PRODUCTS[0],source:"Social Media",status:"New",value:""});
  const [campaign,setCampaign]=useState({name:"",channel:"Social Media",business:PRODUCTS[0],budget:"",leads:"0"});
