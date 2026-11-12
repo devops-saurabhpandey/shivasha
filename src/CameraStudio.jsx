@@ -193,7 +193,7 @@ export default function CameraStudio() {
       <div style={{ marginTop: 16, padding: 14, border: "1px solid var(--border, #dbe2ea)", borderRadius: 14 }}>
         <b>महत्वपूर्ण जानकारी</b>
         <p style={{ marginBottom: 0, color: "var(--muted, #64748b)", lineHeight: 1.6 }}>
-          Zoom की सीमा browser/WebView द्वारा बताई गई camera capability पर निर्भर है। यदि hardware zoom उपलब्ध न हो, तो यह prototype software crop इस्तेमाल करता है; इससे optical detail नहीं बढ़ती। RAW, OIS और native Camera2 controls अगले native Android चरण में जोड़े जाएँगे।
+          Native Camera2 bridge Android से rear-camera की वास्तविक metadata पढ़ता है। इस चरण में bridge केवल capabilities report करता है; live preview और zoom slider अभी WebView camera पर चलते हैं। WebView hardware zoom न दे तो software crop इस्तेमाल होगा, जिससे optical detail नहीं बढ़ती। Native photo capture, RAW और OIS/EIS controls अभी अगले चरण में हैं।
         </p>
       </div>
     </section>
