@@ -86,7 +86,7 @@ After review, apply:
 npm run migrate:hr-indexes -- --apply
 ```
 
-This replaces the old global employee-code and payroll-month unique indexes with company-scoped unique indexes. It does not change HR documents.
+This replaces the old global employee-code, attendance employee/date and payroll-month unique indexes with company-scoped unique indexes. It does not change HR documents.
 
 ## 6. Verify tenant isolation
 
