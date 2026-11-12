@@ -2,6 +2,10 @@ package com.shivasha.next;
 
 import android.Manifest;
 import android.content.Context;
+import android.content.ContentValues;
+import android.net.Uri;
+import android.provider.MediaStore;
+import java.io.OutputStream;
 import android.graphics.Rect;
 import android.hardware.camera2.*;
 import android.media.Image;
@@ -40,6 +44,47 @@ public class ShivashaCamera2Plugin extends Plugin {
             return;
         }
         new CaptureTask(call).start();
+    }
+
+    @PluginMethod public void savePhoto(PluginCall call) {
+        if (Build.VERSION.SDK_INT < 29) {
+            call.reject("Gallery saving currently requires Android 10 or newer.");
+            return;
+        }
+        String encoded = call.getString("base64");
+        if (encoded == null || encoded.isEmpty()) {
+            call.reject("Photo data is missing.");
+            return;
+        }
+        Uri imageUri = null;
+        try {
+            byte[] bytes = Base64.decode(encoded, Base64.DEFAULT);
+            String filename = "SHIVASHA-" + System.currentTimeMillis() + ".jpg";
+            ContentValues values = new ContentValues();
+            values.put(MediaStore.Images.Media.DISPLAY_NAME, filename);
+            values.put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg");
+            values.put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/SHIVASHA");
+            values.put(MediaStore.Images.Media.IS_PENDING, 1);
+            imageUri = getContext().getContentResolver().insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values);
+            if (imageUri == null) throw new IllegalStateException("Android could not create a gallery image entry.");
+            try (OutputStream output = getContext().getContentResolver().openOutputStream(imageUri, "w")) {
+                if (output == null) throw new IllegalStateException("Could not open the gallery image for writing.");
+                output.write(bytes);
+                output.flush();
+            }
+            ContentValues published = new ContentValues();
+            published.put(MediaStore.Images.Media.IS_PENDING, 0);
+            getContext().getContentResolver().update(imageUri, published, null, null);
+            JSObject result = new JSObject();
+            result.put("uri", imageUri.toString());
+            result.put("fileName", filename);
+            call.resolve(result);
+        } catch (Exception e) {
+            if (imageUri != null) {
+                try { getContext().getContentResolver().delete(imageUri, null, null); } catch (Exception ignored) {}
+            }
+            call.reject("Unable to save photo to Pictures/SHIVASHA: " + e.getMessage(), e);
+        }
     }
 
     @PermissionCallback private void capturePermissionCallback(PluginCall call) {
