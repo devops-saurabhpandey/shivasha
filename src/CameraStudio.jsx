@@ -1,0 +1,185 @@
+import React, { useEffect, useRef, useState } from "react";
+
+const panel = { background: "#101827", color: "#f8fafc", borderRadius: 18, padding: 18, boxShadow: "0 12px 36px rgba(15,23,42,.16)" };
+const button = { border: 0, borderRadius: 12, padding: "12px 16px", fontWeight: 800, cursor: "pointer" };
+
+export default function CameraStudio() {
+  const videoRef = useRef(null);
+  const streamRef = useRef(null);
+  const trackRef = useRef(null);
+  const [status, setStatus] = useState("Camera बंद है");
+  const [error, setError] = useState("");
+  const [zoom, setZoom] = useState(1);
+  const [zoomMin, setZoomMin] = useState(1);
+  const [zoomMax, setZoomMax] = useState(8);
+  const [hardwareZoom, setHardwareZoom] = useState(false);
+  const [photoUrl, setPhotoUrl] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => () => {
+    streamRef.current?.getTracks().forEach(track => track.stop());
+    if (photoUrl) URL.revokeObjectURL(photoUrl);
+  }, [photoUrl]);
+
+  const stopCamera = () => {
+    streamRef.current?.getTracks().forEach(track => track.stop());
+    streamRef.current = null;
+    trackRef.current = null;
+    if (videoRef.current) videoRef.current.srcObject = null;
+    setStatus("Camera बंद है");
+    setHardwareZoom(false);
+    setZoom(1);
+  };
+
+  const startCamera = async () => {
+    setError("");
+    setPhotoUrl("");
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setError("इस browser/WebView में camera access उपलब्ध नहीं है। Android camera permission और WebView support जाँचें।");
+      return;
+    }
+    try {
+      setStatus("Camera शुरू हो रहा है…");
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: false,
+        video: {
+          facingMode: { ideal: "environment" },
+          width: { ideal: 1920 },
+          height: { ideal: 1080 }
+        }
+      });
+      streamRef.current = stream;
+      const track = stream.getVideoTracks()[0];
+      trackRef.current = track;
+      const capabilities = track.getCapabilities?.() || {};
+      const range = capabilities.zoom;
+      if (range && Number.isFinite(range.max) && range.max >= 1) {
+        setZoomMin(Number.isFinite(range.min) ? range.min : 1);
+        setZoomMax(range.max);
+        setHardwareZoom(true);
+        const initial = Math.max(range.min || 1, 1);
+        try { await track.applyConstraints({ advanced: [{ zoom: initial }] }); } catch { setHardwareZoom(false); }
+      } else {
+        setZoomMin(1);
+        setZoomMax(8);
+        setHardwareZoom(false);
+      }
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play();
+      }
+      setZoom(1);
+      setStatus("Rear camera चालू है");
+    } catch (e) {
+      setStatus("Camera चालू नहीं हुआ");
+      setError(e.name === "NotAllowedError"
+        ? "Camera permission नहीं मिली। Android Settings में SHIVASHA को Camera permission दें।"
+        : e.name === "NotFoundError"
+          ? "इस device पर usable camera नहीं मिला।"
+          : e.message || "Camera शुरू करने में समस्या आई।");
+      stopCamera();
+    }
+  };
+
+  const changeZoom = async value => {
+    const next = Number(value);
+    setZoom(next);
+    if (hardwareZoom && trackRef.current) {
+      try {
+        await trackRef.current.applyConstraints({ advanced: [{ zoom: next }] });
+      } catch {
+        setHardwareZoom(false);
+        setError("इस WebView ने hardware zoom command स्वीकार नहीं की; preview में software crop इस्तेमाल होगा।");
+      }
+    }
+  };
+
+  const capture = async () => {
+    const video = videoRef.current;
+    if (!video || !video.videoWidth || !video.videoHeight) {
+      setError("पहले camera preview शुरू करें।");
+      return;
+    }
+    setBusy(true);
+    setError("");
+    try {
+      const canvas = document.createElement("canvas");
+      const width = video.videoWidth;
+      const height = video.videoHeight;
+      const crop = hardwareZoom ? 1 : Math.max(1, zoom);
+      const cropWidth = Math.round(width / crop);
+      const cropHeight = Math.round(height / crop);
+      const sx = Math.round((width - cropWidth) / 2);
+      const sy = Math.round((height - cropHeight) / 2);
+      canvas.width = cropWidth;
+      canvas.height = cropHeight;
+      const context = canvas.getContext("2d");
+      context.drawImage(video, sx, sy, cropWidth, cropHeight, 0, 0, cropWidth, cropHeight);
+      const blob = await new Promise(resolve => canvas.toBlob(resolve, "image/jpeg", 0.94));
+      if (!blob) throw new Error("Photo तैयार नहीं हो सकी।");
+      if (photoUrl) URL.revokeObjectURL(photoUrl);
+      setPhotoUrl(URL.createObjectURL(blob));
+    } catch (e) {
+      setError(e.message || "Photo capture में समस्या आई।");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const savePhoto = () => {
+    if (!photoUrl) return;
+    const link = document.createElement("a");
+    link.href = photoUrl;
+    link.download = "shivasha-camera-" + new Date().toISOString().replace(/[:.]/g, "-") + ".jpg";
+    link.click();
+  };
+
+  const displayedMax = Math.max(zoomMin, zoomMax);
+  return (
+    <section style={{ maxWidth: 920, margin: "0 auto", padding: "18px 12px 32px" }}>
+      <div style={{ marginBottom: 16 }}>
+        <span style={{ color: "#6b4eff", fontWeight: 900, letterSpacing: 1, fontSize: 12 }}>SHIVASHA IMAGING LAB</span>
+        <h2 style={{ margin: "6px 0", fontSize: 26 }}>2000X Super Zoom Camera</h2>
+        <p style={{ color: "var(--muted, #64748b)", margin: 0 }}>पहला चरण: Rear camera preview, zoom control और photo capture.</p>
+      </div>
+      <div style={panel}>
+        <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap", alignItems: "center", marginBottom: 12 }}>
+          <b>{status}</b>
+          <span style={{ fontSize: 12, color: "#a5b4fc" }}>{hardwareZoom ? "Device-reported hardware zoom" : "Software crop fallback"}</span>
+        </div>
+        <div style={{ background: "#020617", borderRadius: 14, overflow: "hidden", aspectRatio: "16 / 9", display: "grid", placeItems: "center" }}>
+          <video ref={videoRef} playsInline muted autoPlay aria-label="Rear camera preview"
+            style={{ width: "100%", height: "100%", objectFit: "contain", transform: hardwareZoom ? "none" : "scale(" + zoom + ")", display: streamRef.current ? "block" : "none" }} />
+          {!streamRef.current && <div style={{ textAlign: "center", color: "#94a3b8", padding: 24 }}>📷<br/>Camera preview यहाँ दिखाई देगा</div>}
+        </div>
+        <div style={{ display: "flex", justifyContent: "space-between", margin: "16px 0 8px", alignItems: "center" }}>
+          <label htmlFor="shivasha-zoom" style={{ fontWeight: 800 }}>Zoom</label>
+          <strong style={{ fontSize: 22, color: "#c4b5fd" }}>{zoom.toFixed(1)}X</strong>
+        </div>
+        <input id="shivasha-zoom" type="range" min={zoomMin} max={displayedMax} step="0.1" value={Math.min(zoom, displayedMax)} onChange={e => changeZoom(e.target.value)} disabled={!streamRef.current}
+          style={{ width: "100%", accentColor: "#8b5cf6" }} />
+        <div style={{ display: "flex", justifyContent: "space-between", color: "#cbd5e1", fontSize: 12 }}>
+          <span>{zoomMin.toFixed(1)}X</span><span>{displayedMax.toFixed(1)}X available in this camera session</span>
+        </div>
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 18 }}>
+          {!streamRef.current
+            ? <button style={{ ...button, background: "#8b5cf6", color: "#fff" }} onClick={startCamera}>Start Rear Camera</button>
+            : <button style={{ ...button, background: "#334155", color: "#fff" }} onClick={stopCamera}>Stop Camera</button>}
+          <button style={{ ...button, background: "#16a34a", color: "#fff" }} onClick={capture} disabled={!streamRef.current || busy}>{busy ? "Capturing…" : "Capture Photo"}</button>
+        </div>
+        {error && <p role="alert" style={{ color: "#fecaca", background: "#7f1d1d", padding: 12, borderRadius: 10, marginTop: 14 }}>{error}</p>}
+      </div>
+      {photoUrl && <div style={{ ...panel, marginTop: 16 }}>
+        <h3 style={{ marginTop: 0 }}>Captured photo</h3>
+        <img src={photoUrl} alt="Captured by Shivasha Camera" style={{ width: "100%", borderRadius: 12, display: "block" }} />
+        <button style={{ ...button, background: "#8b5cf6", color: "#fff", marginTop: 12 }} onClick={savePhoto}>Save Photo</button>
+      </div>}
+      <div style={{ marginTop: 16, padding: 14, border: "1px solid var(--border, #dbe2ea)", borderRadius: 14 }}>
+        <b>महत्वपूर्ण जानकारी</b>
+        <p style={{ marginBottom: 0, color: "var(--muted, #64748b)", lineHeight: 1.6 }}>
+          Zoom की सीमा browser/WebView द्वारा बताई गई camera capability पर निर्भर है। यदि hardware zoom उपलब्ध न हो, तो यह prototype software crop इस्तेमाल करता है; इससे optical detail नहीं बढ़ती। RAW, OIS और native Camera2 controls अगले native Android चरण में जोड़े जाएँगे।
+        </p>
+      </div>
+    </section>
+  );
+}
