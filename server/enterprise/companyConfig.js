@@ -25,8 +25,10 @@ export const ENTERPRISE_PERMISSIONS = Object.freeze([
   "company.settings.manage",
   "hr.employee.read",
   "hr.employee.manage",
+  "hr.payroll.read",
   "hr.payroll.prepare",
   "hr.payroll.approve",
+  "hr.payroll.release",
   "finance.ledger.read",
   "finance.ledger.post",
   "finance.period.close",
@@ -43,26 +45,26 @@ const ROLE_PERMISSIONS = Object.freeze({
   company_admin: [
     "company.profile.read", "company.profile.manage", "company.members.manage",
     "company.settings.manage", "hr.employee.read", "hr.employee.manage",
-    "hr.payroll.prepare", "hr.payroll.approve", "finance.ledger.read",
+    "hr.payroll.read", "hr.payroll.prepare", "hr.payroll.approve", "hr.payroll.release", "finance.ledger.read",
     "finance.ledger.post", "finance.period.close", "finance.bank.reconcile",
     "tax.records.read", "tax.returns.prepare", "tax.returns.approve",
     "audit.read", "audit.export"
   ],
   hr_manager: [
     "company.profile.read", "hr.employee.read", "hr.employee.manage",
-    "hr.payroll.prepare", "hr.payroll.approve"
+    "hr.payroll.read", "hr.payroll.prepare", "hr.payroll.approve"
   ],
   finance_manager: [
-    "company.profile.read", "finance.ledger.read", "finance.ledger.post",
+    "company.profile.read", "hr.payroll.read", "hr.payroll.release", "finance.ledger.read", "finance.ledger.post",
     "finance.period.close", "finance.bank.reconcile", "tax.records.read",
     "tax.returns.prepare"
   ],
   accountant: [
-    "company.profile.read", "finance.ledger.read", "finance.ledger.post",
+    "company.profile.read", "hr.payroll.read", "finance.ledger.read", "finance.ledger.post",
     "finance.bank.reconcile", "tax.records.read", "tax.returns.prepare"
   ],
   auditor: [
-    "company.profile.read", "hr.employee.read", "finance.ledger.read",
+    "company.profile.read", "hr.employee.read", "hr.payroll.read", "finance.ledger.read",
     "tax.records.read", "audit.read", "audit.export"
   ],
   employee: ["company.profile.read"],
