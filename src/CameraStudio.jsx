@@ -68,6 +68,7 @@ export default function CameraStudio() {
         document.documentElement.style.backgroundColor = "transparent";
         document.body.style.backgroundColor = "transparent";
         await CameraPreview.start({ position: "rear", x: 0, y: 0, width: window.innerWidth, height: window.innerHeight, toBack: true, disableAudio: true, aspectMode: "cover", initialZoomLevel: 1 });
+        setNativePreviewActive(true);
         const zoomInfo = await CameraPreview.getZoom();
         const max = Math.max(1, Number(zoomInfo.max || cameraInfo.maxZoomRatio || cameraInfo.maxDigitalZoom || 1));
         setZoomMin(Math.max(1, Number(zoomInfo.min || 1)));
@@ -146,7 +147,7 @@ export default function CameraStudio() {
       setError("");
       try {
         const result = await CameraPreview.capture({ quality: 95 });
-        const encoded = String(result.value || "").replace(/^data:image\\/[^;]+;base64,/, "");
+        const encoded = String(result.value || "").replace(/^data:image\/[^;]+;base64,/, "");
         if (!encoded) throw new Error("Native preview ने photo data नहीं लौटाया।");
         const binary = atob(encoded);
         const bytes = new Uint8Array(binary.length);
