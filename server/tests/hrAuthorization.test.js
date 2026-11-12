@@ -10,8 +10,8 @@ test("HR read routes require employee read permission", () => {
 });
 
 test("payroll and challan reads require payroll preparation permission", () => {
-  assert.equal(getHRPermission("GET", "/payroll-runs"), "hr.payroll.prepare");
-  assert.equal(getHRPermission("GET", "/challans"), "hr.payroll.prepare");
+  assert.equal(getHRPermission("GET", "/payroll-runs"), "hr.payroll.read");
+  assert.equal(getHRPermission("GET", "/challans"), "hr.payroll.read");
 });
 
 test("HR writes require employee management permission", () => {
@@ -27,7 +27,8 @@ test("payroll creation and challan writes require preparation permission", () =>
 });
 
 test("payroll status transitions require explicit approval permission", () => {
-  assert.equal(getHRPermission("PATCH", "/payroll-runs/123/status"), "hr.payroll.approve");
+  assert.equal(getHRPermission("PATCH", "/payroll-runs/123/status", "Approved"), "hr.payroll.approve");
+  assert.equal(getHRPermission("PATCH", "/payroll-runs/123/status", "Paid"), "hr.payroll.release");
 });
 
 import mongoose from "mongoose";
