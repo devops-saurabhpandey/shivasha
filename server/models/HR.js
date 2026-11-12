@@ -34,7 +34,7 @@ const attendanceSchema = new mongoose.Schema({
   note: { type: String, default: "", maxlength: 160 },
   recordedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true }
 }, { timestamps: true });
-attendanceSchema.index({ companyId: 1, employee: 1, date: 1 });
+attendanceSchema.index({ companyId: 1, employee: 1, date: 1 }, { unique: true, partialFilterExpression: { companyId: { $type: "objectId" } }, name: "company_employee_attendance_date_unique" });
 
 const leaveSchema = new mongoose.Schema({
   companyId: { type: mongoose.Schema.Types.ObjectId, ref: "EnterpriseCompany", required: function () { return this.isNew; }, default: null, index: true },
