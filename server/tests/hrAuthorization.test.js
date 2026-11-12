@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { getHRPermission } from "../enterprise/hrAuthorization.js";
+import { getHRPermission, createHRCompanyAuthorizationMiddleware } from "../enterprise/hrAuthorization.js";
+import { getRolePermissions } from "../enterprise/companyConfig.js";
 
 test("HR read routes require employee read permission", () => {
   assert.equal(getHRPermission("GET", "/employees"), "hr.employee.read");
@@ -9,7 +10,7 @@ test("HR read routes require employee read permission", () => {
   assert.equal(getHRPermission("GET", "/payroll-attendance-summary"), "hr.employee.read");
 });
 
-test("payroll and challan reads require payroll preparation permission", () => {
+test("payroll and challan reads require payroll read permission", () => {
   assert.equal(getHRPermission("GET", "/payroll-runs"), "hr.payroll.read");
   assert.equal(getHRPermission("GET", "/challans"), "hr.payroll.read");
 });
@@ -32,7 +33,6 @@ test("payroll status transitions require explicit approval permission", () => {
 });
 
 import mongoose from "mongoose";
-import { createHRCompanyAuthorizationMiddleware } from "../enterprise/hrAuthorization.js";
 
 const companyId = "507f1f77bcf86cd799439011";
 const userId = "507f1f77bcf86cd799439012";
