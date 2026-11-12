@@ -96,3 +96,15 @@ test("HR models define company-first query indexes", () => {
     assert.ok(found, model.modelName + " must have a company-scoped index");
   }
 });
+
+test("employee code and payroll month uniqueness are company-scoped while legacy null tenants are excluded", () => {
+  for (const [model, keys] of [
+    [HREmployee, { companyId: 1, employeeCode: 1 }],
+    [HRPayrollRun, { companyId: 1, month: 1 }]
+  ]) {
+    const index = model.schema.indexes().find(([indexKeys]) => JSON.stringify(indexKeys) === JSON.stringify(keys));
+    assert.ok(index, model.modelName + " company unique index must exist");
+    assert.equal(index[1].unique, true);
+    assert.deepEqual(index[1].partialFilterExpression, { companyId: { $type: "objectId" } });
+  }
+});
