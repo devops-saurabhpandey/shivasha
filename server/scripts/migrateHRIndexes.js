@@ -54,7 +54,7 @@ async function main() {
     }
     if (oldIndex) await collection.dropIndex(oldIndex.name);
     if (scopedIndex && !scopedIndex.unique) await collection.dropIndex(scopedIndex.name);
-    await collection.createIndex(item.scopedKeys, { unique: true, name: Object.keys(item.scopedKeys).join("_") + "_unique" });
+    await collection.createIndex(item.scopedKeys, { unique: true, partialFilterExpression: { companyId: { $type: "objectId" } }, name: item.name === HREmployee.collection.name ? "company_employee_code_unique" : "company_payroll_month_unique" });
     console.log("Created company-scoped unique index for " + item.name);
   }
 }
