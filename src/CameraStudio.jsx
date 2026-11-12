@@ -22,6 +22,7 @@ export default function CameraStudio() {
   const [busy, setBusy] = useState(false);
   const [nativeInfo, setNativeInfo] = useState(null);
   const [nativePreviewActive, setNativePreviewActive] = useState(false);
+  const nativePreviewRef = useRef(false);
 
   useEffect(() => () => {
     streamRef.current?.getTracks().forEach(track => track.stop());
@@ -35,13 +36,14 @@ export default function CameraStudio() {
   }, [photoUrl]);
 
   const stopCamera = async () => {
-    if (Capacitor.isNativePlatform() && nativePreviewActive) {
+    if (Capacitor.isNativePlatform() && nativePreviewRef.current) {
       try { await CameraPreview.stop(); } catch (e) { setError(e.message || "Native camera बंद नहीं हो सका।"); }
     }
     streamRef.current?.getTracks().forEach(track => track.stop());
     streamRef.current = null;
     trackRef.current = null;
     if (videoRef.current) videoRef.current.srcObject = null;
+    nativePreviewRef.current = false;
     setNativePreviewActive(false);
     document.documentElement.style.backgroundColor = "";
     document.body.style.backgroundColor = "";
@@ -68,6 +70,7 @@ export default function CameraStudio() {
         document.documentElement.style.backgroundColor = "transparent";
         document.body.style.backgroundColor = "transparent";
         await CameraPreview.start({ position: "rear", x: 0, y: 0, width: window.innerWidth, height: window.innerHeight, toBack: true, disableAudio: true, aspectMode: "cover", initialZoomLevel: 1 });
+        nativePreviewRef.current = true;
         setNativePreviewActive(true);
         const zoomInfo = await CameraPreview.getZoom();
         const max = Math.max(1, Number(zoomInfo.max || cameraInfo.maxZoomRatio || cameraInfo.maxDigitalZoom || 1));
