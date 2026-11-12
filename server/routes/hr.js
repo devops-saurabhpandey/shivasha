@@ -1,33 +1,62 @@
 import { Router } from "express";
 import mongoose from "mongoose";
 import { requireAuth } from "../middleware/auth.js";
-import User from "../models/User.js";
+import Company from "../models/Company.js";
+import CompanyMembership from "../models/CompanyMembership.js";
+import { hasCompanyPermission } from "../enterprise/companyConfig.js";
 import { HREmployee, HRAttendance, HRLeave, HRChallan, HRPayrollRun } from "../models/HR.js";
 
 const router = Router();
 router.use(requireAuth);
 
-async function requireHR(req, res, next) {
+const validId = id => mongoose.isValidObjectId(id);
+
+function requiredHRPermission(req) {
+  if (req.method === "GET") {
+    return /^(?:\/payroll-runs|\/challans)(?:\/|$)/.test(req.path)
+      ? "hr.payroll.prepare"
+      : "hr.employee.read";
+  }
+  if (req.method === "PATCH" && /^\/payroll-runs\/[^/]+\/status$/.test(req.path)) {
+    return "hr.payroll.approve";
+  }
+  if (/^\/payroll-runs(?:\/|$)/.test(req.path) || /^\/challans(?:\/|$)/.test(req.path)) {
+    return "hr.payroll.prepare";
+  }
+  return "hr.employee.manage";
+}
+
+async function requireHRCompany(req, res, next) {
+  const companyId = String(req.get("x-company-id") || "");
+  if (!validId(companyId)) {
+    return res.status(400).json({ message: "Select a company and send its ID in the X-Company-ID header" });
+  }
   try {
-    const user = await User.findById(req.user.id).select("role");
-    if (!user) return res.status(401).json({ message: "Account not found" });
-    if (!["admin", "manager", "hr"].includes(user.role)) {
-      return res.status(403).json({ message: "HR access required. Ask a Shivasha administrator to assign an HR or manager role." });
+    const [company, membership] = await Promise.all([
+      Company.findById(companyId).select("_id status").lean(),
+      CompanyMembership.findOne({ companyId, userId: req.user.id, status: "active" }).lean()
+    ]);
+    if (!company || company.status !== "active") {
+      return res.status(404).json({ message: "Company not found or inactive" });
     }
-    req.hrRole = user.role;
+    const permission = requiredHRPermission(req);
+    if (!membership || !hasCompanyPermission(membership, companyId, permission)) {
+      return res.status(403).json({ message: "You do not have permission for this HR action in the selected company" });
+    }
+    req.companyId = company._id;
+    req.companyMembership = membership;
+    req.hrRole = membership.role;
     next();
   } catch {
-    res.status(500).json({ message: "Could not verify HR permissions" });
+    return res.status(500).json({ message: "Could not verify company HR permissions" });
   }
 }
-router.use(requireHR);
-
-const validId = id => mongoose.isValidObjectId(id);
+router.use(requireHRCompany);
 const clean = (v, max=100) => typeof v === "string" ? v.trim().slice(0, max) : "";
 
 router.get("/employees", async (req, res) => {
   try {
-    const employees = await HREmployee.find().sort({ createdAt: -1 }).lean();
+    const employees = await HREmployee.find({ companyId: req.companyId }).sort({ createdAt: -1 }).lean();
     res.json({ employees });
   } catch { res.status(500).json({ message: "Could not load employees" }); }
 });
@@ -48,7 +77,7 @@ router.post("/employees", async (req, res) => {
       components[key] = n;
     }
     const employee = await HREmployee.create({
-      employeeCode, name, department: clean(req.body?.department, 80) || "Other",
+      companyId: req.companyId, employeeCode, name, department: clean(req.body?.department, 80) || "Other",
       jobTitle: clean(req.body?.jobTitle, 80), workEmail: clean(req.body?.workEmail, 120).toLowerCase(),
       joiningDate: clean(req.body?.joiningDate, 10), monthlyGrossSalary, annualCtc, ...components,
       uan: clean(req.body?.uan, 12),
@@ -116,7 +145,7 @@ router.patch("/employees/:id", async (req, res) => {
       if (!["Active","On leave","Inactive"].includes(req.body.status)) return res.status(400).json({ message: "Invalid employee status" });
       updates.status = req.body.status;
     }
-    const employee = await HREmployee.findByIdAndUpdate(req.params.id, updates, { new: true, runValidators: true });
+    const employee = await HREmployee.findOneAndUpdate({ _id: req.params.id, companyId: req.companyId }, updates, { new: true, runValidators: true });
     if (!employee) return res.status(404).json({ message: "Employee not found" });
     res.json({ employee });
   } catch (e) {
@@ -128,15 +157,15 @@ router.patch("/employees/:id", async (req, res) => {
 router.delete("/employees/:id", async (req, res) => {
   if (!validId(req.params.id)) return res.status(400).json({ message: "Invalid employee ID" });
   try {
-    const employee = await HREmployee.findByIdAndDelete(req.params.id);
+    const employee = await HREmployee.findOneAndDelete({ _id: req.params.id, companyId: req.companyId });
     if (!employee) return res.status(404).json({ message: "Employee not found" });
-    await Promise.all([HRAttendance.deleteMany({ employee: employee._id }), HRLeave.deleteMany({ employee: employee._id })]);
+    await Promise.all([HRAttendance.deleteMany({ companyId: req.companyId, employee: employee._id }), HRLeave.deleteMany({ companyId: req.companyId, employee: employee._id })]);
     res.json({ deleted: true });
   } catch { res.status(500).json({ message: "Could not delete employee" }); }
 });
 
 router.get("/attendance", async (_req, res) => {
-  try { res.json({ attendance: await HRAttendance.find().populate("employee", "employeeCode name department").sort({ date: -1 }).limit(1000).lean() }); }
+  try { res.json({ attendance: await HRAttendance.find({ companyId: req.companyId }).populate("employee", "employeeCode name department").sort({ date: -1 }).limit(1000).lean() }); }
   catch { res.status(500).json({ message: "Could not load attendance" }); }
 });
 
@@ -148,9 +177,9 @@ router.post("/attendance", async (req, res) => {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || Number.isNaN(Date.parse(date))) return res.status(400).json({ message: "Valid attendance date is required" });
   if (!["Present","Absent","Half day","Work from home","Holiday"].includes(status)) return res.status(400).json({ message: "Invalid attendance status" });
   try {
-    if (!await HREmployee.exists({ _id: employeeId })) return res.status(404).json({ message: "Employee not found" });
-    const record = await HRAttendance.findOneAndUpdate({ employee: employeeId, date }, {
-      $set: { status, note: clean(req.body?.note, 160), recordedBy: req.user.id }
+    if (!await HREmployee.exists({ _id: employeeId, companyId: req.companyId })) return res.status(404).json({ message: "Employee not found" });
+    const record = await HRAttendance.findOneAndUpdate({ companyId: req.companyId, employee: employeeId, date }, {
+      $set: { companyId: req.companyId, status, note: clean(req.body?.note, 160), recordedBy: req.user.id }
     }, { upsert: true, new: true, runValidators: true, setDefaultsOnInsert: true }).populate("employee", "employeeCode name department");
     res.status(200).json({ attendance: record });
   } catch { res.status(500).json({ message: "Could not save attendance" }); }
@@ -159,14 +188,14 @@ router.post("/attendance", async (req, res) => {
 router.delete("/attendance/:id", async (req, res) => {
   if (!validId(req.params.id)) return res.status(400).json({ message: "Invalid attendance ID" });
   try {
-    const record = await HRAttendance.findByIdAndDelete(req.params.id);
+    const record = await HRAttendance.findOneAndDelete({ _id: req.params.id, companyId: req.companyId });
     if (!record) return res.status(404).json({ message: "Attendance record not found" });
     res.json({ deleted: true });
   } catch { res.status(500).json({ message: "Could not delete attendance" }); }
 });
 
 router.get("/leaves", async (_req, res) => {
-  try { res.json({ leaves: await HRLeave.find().populate("employee", "employeeCode name department").sort({ createdAt: -1 }).limit(1000).lean() }); }
+  try { res.json({ leaves: await HRLeave.find({ companyId: req.companyId }).populate("employee", "employeeCode name department").sort({ createdAt: -1 }).limit(1000).lean() }); }
   catch { res.status(500).json({ message: "Could not load leave requests" }); }
 });
 
@@ -177,8 +206,8 @@ router.post("/leaves", async (req, res) => {
   if (!validId(employeeId)) return res.status(400).json({ message: "Valid employee is required" });
   if (!/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(to) || to < from) return res.status(400).json({ message: "Valid leave date range is required" });
   try {
-    if (!await HREmployee.exists({ _id: employeeId })) return res.status(404).json({ message: "Employee not found" });
-    const leave = await HRLeave.create({ employee: employeeId, type, from, to, reason: clean(req.body?.reason, 200), requestedBy: req.user.id });
+    if (!await HREmployee.exists({ _id: employeeId, companyId: req.companyId })) return res.status(404).json({ message: "Employee not found" });
+    const leave = await HRLeave.create({ companyId: req.companyId, employee: employeeId, type, from, to, reason: clean(req.body?.reason, 200), requestedBy: req.user.id });
     res.status(201).json({ leave });
   } catch { res.status(500).json({ message: "Could not create leave request" }); }
 });
@@ -188,7 +217,7 @@ router.patch("/leaves/:id/review", async (req, res) => {
   const status = req.body?.status;
   if (!["Approved","Rejected"].includes(status)) return res.status(400).json({ message: "Status must be Approved or Rejected" });
   try {
-    const leave = await HRLeave.findByIdAndUpdate(req.params.id, { status, reviewedBy: req.user.id, reviewedAt: new Date() }, { new: true, runValidators: true }).populate("employee", "employeeCode name department");
+    const leave = await HRLeave.findOneAndUpdate({ _id: req.params.id, companyId: req.companyId }, { status, reviewedBy: req.user.id, reviewedAt: new Date() }, { new: true, runValidators: true }).populate("employee", "employeeCode name department");
     if (!leave) return res.status(404).json({ message: "Leave request not found" });
     res.json({ leave });
   } catch { res.status(500).json({ message: "Could not review leave request" }); }
@@ -196,7 +225,7 @@ router.patch("/leaves/:id/review", async (req, res) => {
 
 
 router.get("/challans", async (_req, res) => {
-  try { res.json({ challans: await HRChallan.find().sort({ month: -1, createdAt: -1 }).limit(1000).lean() }); }
+  try { res.json({ challans: await HRChallan.find({ companyId: req.companyId }).sort({ month: -1, createdAt: -1 }).limit(1000).lean() }); }
   catch { res.status(500).json({ message: "Could not load challan register" }); }
 });
 
@@ -208,7 +237,7 @@ router.post("/challans", async (req, res) => {
   if (!/^\d{4}-\d{2}$/.test(month) || Number(month.slice(5, 7)) < 1 || Number(month.slice(5, 7)) > 12) return res.status(400).json({ message: "Valid wage month is required" });
   if (!Number.isFinite(amount) || amount < 0 || amount > 1000000000) return res.status(400).json({ message: "Valid challan amount is required" });
   try {
-    const challan = await HRChallan.create({ month, type, status, amount, reference: clean(req.body?.reference, 100), notes: clean(req.body?.notes, 200), createdBy: req.user.id });
+    const challan = await HRChallan.create({ companyId: req.companyId, month, type, status, amount, reference: clean(req.body?.reference, 100), notes: clean(req.body?.notes, 200), createdBy: req.user.id });
     res.status(201).json({ challan });
   } catch { res.status(500).json({ message: "Could not save challan register entry" }); }
 });
@@ -216,7 +245,7 @@ router.post("/challans", async (req, res) => {
 router.delete("/challans/:id", async (req, res) => {
   if (!validId(req.params.id)) return res.status(400).json({ message: "Invalid challan ID" });
   try {
-    const challan = await HRChallan.findByIdAndDelete(req.params.id);
+    const challan = await HRChallan.findOneAndDelete({ _id: req.params.id, companyId: req.companyId });
     if (!challan) return res.status(404).json({ message: "Challan entry not found" });
     res.json({ deleted: true });
   } catch { res.status(500).json({ message: "Could not delete challan entry" }); }
@@ -232,8 +261,8 @@ router.get("/payroll-attendance-summary", async (req, res) => {
     const start = month + "-01";
     const end = month + "-" + String(new Date(Number(month.slice(0, 4)), Number(month.slice(5, 7)), 0).getDate()).padStart(2, "0");
     const [attendance, unpaidLeaves] = await Promise.all([
-      HRAttendance.find({ date: { $gte: start, $lte: end } }).select("employee date status").lean(),
-      HRLeave.find({ type: "Unpaid", status: "Approved", from: { $lte: end }, to: { $gte: start } }).select("employee from to").lean()
+      HRAttendance.find({ companyId: req.companyId, date: { $gte: start, $lte: end } }).select("employee date status").lean(),
+      HRLeave.find({ companyId: req.companyId, type: "Unpaid", status: "Approved", from: { $lte: end }, to: { $gte: start } }).select("employee from to").lean()
     ]);
     const stats = new Map();
     for (const row of attendance) {
@@ -285,7 +314,7 @@ router.get("/payroll-attendance-summary", async (req, res) => {
 
 router.get("/payroll-runs", async (_req, res) => {
   try {
-    const runs = await HRPayrollRun.find().sort({ month: -1 }).limit(120).lean();
+    const runs = await HRPayrollRun.find({ companyId: req.companyId }).sort({ month: -1 }).limit(120).lean();
     res.json({ runs });
   } catch { res.status(500).json({ message: "Could not load monthly payroll history" }); }
 });
@@ -318,6 +347,31 @@ router.post("/payroll-runs", async (req, res) => {
     record.netPay = record.gross + record.otherEarnings - record.employeePF - record.employeeESIC - record.otherDeductions;
     snapshot.push(record);
   }
+  if (snapshot.some(row => !validId(String(row.employeeId || "")))) {
+    return res.status(400).json({ message: "Every payroll row must reference an employee in the selected company" });
+  }
+  const employeeIds = snapshot.map(row => String(row.employeeId));
+  if (new Set(employeeIds).size !== employeeIds.length) {
+    return res.status(400).json({ message: "A payroll employee can appear only once per month" });
+  }
+  try {
+    const employees = await HREmployee.find({
+      companyId: req.companyId,
+      _id: { $in: employeeIds }
+    }).select("_id employeeCode name uan").lean();
+    if (employees.length !== snapshot.length) {
+      return res.status(400).json({ message: "Payroll contains an employee outside the selected company or an unknown employee" });
+    }
+    const employeeById = new Map(employees.map(employee => [String(employee._id), employee]));
+    for (const row of snapshot) {
+      const employee = employeeById.get(String(row.employeeId));
+      row.employeeCode = employee.employeeCode;
+      row.name = employee.name;
+      row.uan = employee.uan || "";
+    }
+  } catch {
+    return res.status(500).json({ message: "Could not verify payroll employee records" });
+  }
   const sum = key => Math.round(snapshot.reduce((total, row) => total + row[key], 0) * 100) / 100;
   const totals = {
     gross: sum("gross"), otherEarnings: sum("otherEarnings"), otherDeductions: sum("otherDeductions"),
@@ -325,13 +379,13 @@ router.post("/payroll-runs", async (req, res) => {
     employeeESIC: sum("employeeESIC"), employerESIC: sum("employerESIC"), netPay: sum("netPay")
   };
   try {
-    const existing = await HRPayrollRun.findOne({ month }).select("status").lean();
+    const existing = await HRPayrollRun.findOne({ companyId: req.companyId, month }).select("status").lean();
     if (existing && existing.status !== "Draft") {
       return res.status(409).json({ message: "This payroll month is " + existing.status + " and is locked. Only Draft payroll can be replaced." });
     }
     const run = await HRPayrollRun.findOneAndUpdate(
-      { month },
-      { $set: { month, status: "Draft", employeeCount: snapshot.length, totals, records: snapshot, createdBy: req.user.id } },
+      { companyId: req.companyId, month },
+      { $set: { companyId: req.companyId, month, status: "Draft", employeeCount: snapshot.length, totals, records: snapshot, createdBy: req.user.id } },
       { new: true, upsert: true, runValidators: true, setDefaultsOnInsert: true }
     );
     res.status(existing ? 200 : 201).json({ run, replacedExistingMonth: Boolean(existing) });
@@ -346,7 +400,7 @@ router.patch("/payroll-runs/:id/status", async (req, res) => {
   const status = req.body?.status;
   if (!["Draft", "Approved", "Paid"].includes(status)) return res.status(400).json({ message: "Status must be Draft, Approved or Paid" });
   try {
-    const run = await HRPayrollRun.findById(req.params.id);
+    const run = await HRPayrollRun.findOne({ _id: req.params.id, companyId: req.companyId });
     if (!run) return res.status(404).json({ message: "Payroll run not found" });
     const allowed = { Draft: ["Draft", "Approved"], Approved: ["Approved", "Paid"], Paid: ["Paid"] };
     if (!allowed[run.status]?.includes(status)) {
