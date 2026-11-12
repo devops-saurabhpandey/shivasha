@@ -71,6 +71,20 @@ const ROLE_PERMISSIONS = Object.freeze({
 
 const text = value => typeof value === "string" ? value.trim() : "";
 const isCode = (value, pattern) => pattern.test(value);
+const isValidTimeZone = value => {
+  if (!value || value.length > 80) return false;
+  try {
+    new Intl.DateTimeFormat("en", { timeZone: value }).format(0);
+    return true;
+  } catch {
+    return false;
+  }
+};
+const isValidCurrency = value => {
+  if (!/^[A-Z]{3}$/.test(value)) return false;
+  if (typeof Intl.supportedValuesOf !== "function") return true;
+  return Intl.supportedValuesOf("currency").includes(value);
+};
 
 export function validateCompanyProfile(input) {
   const errors = [];
@@ -92,13 +106,13 @@ export function validateCompanyProfile(input) {
   if (!legalName || legalName.length > 200) errors.push("legalName is required and must be 200 characters or fewer");
   if (!COMPANY_ENTITY_TYPES.includes(entityType)) errors.push("entityType is not supported");
   if (!isCode(countryCode, /^[A-Z]{2}$/)) errors.push("countryCode must be a 2-letter ISO country code");
-  if (!isCode(functionalCurrency, /^[A-Z]{3}$/)) errors.push("functionalCurrency must be a 3-letter ISO currency code");
-  if (!isCode(reportingCurrency, /^[A-Z]{3}$/)) errors.push("reportingCurrency must be a 3-letter ISO currency code");
+  if (!isValidCurrency(functionalCurrency)) errors.push("functionalCurrency must be a supported 3-letter ISO currency code");
+  if (!isValidCurrency(reportingCurrency)) errors.push("reportingCurrency must be a supported 3-letter ISO currency code");
   if (!Number.isInteger(fiscalYearStartMonth) || fiscalYearStartMonth < 1 || fiscalYearStartMonth > 12) {
     errors.push("fiscalYearStartMonth must be an integer from 1 to 12");
   }
-  if (!timeZone || timeZone.length > 80 || !timeZone.includes("/")) {
-    errors.push("timeZone must be an IANA time-zone identifier such as Asia/Kolkata");
+  if (!isValidTimeZone(timeZone)) {
+    errors.push("timeZone must be a valid IANA time-zone identifier such as Asia/Kolkata or UTC");
   }
   if (!Array.isArray(taxJurisdictions) || taxJurisdictions.length > 20 ||
       taxJurisdictions.some(code => typeof code !== "string" || !/^[A-Z0-9-]{2,12}$/.test(code.trim().toUpperCase()))) {
@@ -137,8 +151,8 @@ export function normalizeCompanyProfile(input) {
  */
 export function hasCompanyPermission(membership, companyId, permission) {
   if (!membership || membership.status !== "active" || !companyId || !permission) return false;
-  if (String(membership.companyId) !== String(companyId)) return false;
   if (membership.role === "platform_admin" && membership.platformScope === true) return true;
+  if (String(membership.companyId) !== String(companyId)) return false;
   const permissions = ROLE_PERMISSIONS[membership.role];
   return Array.isArray(permissions) && permissions.includes(permission);
 }
