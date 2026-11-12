@@ -37,7 +37,7 @@ async function load(){
  $("status").textContent="Company workspace load ho raha hai…";
  try{
   const companyCount=await loadCompanies();
-  if(!companyCount||!activeCompanyId){employees=[];build();$("status").innerHTML='Koi company workspace linked nahi hai. Pehle <a href="./hr.html">HR workspace par company create karein</a> ya owner se membership lein.';return}
+  if(!companyCount||!activeCompanyId){employees=[];challanData=[];payrollRuns=[];build();$("runRows").innerHTML='<tr><td colspan="10">No company selected.</td></tr>';$("status").innerHTML='Koi company workspace linked nahi hai. Pehle <a href="./hr.html">HR workspace par company create karein</a> ya owner se membership lein.';return}
   $("status").textContent="Employees load ho rahe hain…";
   const r=await fetch(base+"/api/hr/employees",{headers:companyHeaders({Authorization:"Bearer "+token})});
   const d=await r.json();if(!r.ok)throw Error(d.message||"API error "+r.status);
