@@ -147,3 +147,14 @@ A feature is not production-ready until all relevant gates pass:
 ## Initial scope decision
 
 The current feature branch should remain an estimation-only prototype until Phase 0 and Phase 1 are completed. Do not label it enterprise-ready, statutory-compliant, or suitable for production payroll/accounting. The first implementation jurisdiction should be explicitly selected; India can be the first profile, while other countries are enabled only after their rules and workflows are reviewed and tested.
+
+
+## Phase 2A implementation note — HR tenant isolation
+
+The feature branch now adds optional `companyId` ownership fields and company-first query indexes to Employee, Attendance, Leave, Challan and Payroll Run models. The HR API requires an active company membership for every request, derives the required HR permission from the route, and scopes all HR reads/writes/deletes to the selected company. Payroll snapshots must reference distinct employees belonging to the selected company; employee code, name and UAN are taken from the server-side employee master rather than trusted from the browser.
+
+The HR and Payroll browser pages now load company memberships, support company creation from the HR workspace, and send the selected company ID in the `X-Company-ID` header. The server re-verifies membership on every request.
+
+**Legacy-data migration is deliberately separate.** Existing HR records are not automatically assigned to a company. The explicit owner-to-company mapping migration and company-scoped unique-index migration are documented in [HR Tenant Migration Runbook](./HR_TENANT_MIGRATION_RUNBOOK.md). Both scripts default to dry-run and require explicit `--apply`; the ownership migration refuses to guess when a creator mapping or employee relationship is missing.
+
+Current limits: model fields remain optional during staged migration; legacy global unique indexes may still exist until the guarded index migration is approved and applied; route-level database integration tests, full tenant-isolation tests, production backup/restore validation, and security review remain release gates. Do not use unassigned legacy HR records or claim production readiness until these gates pass.
