@@ -127,7 +127,7 @@ router.delete("/employees/:id", async (req, res) => {
   } catch { res.status(500).json({ message: "Could not delete employee" }); }
 });
 
-router.get("/attendance", async (_req, res) => {
+router.get("/attendance", async (req, res) => {
   try { res.json({ attendance: await HRAttendance.find({ companyId: req.companyId }).populate("employee", "employeeCode name department").sort({ date: -1 }).limit(1000).lean() }); }
   catch { res.status(500).json({ message: "Could not load attendance" }); }
 });
@@ -157,7 +157,7 @@ router.delete("/attendance/:id", async (req, res) => {
   } catch { res.status(500).json({ message: "Could not delete attendance" }); }
 });
 
-router.get("/leaves", async (_req, res) => {
+router.get("/leaves", async (req, res) => {
   try { res.json({ leaves: await HRLeave.find({ companyId: req.companyId }).populate("employee", "employeeCode name department").sort({ createdAt: -1 }).limit(1000).lean() }); }
   catch { res.status(500).json({ message: "Could not load leave requests" }); }
 });
@@ -187,7 +187,7 @@ router.patch("/leaves/:id/review", async (req, res) => {
 });
 
 
-router.get("/challans", async (_req, res) => {
+router.get("/challans", async (req, res) => {
   try { res.json({ challans: await HRChallan.find({ companyId: req.companyId }).sort({ month: -1, createdAt: -1 }).limit(1000).lean() }); }
   catch { res.status(500).json({ message: "Could not load challan register" }); }
 });
@@ -275,7 +275,7 @@ router.get("/payroll-attendance-summary", async (req, res) => {
   }
 });
 
-router.get("/payroll-runs", async (_req, res) => {
+router.get("/payroll-runs", async (req, res) => {
   try {
     const runs = await HRPayrollRun.find({ companyId: req.companyId }).sort({ month: -1 }).limit(120).lean();
     res.json({ runs });
