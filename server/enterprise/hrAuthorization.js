@@ -5,16 +5,18 @@ import { hasCompanyPermission } from "./companyConfig.js";
  * Resolve the least-privilege permission required by an HR API request.
  * The caller must still verify an active company membership from MongoDB.
  */
-export function getHRPermission(method, path) {
+export function getHRPermission(method, path, requestedStatus) {
   const verb = String(method || "").toUpperCase();
   const route = String(path || "").split("?")[0];
   if (verb === "GET") {
     return /^(?:\/payroll-runs|\/challans)(?:\/|$)/.test(route)
-      ? "hr.payroll.prepare"
+      ? "hr.payroll.read"
       : "hr.employee.read";
   }
   if (verb === "PATCH" && /^\/payroll-runs\/[^/]+\/status$/.test(route)) {
-    return "hr.payroll.approve";
+    if (requestedStatus === "Approved") return "hr.payroll.approve";
+    if (requestedStatus === "Paid") return "hr.payroll.release";
+    return "hr.payroll.prepare";
   }
   if (/^(?:\/payroll-runs|\/challans)(?:\/|$)/.test(route)) {
     return "hr.payroll.prepare";
@@ -40,7 +42,7 @@ export function createHRCompanyAuthorizationMiddleware({ CompanyModel, Membershi
       if (!company || company.status !== "active") {
         return res.status(404).json({ message: "Company not found or inactive" });
       }
-      const permission = getHRPermission(req.method, req.path);
+      const permission = getHRPermission(req.method, req.path, req.body?.status);
       if (!membership || !hasCompanyPermission(membership, companyId, permission)) {
         return res.status(403).json({ message: "You do not have permission for this HR action in the selected company" });
       }
