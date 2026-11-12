@@ -47,9 +47,10 @@ export default function CameraStudio() {
     }
     try {
       setStatus("Camera शुरू हो रहा है…");
+      let cameraInfo = null;
       try {
-        const info = await NativeCamera2.getCameraInfo();
-        setNativeInfo(info);
+        cameraInfo = await NativeCamera2.getCameraInfo();
+        setNativeInfo(cameraInfo);
       } catch {
         setNativeInfo(null);
       }
@@ -66,15 +67,18 @@ export default function CameraStudio() {
       trackRef.current = track;
       const capabilities = track.getCapabilities?.() || {};
       const range = capabilities.zoom;
+      const nativeMax = Capacitor.isNativePlatform()
+        ? Math.max(1, Number(cameraInfo?.maxZoomRatio || cameraInfo?.maxDigitalZoom || 1))
+        : null;
       if (range && Number.isFinite(range.max) && range.max >= 1) {
-        setZoomMin(Number.isFinite(range.min) ? range.min : 1);
-        setZoomMax(range.max);
+        setZoomMin(1);
+        setZoomMax(nativeMax !== null ? Math.min(range.max, nativeMax) : range.max);
         setHardwareZoom(true);
         const initial = Math.max(range.min || 1, 1);
         try { await track.applyConstraints({ advanced: [{ zoom: initial }] }); } catch { setHardwareZoom(false); }
       } else {
         setZoomMin(1);
-        setZoomMax(8);
+        setZoomMax(nativeMax !== null ? nativeMax : 8);
         setHardwareZoom(false);
       }
       if (videoRef.current) {
