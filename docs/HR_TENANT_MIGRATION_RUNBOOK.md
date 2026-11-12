@@ -98,7 +98,9 @@ Use two test companies and at least two users with different memberships. Verify
 - Missing or malformed `X-Company-ID` receives 400.
 - Supplying another company's employee, attendance, leave, challan or payroll-run ID cannot read, edit or delete it.
 - Payroll snapshots reject duplicate employees and employee IDs belonging to another company.
-- HR manager cannot use finance or tax APIs; payroll approval requires `hr.payroll.approve`.
+- HR managers can prepare and approve payroll but cannot release payment; finance managers can read and release approved payroll but cannot prepare or approve it.
+- The payroll preparer cannot approve their own run, and the approver cannot mark that same run as paid.
+- HR manager cannot use finance ledger or tax APIs; payroll actions require their distinct `hr.payroll.*` permission.
 
 The current automated tests cover permission mapping and model ownership/index definitions. Route-level database integration tests and production security review are still required before this phase is approved for production.
 
