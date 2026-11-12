@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { registerPlugin } from "@capacitor/core";
+import { Capacitor, registerPlugin } from "@capacitor/core";
 
 const NativeCamera2 = registerPlugin("ShivashaCamera2");
 
@@ -108,6 +108,31 @@ export default function CameraStudio() {
   };
 
   const capture = async () => {
+    if (Capacitor.isNativePlatform() && typeof NativeCamera2.capturePhoto === "function") {
+      setBusy(true);
+      setError("");
+      streamRef.current?.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
+      trackRef.current = null;
+      if (videoRef.current) videoRef.current.srcObject = null;
+      setStatus("Native Camera2 से photo capture हो रही है…");
+      try {
+        const result = await NativeCamera2.capturePhoto({ zoom });
+        const binary = atob(result.base64);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+        const blob = new Blob([bytes], { type: result.mimeType || "image/jpeg" });
+        if (photoUrl) URL.revokeObjectURL(photoUrl);
+        setPhotoUrl(URL.createObjectURL(blob));
+        setStatus("Native Camera2 photo captured · " + result.width + "×" + result.height + " · " + Number(result.appliedZoom).toFixed(1) + "X");
+      } catch (e) {
+        setStatus("Native capture नहीं हो सका");
+        setError(e.message || "Native Camera2 photo capture में समस्या आई। Start Rear Camera दबाकर दोबारा कोशिश करें।");
+      } finally {
+        setBusy(false);
+      }
+      return;
+    }
     const video = videoRef.current;
     if (!video || !video.videoWidth || !video.videoHeight) {
       setError("पहले camera preview शुरू करें।");
@@ -158,7 +183,7 @@ export default function CameraStudio() {
       <div style={panel}>
         <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap", alignItems: "center", marginBottom: 12 }}>
           <b>{status}</b>
-          <span style={{ fontSize: 12, color: "#a5b4fc" }}>{hardwareZoom ? "Web camera hardware zoom" : "Software crop fallback"}</span>
+          <span style={{ fontSize: 12, color: "#a5b4fc" }}>{Capacitor.isNativePlatform() ? "Native Camera2 still capture" : (hardwareZoom ? "Web camera hardware zoom" : "Software crop fallback")}</span>
         </div>
         {nativeInfo && <div style={{ background: "#172554", color: "#dbeafe", borderRadius: 10, padding: 10, marginBottom: 12, fontSize: 13 }}>
           Native Camera2: {nativeInfo.hardwareSupportLevel} · Maximum reported zoom ratio: {Number(nativeInfo.maxZoomRatio || nativeInfo.maxDigitalZoom || 1).toFixed(1)}X · Camera ID {nativeInfo.cameraId}
@@ -181,7 +206,7 @@ export default function CameraStudio() {
           {!streamRef.current
             ? <button style={{ ...button, background: "#8b5cf6", color: "#fff" }} onClick={startCamera}>Start Rear Camera</button>
             : <button style={{ ...button, background: "#334155", color: "#fff" }} onClick={stopCamera}>Stop Camera</button>}
-          <button style={{ ...button, background: "#16a34a", color: "#fff" }} onClick={capture} disabled={!streamRef.current || busy}>{busy ? "Capturing…" : "Capture Photo"}</button>
+          <button style={{ ...button, background: "#16a34a", color: "#fff" }} onClick={capture} disabled={!streamRef.current || busy}>{busy ? "Capturing…" : (Capacitor.isNativePlatform() ? "Native Capture Photo" : "Capture Photo")}</button>
         </div>
         {error && <p role="alert" style={{ color: "#fecaca", background: "#7f1d1d", padding: 12, borderRadius: 10, marginTop: 14 }}>{error}</p>}
       </div>
@@ -193,7 +218,7 @@ export default function CameraStudio() {
       <div style={{ marginTop: 16, padding: 14, border: "1px solid var(--border, #dbe2ea)", borderRadius: 14 }}>
         <b>महत्वपूर्ण जानकारी</b>
         <p style={{ marginBottom: 0, color: "var(--muted, #64748b)", lineHeight: 1.6 }}>
-          Native Camera2 bridge Android से rear-camera की वास्तविक metadata पढ़ता है। इस चरण में bridge केवल capabilities report करता है; live preview और zoom slider अभी WebView camera पर चलते हैं। WebView hardware zoom न दे तो software crop इस्तेमाल होगा, जिससे optical detail नहीं बढ़ती। Native photo capture, RAW और OIS/EIS controls अभी अगले चरण में हैं।
+          Android app में Native Camera2 अब JPEG still photo सीधे rear camera से capture करता है और चुने गए zoom को Camera2 zoom-ratio या sensor crop के जरिए लागू करता है। Live preview अभी WebView पर है; native capture के समय preview stream बंद करके camera को Camera2 के लिए release किया जाता है। Browser build में capture अभी WebView canvas से होता है। यह digital zoom है, optical zoom नहीं; RAW capture, live native preview और OIS/EIS controls अभी शामिल नहीं हैं।
         </p>
       </div>
     </section>
