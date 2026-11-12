@@ -6,6 +6,8 @@ on:
     branches: [main]
     paths:
       - "src/**"
+      - "scripts/**"
+      - "android-native/**"
       - "public/**"
       - "index.html"
       - "package.json"
