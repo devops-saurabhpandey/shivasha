@@ -57,7 +57,7 @@ async function loadAttendanceSummary(){
   const b=$("loadAttendance");b.disabled=true;
   $("attendanceStatus").textContent="Attendance aur approved unpaid leave load ho rahe hain…";
   try{
-    const r=await fetch(base+"/api/hr/payroll-attendance-summary?month="+encodeURIComponent(month),{headers:{Authorization:"Bearer "+token}});
+    const r=await fetch(base+"/api/hr/payroll-attendance-summary?month="+encodeURIComponent(month),{headers:companyHeaders({Authorization:"Bearer "+token})});
     const d=await r.json();if(!r.ok)throw Error(d.message||"Attendance summary load failed");
     const s=(d.summaries||[]).find(x=>String(x.employeeId)===String(employeeId));
     if(!s){$("attendanceStatus").textContent="Is employee ke liye is month koi attendance record ya approved unpaid leave nahi mila. Paid days ko manually verify karein; auto-fill nahi kiya.";return}
@@ -78,7 +78,7 @@ $("employee").addEventListener("change",()=>{const p=getSlip();$("bonus").value=
 $("period").addEventListener("change",()=>{const month=$("period").value;const days=month?new Date(Number(month.slice(0,4)),Number(month.slice(5,7)),0).getDate():30;$("paidDays").max=String(days);$("unpaidDays").max=String(days);$("paidDays").value=String(days);$("unpaidDays").value="0";$("attendanceStatus").textContent="Month changed. Paid days reset to "+days+"; load attendance summary and review before generating the slip.";});
 async function loadPayrollRuns(){
   try {
-    const r=await fetch(base+"/api/hr/payroll-runs",{headers:{Authorization:"Bearer "+token}});
+    const r=await fetch(base+"/api/hr/payroll-runs",{headers:companyHeaders({Authorization:"Bearer "+token})});
     const d=await r.json(); if(!r.ok) throw Error(d.message||"Could not load payroll history");
     payrollRuns=d.runs||[]; renderPayrollRuns();
   } catch(e) { $("runRows").innerHTML='<tr><td colspan="6">Payroll history error: '+esc(e.message)+'</td></tr>'; }
@@ -128,7 +128,7 @@ $("runRows").onclick=async e=>{
   const button=b;
   button.disabled=true;
   try{
-    const r=await fetch(base+"/api/hr/payroll-runs/"+encodeURIComponent(id)+"/status",{method:"PATCH",headers:{"Content-Type":"application/json",Authorization:"Bearer "+token},body:JSON.stringify({status:nextStatus})});
+    const r=await fetch(base+"/api/hr/payroll-runs/"+encodeURIComponent(id)+"/status",{method:"PATCH",headers:companyHeaders({"Content-Type":"application/json",Authorization:"Bearer "+token}),body:JSON.stringify({status:nextStatus})});
     const d=await r.json();if(!r.ok)throw Error(d.message||"Status update failed");
     await loadPayrollRuns();alert("Payroll status updated: "+nextStatus);
   }catch(err){select.value=run.status;alert(err.message)}
@@ -136,15 +136,15 @@ $("runRows").onclick=async e=>{
 };
 $("savePayroll").onclick=saveMonthlyPayroll;
 
-async function loadChallans(){try{const r=await fetch(base+"/api/hr/challans",{headers:{Authorization:"Bearer "+token}});const d=await r.json();if(!r.ok)throw Error(d.message||"Could not load challans");challanData=d.challans||[];renderChallans()}catch(e){$("challanRows").innerHTML='<tr><td colspan="7">Challan API error: '+esc(e.message)+'</td></tr>'}}
+async function loadChallans(){try{const r=await fetch(base+"/api/hr/challans",{headers:companyHeaders({Authorization:"Bearer "+token})});const d=await r.json();if(!r.ok)throw Error(d.message||"Could not load challans");challanData=d.challans||[];renderChallans()}catch(e){$("challanRows").innerHTML='<tr><td colspan="7">Challan API error: '+esc(e.message)+'</td></tr>'}}
 function renderChallans(){$("challanRows").innerHTML=challanData.map(x=>'<tr><td>'+esc(x.month)+'</td><td>'+esc(x.type)+'</td><td>'+money(x.amount)+'</td><td>'+esc(x.status)+'</td><td>'+esc(x.reference||"")+'</td><td>'+esc(x.notes)+'</td><td><button class="secondary" data-del="'+esc(x._id||x.id)+'">Delete</button></td></tr>').join("")||'<tr><td colspan="7">No entries.</td></tr>'}
 document.querySelectorAll("[data-tab]").forEach(b=>b.addEventListener("click",()=>{document.querySelectorAll("[data-tab]").forEach(x=>x.classList.toggle("active",x===b));document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("hidden",x.id!==b.dataset.tab))}));
 $("companySelect").addEventListener("change",()=>{activeCompanyId=$("companySelect").value;if(activeCompanyId)localStorage.setItem("shivasha_active_company_id",activeCompanyId);else localStorage.removeItem("shivasha_active_company_id");load()});
 $("refresh").onclick=load;["epf","erpf","eesi","eresi"].forEach(id=>$(id).addEventListener("input",build));$("csv").onclick=()=>csvDownload("shivasha-payroll-"+($("period").value||"month")+".csv",[["Employee Code","Name","UAN","Department","Wage Month","Gross","PF Wage","Employee PF estimate","Employer PF estimate","Employee ESIC estimate","Employer ESIC estimate","Bonus / Other Earnings","Other Deductions","Net Pay estimate"],...payroll.map(p=>[p.e.employeeCode,p.e.name,p.e.uan,p.e.department,$("period").value,p.gross,p.pfw,p.pf,p.erpf,p.esi,p.eresi,p.otherEarnings,p.otherDeductions,p.net])]);
 $("ecr").onclick=()=>{const missing=payroll.filter(p=>p.e.pfApplicable&&!/^\d{12}$/.test(p.e.uan||""));if(missing.length){alert("PF applicable employee ke liye valid 12-digit UAN missing hai: "+missing.map(p=>p.e.name).join(", "));return}csvDownload("shivasha-ecr-review-"+($("period").value||"month")+".csv",[["STATUS","Employee Code","Name","UAN","Gross Wages","EPF Wages","EPS Wages","EDLI Wages","NCP Days","Employee PF estimate","Employer PF estimate"],...payroll.filter(p=>p.e.pfApplicable).map(p=>[ "REVIEW ONLY",p.e.employeeCode,p.e.name,p.e.uan,p.gross,p.pfw,Number(p.e.epsWage)||0,Number(p.e.edliWage)||0,Number(p.e.ncpDays)||0,p.pf,p.erpf])]);alert("Review CSV download hua. Yeh official EPFO .txt ECR upload file nahi hai; filing se pehle official portal format aur calculations validate karein.")};
 function printSlip(){document.querySelectorAll("[data-tab]").forEach(x=>x.classList.toggle("active",x.dataset.tab==="slip"));document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("hidden",x.id!=="slip"));renderSlip();window.print()}$("print").onclick=printSlip;$("renderSlip").onclick=renderSlip;$("prorationBasis").addEventListener("change",renderSlip);$("printOne").onclick=printSlip;
-$("saveCh").onclick=async()=>{const month=$("chMonth").value||$("period").value;if(!month){alert("Wage month select karein.");return}if(!token){alert("Shivasha app mein login karein.");return}const b=$("saveCh");b.disabled=true;try{const r=await fetch(base+"/api/hr/challans",{method:"POST",headers:{"Content-Type":"application/json",Authorization:"Bearer "+token},body:JSON.stringify({month,type:$("chType").value,amount:num("chAmount"),status:$("chStatus").value,reference:$("chRef").value.trim(),notes:$("chNotes").value.trim()})});const d=await r.json();if(!r.ok)throw Error(d.message||"Save failed");["chAmount","chRef","chNotes"].forEach(id=>$(id).value="");await loadChallans()}catch(e){alert(e.message)}finally{b.disabled=false}};
-$("challanRows").onclick=async e=>{const b=e.target.closest("[data-del]");if(!b)return;if(!confirm("Is challan register entry ko delete karein?"))return;try{const r=await fetch(base+"/api/hr/challans/"+encodeURIComponent(b.dataset.del),{method:"DELETE",headers:{Authorization:"Bearer "+token}});const d=await r.json();if(!r.ok)throw Error(d.message||"Delete failed");await loadChallans()}catch(err){alert(err.message)}};
+$("saveCh").onclick=async()=>{const month=$("chMonth").value||$("period").value;if(!month){alert("Wage month select karein.");return}if(!token){alert("Shivasha app mein login karein.");return}const b=$("saveCh");b.disabled=true;try{const r=await fetch(base+"/api/hr/challans",{method:"POST",headers:companyHeaders({"Content-Type":"application/json",Authorization:"Bearer "+token}),body:JSON.stringify({month,type:$("chType").value,amount:num("chAmount"),status:$("chStatus").value,reference:$("chRef").value.trim(),notes:$("chNotes").value.trim()})});const d=await r.json();if(!r.ok)throw Error(d.message||"Save failed");["chAmount","chRef","chNotes"].forEach(id=>$(id).value="");await loadChallans()}catch(e){alert(e.message)}finally{b.disabled=false}};
+$("challanRows").onclick=async e=>{const b=e.target.closest("[data-del]");if(!b)return;if(!confirm("Is challan register entry ko delete karein?"))return;try{const r=await fetch(base+"/api/hr/challans/"+encodeURIComponent(b.dataset.del),{method:"DELETE",headers:companyHeaders({Authorization:"Bearer "+token})});const d=await r.json();if(!r.ok)throw Error(d.message||"Delete failed");await loadChallans()}catch(err){alert(err.message)}};
 $("exportCh").onclick=()=>csvDownload("shivasha-challan-register.csv",[["Month","Type","Amount","Status","Reference","Notes"],...challanData.map(x=>[x.month,x.type,x.amount,x.status,x.reference,x.notes])]);
 $("period").value=new Date().toISOString().slice(0,7);$("chMonth").value=$("period").value;load();
 </script></body></html>
