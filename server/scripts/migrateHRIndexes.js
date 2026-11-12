@@ -5,6 +5,7 @@ import { HREmployee, HRAttendance, HRLeave, HRChallan, HRPayrollRun } from "../m
 const APPLY = process.argv.includes("--apply");
 const COLLECTIONS = [
   { name: HREmployee.collection.name, legacyUnique: "employeeCode_1", scopedKeys: { companyId: 1, employeeCode: 1 } },
+  { name: HRAttendance.collection.name, legacyUnique: "employee_1_date_1", scopedKeys: { companyId: 1, employee: 1, date: 1 } },
   { name: HRPayrollRun.collection.name, legacyUnique: "month_1", scopedKeys: { companyId: 1, month: 1 } }
 ];
 const HR_COLLECTION_NAMES = [HREmployee, HRAttendance, HRLeave, HRChallan, HRPayrollRun].map(model => model.collection.name);
@@ -33,7 +34,7 @@ async function main() {
   for (const item of COLLECTIONS) {
     const collection = db.collection(item.name);
     const duplicates = await collection.aggregate([
-      { $group: { _id: { companyId: "$companyId", value: item.name === "hremployees" ? "$employeeCode" : "$month" }, count: { $sum: 1 } } },
+      { $group: { _id: { companyId: "$companyId", value: item.name === HREmployee.collection.name ? "$employeeCode" : item.name === HRPayrollRun.collection.name ? "$month" : { employee: "$employee", date: "$date" } }, count: { $sum: 1 } } },
       { $match: { count: { $gt: 1 } } },
       { $limit: 5 }
     ]).toArray();
@@ -54,7 +55,7 @@ async function main() {
     }
     if (oldIndex) await collection.dropIndex(oldIndex.name);
     if (scopedIndex && !scopedIndex.unique) await collection.dropIndex(scopedIndex.name);
-    await collection.createIndex(item.scopedKeys, { unique: true, partialFilterExpression: { companyId: { $type: "objectId" } }, name: item.name === HREmployee.collection.name ? "company_employee_code_unique" : "company_payroll_month_unique" });
+    await collection.createIndex(item.scopedKeys, { unique: true, partialFilterExpression: { companyId: { $type: "objectId" } }, name: item.name === HREmployee.collection.name ? "company_employee_code_unique" : item.name === HRPayrollRun.collection.name ? "company_payroll_month_unique" : "company_employee_attendance_date_unique" });
     console.log("Created company-scoped unique index for " + item.name);
   }
 }
