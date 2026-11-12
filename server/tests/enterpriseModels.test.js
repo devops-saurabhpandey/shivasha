@@ -72,3 +72,27 @@ test("company model rejects unsupported currency codes and invalid time zones", 
   const badTimeZone = new Company({ ...companyData, timeZone: "Not/A_Timezone" });
   assert.ok(badTimeZone.validateSync()?.errors.timeZone);
 });
+
+import { HREmployee, HRAttendance, HRLeave, HRChallan, HRPayrollRun } from "../models/HR.js";
+
+test("all HR record models carry an optional company ownership field during migration", () => {
+  for (const model of [HREmployee, HRAttendance, HRLeave, HRChallan, HRPayrollRun]) {
+    assert.ok(model.schema.path("companyId"), model.modelName + " must define companyId");
+    assert.equal(model.schema.path("companyId").options.ref, "EnterpriseCompany");
+  }
+});
+
+test("HR models define company-first query indexes", () => {
+  const expectations = [
+    [HREmployee, ["companyId", "employeeCode"]],
+    [HRAttendance, ["companyId", "employee", "date"]],
+    [HRChallan, ["companyId", "month", "type"]],
+    [HRPayrollRun, ["companyId", "month"]]
+  ];
+  for (const [model, keys] of expectations) {
+    const found = model.schema.indexes().some(([indexKeys]) =>
+      keys.every((key, index) => Object.keys(indexKeys)[index] === key)
+    );
+    assert.ok(found, model.modelName + " must have a company-scoped index");
+  }
+});
