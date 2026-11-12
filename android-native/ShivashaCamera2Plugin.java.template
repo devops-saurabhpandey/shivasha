@@ -64,7 +64,7 @@ public class ShivashaCamera2Plugin extends Plugin {
                 result.put("androidApiLevel", Build.VERSION.SDK_INT);
 
                 JSArray focalLengths = new JSArray();
-                float[] focal = c.get(CameraCharacteristics.LENS_INFO_AVAILABLE焦CAL_LENGTHS);
+                float[] focal = c.get(CameraCharacteristics.LENS_INFO_AVAILABLE_FOCAL_LENGTHS);
                 if (focal != null) for (float value : focal) focalLengths.put(value);
                 result.put("focalLengthsMm", focalLengths);
 
