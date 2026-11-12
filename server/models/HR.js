@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 
 const employeeSchema = new mongoose.Schema({
+  companyId: { type: mongoose.Schema.Types.ObjectId, ref: "EnterpriseCompany", default: null, index: true },
   employeeCode: { type: String, required: true, trim: true, maxlength: 30 },
   name: { type: String, required: true, trim: true, maxlength: 100 },
   department: { type: String, default: "Other", trim: true, maxlength: 80 },
@@ -23,18 +24,20 @@ const employeeSchema = new mongoose.Schema({
   status: { type: String, enum: ["Active", "On leave", "Inactive"], default: "Active" },
   createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true }
 }, { timestamps: true });
-employeeSchema.index({ employeeCode: 1 }, { unique: true });
+employeeSchema.index({ companyId: 1, employeeCode: 1 });
 
 const attendanceSchema = new mongoose.Schema({
+  companyId: { type: mongoose.Schema.Types.ObjectId, ref: "EnterpriseCompany", default: null, index: true },
   employee: { type: mongoose.Schema.Types.ObjectId, ref: "HREmployee", required: true },
   date: { type: String, required: true },
   status: { type: String, enum: ["Present", "Absent", "Half day", "Work from home", "Holiday"], required: true },
   note: { type: String, default: "", maxlength: 160 },
   recordedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true }
 }, { timestamps: true });
-attendanceSchema.index({ employee: 1, date: 1 }, { unique: true });
+attendanceSchema.index({ companyId: 1, employee: 1, date: 1 });
 
 const leaveSchema = new mongoose.Schema({
+  companyId: { type: mongoose.Schema.Types.ObjectId, ref: "EnterpriseCompany", default: null, index: true },
   employee: { type: mongoose.Schema.Types.ObjectId, ref: "HREmployee", required: true },
   type: { type: String, enum: ["Casual", "Sick", "Earned", "Unpaid", "Other"], default: "Casual" },
   from: { type: String, required: true },
@@ -51,6 +54,7 @@ export const HRAttendance = mongoose.models.HRAttendance || mongoose.model("HRAt
 export const HRLeave = mongoose.models.HRLeave || mongoose.model("HRLeave", leaveSchema);
 
 const challanSchema = new mongoose.Schema({
+  companyId: { type: mongoose.Schema.Types.ObjectId, ref: "EnterpriseCompany", default: null, index: true },
   month: { type: String, required: true, match: /^[0-9]{4}-[0-9]{2}$/ },
   type: { type: String, enum: ["PF", "ESIC", "Other"], default: "PF" },
   amount: { type: Number, required: true, min: 0, max: 1000000000 },
@@ -59,11 +63,12 @@ const challanSchema = new mongoose.Schema({
   notes: { type: String, default: "", trim: true, maxlength: 200 },
   createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true }
 }, { timestamps: true });
-challanSchema.index({ month: 1, type: 1 });
+challanSchema.index({ companyId: 1, month: 1, type: 1 });
 export const HRChallan = mongoose.models.HRChallan || mongoose.model("HRChallan", challanSchema);
 
 
 const payrollRunSchema = new mongoose.Schema({
+  companyId: { type: mongoose.Schema.Types.ObjectId, ref: "EnterpriseCompany", default: null, index: true },
   month: { type: String, required: true, match: /^[0-9]{4}-[0-9]{2}$/ },
   status: { type: String, enum: ["Draft", "Approved", "Paid"], default: "Draft" },
   employeeCount: { type: Number, min: 0, required: true },
@@ -94,5 +99,5 @@ const payrollRunSchema = new mongoose.Schema({
     netPay: { type: Number, required: true }
   }]
 }, { timestamps: true });
-payrollRunSchema.index({ month: 1 }, { unique: true });
+payrollRunSchema.index({ companyId: 1, month: 1 });
 export const HRPayrollRun = mongoose.models.HRPayrollRun || mongoose.model("HRPayrollRun", payrollRunSchema);
