@@ -4,7 +4,7 @@ import { requireAuth } from "../middleware/auth.js";
 import Company from "../models/Company.js";
 import CompanyMembership from "../models/CompanyMembership.js";
 import { hasCompanyPermission } from "../enterprise/companyConfig.js";
-import { getHRPermission } from "../enterprise/hrAuthorization.js";
+import { createHRCompanyAuthorizationMiddleware } from "../enterprise/hrAuthorization.js";
 import { HREmployee, HRAttendance, HRLeave, HRChallan, HRPayrollRun } from "../models/HR.js";
 
 const router = Router();
@@ -12,31 +12,7 @@ router.use(requireAuth);
 
 const validId = id => mongoose.isValidObjectId(id);
 
-async function requireHRCompany(req, res, next) {
-  const companyId = String(req.get("x-company-id") || "");
-  if (!validId(companyId)) {
-    return res.status(400).json({ message: "Select a company and send its ID in the X-Company-ID header" });
-  }
-  try {
-    const [company, membership] = await Promise.all([
-      Company.findById(companyId).select("_id status").lean(),
-      CompanyMembership.findOne({ companyId, userId: req.user.id, status: "active" }).lean()
-    ]);
-    if (!company || company.status !== "active") {
-      return res.status(404).json({ message: "Company not found or inactive" });
-    }
-    const permission = getHRPermission(req.method, req.path);
-    if (!membership || !hasCompanyPermission(membership, companyId, permission)) {
-      return res.status(403).json({ message: "You do not have permission for this HR action in the selected company" });
-    }
-    req.companyId = company._id;
-    req.companyMembership = membership;
-    req.hrRole = membership.role;
-    next();
-  } catch {
-    return res.status(500).json({ message: "Could not verify company HR permissions" });
-  }
-}
+const requireHRCompany = createHRCompanyAuthorizationMiddleware({ CompanyModel: Company, MembershipModel: CompanyMembership });
 router.use(requireHRCompany);
 const clean = (v, max=100) => typeof v === "string" ? v.trim().slice(0, max) : "";
 
