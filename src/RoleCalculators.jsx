@@ -15,6 +15,8 @@ export default function RoleCalculators() {
   const [tdsBase, setTdsBase] = useState("50000"), [tdsRate, setTdsRate] = useState("10");
   const [assetCost, setAssetCost] = useState("500000"), [salvage, setSalvage] = useState("50000"), [usefulLife, setUsefulLife] = useState("5"), [depreciationMethod, setDepreciationMethod] = useState("slm"), [depreciationRate, setDepreciationRate] = useState("15");
   const [revenue, setRevenue] = useState("500000"), [expenses, setExpenses] = useState("320000"), [otherIncome, setOtherIncome] = useState("10000");
+  const [openingCash, setOpeningCash] = useState("250000"), [cashReceipts, setCashReceipts] = useState("600000"), [cashPayments, setCashPayments] = useState("420000");
+  const [receivables, setReceivables] = useState("180000"), [inventory, setInventory] = useState("120000"), [payables, setPayables] = useState("90000"), [shortTermDebt, setShortTermDebt] = useState("60000");
 
   const hr = useMemo(() => {
     const b=n(basic), h=n(hra), a=n(allowance), gross=b+h+a;
@@ -48,12 +50,19 @@ export default function RoleCalculators() {
     return {base,gst,total:gstMode==="inclusive"?entered:base+gst,cgst:gst/2,sgst:gst/2,tds,netPayable:n(tdsBase)-tds,dep,bookValue,profit,margin:n(revenue)>0?profit/n(revenue)*100:0};
   },[gstBase,gstRate,gstMode,tdsBase,tdsRate,assetCost,salvage,usefulLife,depreciationMethod,depreciationRate,revenue,expenses,otherIncome]);
 
-  const tabs=[["hr","🧑‍💼","HR Manager"],["loan","🏦","Loan Manager"],["ca","📊","Chartered Accountant"]];
+  const finance = useMemo(() => {
+    const cash=n(openingCash)+n(cashReceipts)-n(cashPayments);
+    const currentAssets=cash+n(receivables)+n(inventory);
+    const currentLiabilities=n(payables)+n(shortTermDebt);
+    return {cash,netCashFlow:n(cashReceipts)-n(cashPayments),currentAssets,currentLiabilities,workingCapital:currentAssets-currentLiabilities,currentRatio:currentLiabilities>0?currentAssets/currentLiabilities:0};
+  },[openingCash,cashReceipts,cashPayments,receivables,inventory,payables,shortTermDebt]);
+
+  const tabs=[["hr","🧑‍💼","HR Manager"],["loan","💼","Finance Manager"],["ca","📊","Chartered Accountant"]];
   return <section className="content role-calculators">
     <style>{`
       .role-calculators{max-width:1120px}.role-hero{padding:24px;border-radius:18px;background:linear-gradient(125deg,#163b55,#246c70);color:#fff;margin-bottom:16px}.role-hero h2{color:#fff;margin:7px 0}.role-hero p{color:#e1f1f2;margin:0;line-height:1.6}.role-kicker{font-size:10px;letter-spacing:.15em;font-weight:900;color:#bfe6dc}.role-tabs{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0}.role-tabs button{border:1px solid #dbe4ed;border-radius:999px;padding:10px 15px;background:#fff;color:#334155;font-weight:800;cursor:pointer}.role-tabs button.active{background:#173b54;color:#fff;border-color:#173b54}.role-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(260px,.85fr);gap:14px}.role-panel{padding:20px}.role-panel h3{margin:0 0 8px}.role-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px 14px}.role-field{display:block;margin:10px 0;font-size:12px;font-weight:750;color:#344054}.role-input-wrap{display:flex;align-items:center;margin-top:6px;border:1px solid #dbe2ea;border-radius:9px;background:#fff;overflow:hidden}.role-input-wrap input{width:100%;min-width:0;border:0!important;outline:0;padding:11px!important;font:inherit;color:#17243b}.role-input-wrap span{padding:0 10px;color:#748094;font-size:11px}.role-stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:12px 0}.role-stat{padding:13px;border:1px solid #e4eaf0;border-radius:12px;background:#f8fafc;min-width:0}.role-stat small,.role-stat span{display:block;color:#66758b;font-size:11px}.role-stat strong{display:block;margin:5px 0;color:#183b55;font-size:19px;overflow-wrap:anywhere}.role-stat span{font-size:10px}.role-check{display:flex;gap:8px;align-items:center;margin:12px 0;font-size:12px}.role-table-wrap{overflow:auto;margin-top:14px}.role-table{width:100%;border-collapse:collapse;font-size:12px;white-space:nowrap}.role-table th,.role-table td{padding:9px;border-bottom:1px solid #e8edf2;text-align:right}.role-table th:first-child,.role-table td:first-child{text-align:left}.role-note{padding:12px;border-radius:10px;background:#fff8e8;color:#76571d;font-size:11px;line-height:1.6;margin-top:14px}.role-disclaimer{margin:16px 2px;color:#748094;font-size:11px;line-height:1.6}.role-select{width:100%;padding:11px;border:1px solid #dbe2ea;border-radius:9px;background:#fff;color:#17243b;margin-top:6px}@media(max-width:760px){.role-grid{grid-template-columns:1fr}.role-fields{grid-template-columns:1fr}.role-panel{padding:15px}.role-hero{padding:20px}.role-tabs button{flex:1 1 100%;text-align:left}}
     `}</style>
-    <div className="role-hero"><span className="role-kicker">SHIVASHA • PROFESSIONAL TOOLS</span><h2>HR, Loan & CA Calculators</h2><p>Practical India-focused calculators for salary, loan EMI, GST, TDS, depreciation and business profit.</p></div>
+    <div className="role-hero"><span className="role-kicker">SHIVASHA • PROFESSIONAL TOOLS</span><h2>HR, Finance & CA Calculators</h2><p>Practical India-focused tools for payroll, cash flow, working capital, loan EMI, GST, TDS and accounts.</p></div>
     <div className="role-tabs" role="tablist" aria-label="Professional calculator categories">{tabs.map(([key,icon,label])=><button type="button" role="tab" aria-selected={tab===key} key={key} className={tab===key?"active":""} onClick={()=>setTab(key)}>{icon} {label}</button>)}</div>
     {tab==="hr"&&<div className="role-grid">
       <div className="panel role-panel"><h3>HR Manager · Salary Calculator</h3><p className="muted">Enter monthly salary components and contribution rates.</p><div className="role-fields">
