@@ -107,3 +107,29 @@ test("payroll preparation, approval and release are segregated by role", () => {
   assert.ok(!finance.includes("hr.payroll.prepare"));
   assert.ok(!finance.includes("hr.payroll.approve"));
 });
+
+test("HR manager may approve payroll but cannot release payment", async () => {
+  const membership = { companyId: new mongoose.Types.ObjectId(companyId), userId, role: "hr_manager", status: "active" };
+  const approve = harness({ membership, method: "PATCH", path: "/payroll-runs/507f1f77bcf86cd799439013/status", bodyStatus: "Approved" });
+  await approve.middleware(approve.req, approve.res, () => approve.calls.next++);
+  assert.equal(approve.calls.next, 1);
+
+  const release = harness({ membership, method: "PATCH", path: "/payroll-runs/507f1f77bcf86cd799439013/status", bodyStatus: "Paid" });
+  await release.middleware(release.req, release.res, () => release.calls.next++);
+  assert.equal(release.calls.status, 403);
+});
+
+test("finance manager may release payroll but cannot prepare or approve it", async () => {
+  const membership = { companyId: new mongoose.Types.ObjectId(companyId), userId, role: "finance_manager", status: "active" };
+  const release = harness({ membership, method: "PATCH", path: "/payroll-runs/507f1f77bcf86cd799439013/status", bodyStatus: "Paid" });
+  await release.middleware(release.req, release.res, () => release.calls.next++);
+  assert.equal(release.calls.next, 1);
+
+  const approve = harness({ membership, method: "PATCH", path: "/payroll-runs/507f1f77bcf86cd799439013/status", bodyStatus: "Approved" });
+  await approve.middleware(approve.req, approve.res, () => approve.calls.next++);
+  assert.equal(approve.calls.status, 403);
+
+  const prepare = harness({ membership, method: "POST", path: "/payroll-runs" });
+  await prepare.middleware(prepare.req, prepare.res, () => prepare.calls.next++);
+  assert.equal(prepare.calls.status, 403);
+});
