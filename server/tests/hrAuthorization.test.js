@@ -39,13 +39,13 @@ const userId = "507f1f77bcf86cd799439012";
 function query(value) {
   return { select() { return this; }, async lean() { return value; } };
 }
-function harness({ company = { _id: new mongoose.Types.ObjectId(companyId), status: "active" }, membership = null, header = companyId, method = "GET", path = "/employees" } = {}) {
+function harness({ company = { _id: new mongoose.Types.ObjectId(companyId), status: "active" }, membership = null, header = companyId, method = "GET", path = "/employees", bodyStatus } = {}) {
   const calls = { company: 0, membership: 0, next: 0, status: null, body: null };
   const middleware = createHRCompanyAuthorizationMiddleware({
     CompanyModel: { findById() { calls.company++; return query(company); } },
     MembershipModel: { findOne() { calls.membership++; return query(membership); } }
   });
-  const req = { user: { id: userId }, method, path, get(name) { return name === "x-company-id" ? header : undefined; } };
+  const req = { user: { id: userId }, method, path, body: { status: bodyStatus }, get(name) { return name === "x-company-id" ? header : undefined; } };
   const res = {
     status(code) { calls.status = code; return this; },
     json(body) { calls.body = body; return this; }
@@ -94,4 +94,16 @@ test("HR tenant middleware trusts active database membership and attaches compan
   assert.equal(String(req.companyId), companyId);
   assert.equal(req.companyMembership, membership);
   assert.equal(req.hrRole, "hr_manager");
+});
+
+test("payroll preparation, approval and release are segregated by role", () => {
+  const hr = getRolePermissions("hr_manager");
+  const finance = getRolePermissions("finance_manager");
+  assert.ok(hr.includes("hr.payroll.prepare"));
+  assert.ok(hr.includes("hr.payroll.approve"));
+  assert.ok(!hr.includes("hr.payroll.release"));
+  assert.ok(finance.includes("hr.payroll.read"));
+  assert.ok(finance.includes("hr.payroll.release"));
+  assert.ok(!finance.includes("hr.payroll.prepare"));
+  assert.ok(!finance.includes("hr.payroll.approve"));
 });
