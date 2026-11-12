@@ -45,6 +45,9 @@ jobs:
       - name: Generate Android project
         run: npx cap add android
 
+      - name: Install native Camera2 bridge
+        run: node scripts/setup-native-camera.mjs
+
       - name: Sync web assets
         run: npx cap sync android
 
