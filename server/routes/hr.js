@@ -368,6 +368,25 @@ router.patch("/payroll-runs/:id/status", async (req, res) => {
     if (!allowed[run.status]?.includes(status)) {
       return res.status(409).json({ message: "Invalid payroll status transition. Use Draft → Approved → Paid; approved or paid payroll cannot be reopened here." });
     }
+    if (run.status === status) return res.json({ run });
+    if (status === "Approved" && String(run.createdBy) === String(req.user.id)) {
+      return res.status(403).json({ message: "Maker-checker control: the payroll preparer cannot approve their own payroll run" });
+    }
+    if (status === "Paid") {
+      if (!run.approvedBy) return res.status(409).json({ message: "Payroll must have a recorded approver before it can be marked paid" });
+      if (String(run.approvedBy) === String(req.user.id)) {
+        return res.status(403).json({ message: "Payment release must be performed by a different user from the payroll approver" });
+      }
+    }
+    const now = new Date();
+    if (status === "Approved") {
+      run.approvedBy = req.user.id;
+      run.approvedAt = now;
+    }
+    if (status === "Paid") {
+      run.paidBy = req.user.id;
+      run.paidAt = now;
+    }
     run.status = status;
     await run.save();
     res.json({ run });
