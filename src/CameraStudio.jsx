@@ -1,4 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
+import { registerPlugin } from "@capacitor/core";
+
+const NativeCamera2 = registerPlugin("ShivashaCamera2");
 
 const panel = { background: "#101827", color: "#f8fafc", borderRadius: 18, padding: 18, boxShadow: "0 12px 36px rgba(15,23,42,.16)" };
 const button = { border: 0, borderRadius: 12, padding: "12px 16px", fontWeight: 800, cursor: "pointer" };
@@ -15,6 +18,7 @@ export default function CameraStudio() {
   const [hardwareZoom, setHardwareZoom] = useState(false);
   const [photoUrl, setPhotoUrl] = useState("");
   const [busy, setBusy] = useState(false);
+  const [nativeInfo, setNativeInfo] = useState(null);
 
   useEffect(() => () => {
     streamRef.current?.getTracks().forEach(track => track.stop());
@@ -43,6 +47,12 @@ export default function CameraStudio() {
     }
     try {
       setStatus("Camera शुरू हो रहा है…");
+      try {
+        const info = await NativeCamera2.getCameraInfo();
+        setNativeInfo(info);
+      } catch {
+        setNativeInfo(null);
+      }
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: false,
         video: {
@@ -148,8 +158,11 @@ export default function CameraStudio() {
       <div style={panel}>
         <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap", alignItems: "center", marginBottom: 12 }}>
           <b>{status}</b>
-          <span style={{ fontSize: 12, color: "#a5b4fc" }}>{hardwareZoom ? "Device-reported hardware zoom" : "Software crop fallback"}</span>
+          <span style={{ fontSize: 12, color: "#a5b4fc" }}>{hardwareZoom ? "Web camera hardware zoom" : "Software crop fallback"}</span>
         </div>
+        {nativeInfo && <div style={{ background: "#172554", color: "#dbeafe", borderRadius: 10, padding: 10, marginBottom: 12, fontSize: 13 }}>
+          Native Camera2: {nativeInfo.hardwareSupportLevel} · Maximum reported zoom ratio: {Number(nativeInfo.maxZoomRatio || nativeInfo.maxDigitalZoom || 1).toFixed(1)}X · Camera ID {nativeInfo.cameraId}
+        </div>}
         <div style={{ background: "#020617", borderRadius: 14, overflow: "hidden", aspectRatio: "16 / 9", display: "grid", placeItems: "center" }}>
           <video ref={videoRef} playsInline muted autoPlay aria-label="Rear camera preview"
             style={{ width: "100%", height: "100%", objectFit: "contain", transform: hardwareZoom ? "none" : "scale(" + zoom + ")", display: streamRef.current ? "block" : "none" }} />
