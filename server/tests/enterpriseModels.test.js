@@ -64,3 +64,11 @@ test("audit event identity and event fields are immutable in the Mongoose model"
     assert.equal(EnterpriseAuditEvent.schema.path(path).options.immutable, true);
   }
 });
+
+test("company model rejects unsupported currency codes and invalid time zones", () => {
+  const badCurrency = new Company({ ...companyData, functionalCurrency: "ZZZ" });
+  assert.ok(badCurrency.validateSync()?.errors.functionalCurrency);
+
+  const badTimeZone = new Company({ ...companyData, timeZone: "Not/A_Timezone" });
+  assert.ok(badTimeZone.validateSync()?.errors.timeZone);
+});
