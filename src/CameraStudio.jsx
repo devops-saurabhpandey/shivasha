@@ -9,6 +9,7 @@ const button = { border: 0, borderRadius: 12, padding: "12px 16px", fontWeight: 
 
 export default function CameraStudio() {
   const videoRef = useRef(null);
+  const previewBoxRef = useRef(null);
   const streamRef = useRef(null);
   const trackRef = useRef(null);
   const [status, setStatus] = useState("Camera बंद है");
@@ -69,7 +70,19 @@ export default function CameraStudio() {
         if (permission.camera !== "granted") throw new Error("Camera permission नहीं मिली। Android Settings में SHIVASHA को Camera permission दें।");
         document.documentElement.style.backgroundColor = "transparent";
         document.body.style.backgroundColor = "transparent";
-        await CameraPreview.start({ position: "rear", x: 0, y: 0, width: window.innerWidth, height: window.innerHeight, toBack: true, disableAudio: true, aspectMode: "cover", initialZoomLevel: 1 });
+        const previewBounds = previewBoxRef.current?.getBoundingClientRect();
+        if (!previewBounds || previewBounds.width < 1 || previewBounds.height < 1) throw new Error("Camera preview area तैयार नहीं है।");
+        await CameraPreview.start({
+          position: "rear",
+          x: Math.max(0, previewBounds.left),
+          y: Math.max(0, previewBounds.top),
+          width: previewBounds.width,
+          height: previewBounds.height,
+          toBack: true,
+          disableAudio: true,
+          aspectMode: "cover",
+          initialZoomLevel: 1
+        });
         nativePreviewRef.current = true;
         setNativePreviewActive(true);
         const zoomInfo = await CameraPreview.getZoom();
@@ -222,13 +235,13 @@ export default function CameraStudio() {
   const displayedMax = Math.max(zoomMin, zoomMax);
   const cameraActive = Capacitor.isNativePlatform() ? nativePreviewActive : !!streamRef.current;
   return (
-    <section style={{ maxWidth: 920, margin: "0 auto", padding: "18px 12px 32px", background: "rgba(2,6,23,.18)", minHeight: "100vh" }}>
+    <section style={{ maxWidth: 920, margin: "0 auto", padding: "18px 12px 32px", background: "rgba(2,6,23,.08)", minHeight: "100vh" }}>
       <div style={{ marginBottom: 16 }}>
         <span style={{ color: "#6b4eff", fontWeight: 900, letterSpacing: 1, fontSize: 12 }}>SHIVASHA IMAGING LAB</span>
         <h2 style={{ margin: "6px 0", fontSize: 26 }}>2000X Super Zoom Camera</h2>
         <p style={{ color: "var(--muted, #64748b)", margin: 0 }}>पहला चरण: Rear camera preview, zoom control और photo capture.</p>
       </div>
-      <div style={{ ...panel, background: "rgba(16,24,39,.56)" }}>
+      <div style={{ ...panel, background: "rgba(16,24,39,.28)" }}>
         <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap", alignItems: "center", marginBottom: 12 }}>
           <b>{status}</b>
           <span style={{ fontSize: 12, color: "#a5b4fc" }}>{Capacitor.isNativePlatform() ? "Native Camera2 still capture" : (hardwareZoom ? "Web camera hardware zoom" : "Software crop fallback")}</span>
@@ -236,7 +249,7 @@ export default function CameraStudio() {
         {nativeInfo && <div style={{ background: "#172554", color: "#dbeafe", borderRadius: 10, padding: 10, marginBottom: 12, fontSize: 13 }}>
           Native Camera2: {nativeInfo.hardwareSupportLevel} · Maximum reported zoom ratio: {Number(nativeInfo.maxZoomRatio || nativeInfo.maxDigitalZoom || 1).toFixed(1)}X · Camera ID {nativeInfo.cameraId}
         </div>}
-        <div style={{ background: Capacitor.isNativePlatform() && nativePreviewActive ? "transparent" : "#020617", borderRadius: 14, overflow: "hidden", aspectRatio: "16 / 9", display: "grid", placeItems: "center", position: "relative" }}>
+        <div ref={previewBoxRef} style={{ background: Capacitor.isNativePlatform() && nativePreviewActive ? "transparent" : "#020617", borderRadius: 14, overflow: "hidden", aspectRatio: "16 / 9", display: "grid", placeItems: "center", position: "relative" }}>
           <video ref={videoRef} playsInline muted autoPlay aria-label="Rear camera preview"
             style={{ width: "100%", height: "100%", objectFit: "contain", transform: hardwareZoom ? "none" : "scale(" + zoom + ")", display: !Capacitor.isNativePlatform() && streamRef.current ? "block" : "none" }} />
           {!cameraActive && <div style={{ textAlign: "center", color: "#94a3b8", padding: 24 }}>📷<br/>Camera preview यहाँ दिखाई देगा</div>}
