@@ -27,7 +27,7 @@ if (!activityPath) throw new Error("Capacitor MainActivity.java was not found.")
 let activity = fs.readFileSync(activityPath, "utf8");
 if (!activity.includes("ShivashaCamera2Plugin")) {
   activity = activity.replace(/(package [^;]+;)/, "$1\n\nimport " + packageName + ".ShivashaCamera2Plugin;");
-  activity = activity.replace(/(public class MainActivity extends BridgeActivity\\s*\\{)/, "$1\n    @Override\n    public void onCreate(android.os.Bundle savedInstanceState) {\n        registerPlugin(ShivashaCamera2Plugin.class);\n        super.onCreate(savedInstanceState);\n    }");
+  activity = activity.replace(/(public class MainActivity extends BridgeActivity\s*\{)/, "$1\n    @Override\n    public void onCreate(android.os.Bundle savedInstanceState) {\n        registerPlugin(ShivashaCamera2Plugin.class);\n        super.onCreate(savedInstanceState);\n    }");
   fs.writeFileSync(activityPath, activity);
 }
 
