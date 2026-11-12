@@ -244,7 +244,7 @@ export default function CameraStudio() {
       <div style={{ ...panel, background: "rgba(16,24,39,.28)" }}>
         <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap", alignItems: "center", marginBottom: 12 }}>
           <b>{status}</b>
-          <span style={{ fontSize: 12, color: "#a5b4fc" }}>{Capacitor.isNativePlatform() ? "Native Camera2 still capture" : (hardwareZoom ? "Web camera hardware zoom" : "Software crop fallback")}</span>
+          <span style={{ fontSize: 12, color: "#a5b4fc" }}>{Capacitor.isNativePlatform() ? "CameraX native preview + capture" : (hardwareZoom ? "Web camera hardware zoom" : "Software crop fallback")}</span>
         </div>
         {nativeInfo && <div style={{ background: "#172554", color: "#dbeafe", borderRadius: 10, padding: 10, marginBottom: 12, fontSize: 13 }}>
           Native Camera2: {nativeInfo.hardwareSupportLevel} · Maximum reported zoom ratio: {Number(nativeInfo.maxZoomRatio || nativeInfo.maxDigitalZoom || 1).toFixed(1)}X · Camera ID {nativeInfo.cameraId}
