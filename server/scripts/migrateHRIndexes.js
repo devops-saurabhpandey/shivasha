@@ -15,7 +15,7 @@ async function main() {
   if (!process.env.MONGODB_URI) throw new Error("MONGODB_URI is required");
   await mongoose.connect(process.env.MONGODB_URI);
   const db = mongoose.connection.db;
-  const hrCollections = ["hremployees", "hrattendance", "hrleaves", "hrchallans", "hrpayrollruns"];
+  const hrCollections = ["hremployees", "hrattendances", "hrleaves", "hrchallans", "hrpayrollruns"];
   const missing = {};
   for (const name of hrCollections) {
     const collection = db.collection(name);
