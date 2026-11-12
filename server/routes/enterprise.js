@@ -39,7 +39,7 @@ router.post("/companies", async (req, res) => {
   let membership;
   try {
     const profile = normalizeCompanyProfile(req.body || {});
-    company = await Company.create({ ...profile, createdBy: req.user.id });
+    company = await Company.create({ ...profile, status: "active", configurationVersion: 1, createdBy: req.user.id });
     membership = await CompanyMembership.create({
       companyId: company._id, userId: req.user.id, role: "company_owner",
       status: "active", invitedBy: req.user.id
