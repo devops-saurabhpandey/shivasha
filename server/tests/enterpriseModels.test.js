@@ -75,7 +75,7 @@ test("company model rejects unsupported currency codes and invalid time zones", 
 
 import { HREmployee, HRAttendance, HRLeave, HRChallan, HRPayrollRun } from "../models/HR.js";
 
-test("all HR record models carry an optional company ownership field during migration", () => {
+test("all HR record models carry company ownership and require it for new documents", () => {
   for (const model of [HREmployee, HRAttendance, HRLeave, HRChallan, HRPayrollRun]) {
     assert.ok(model.schema.path("companyId"), model.modelName + " must define companyId");
     assert.equal(model.schema.path("companyId").options.ref, "EnterpriseCompany");
