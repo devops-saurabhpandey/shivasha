@@ -17,6 +17,7 @@ export default function CameraStudio() {
   const [zoomMax, setZoomMax] = useState(8);
   const [hardwareZoom, setHardwareZoom] = useState(false);
   const [photoUrl, setPhotoUrl] = useState("");
+  const [nativePhotoBase64, setNativePhotoBase64] = useState("");
   const [busy, setBusy] = useState(false);
   const [nativeInfo, setNativeInfo] = useState(null);
 
@@ -126,6 +127,7 @@ export default function CameraStudio() {
         const bytes = new Uint8Array(binary.length);
         for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
         const blob = new Blob([bytes], { type: result.mimeType || "image/jpeg" });
+        setNativePhotoBase64(result.base64);
         if (photoUrl) URL.revokeObjectURL(photoUrl);
         setPhotoUrl(URL.createObjectURL(blob));
         setStatus("Native Camera2 photo captured · " + result.width + "×" + result.height + " · " + Number(result.appliedZoom).toFixed(1) + "X");
@@ -159,6 +161,7 @@ export default function CameraStudio() {
       context.drawImage(video, sx, sy, cropWidth, cropHeight, 0, 0, cropWidth, cropHeight);
       const blob = await new Promise(resolve => canvas.toBlob(resolve, "image/jpeg", 0.94));
       if (!blob) throw new Error("Photo तैयार नहीं हो सकी।");
+      setNativePhotoBase64("");
       if (photoUrl) URL.revokeObjectURL(photoUrl);
       setPhotoUrl(URL.createObjectURL(blob));
     } catch (e) {
@@ -168,8 +171,21 @@ export default function CameraStudio() {
     }
   };
 
-  const savePhoto = () => {
+  const savePhoto = async () => {
     if (!photoUrl) return;
+    if (Capacitor.isNativePlatform() && nativePhotoBase64 && typeof NativeCamera2.savePhoto === "function") {
+      setBusy(true);
+      setError("");
+      try {
+        const saved = await NativeCamera2.savePhoto({ base64: nativePhotoBase64 });
+        setStatus("Photo Gallery में Pictures/SHIVASHA folder में save हो गई: " + saved.fileName);
+      } catch (e) {
+        setError(e.message || "Gallery में photo save नहीं हो सकी।");
+      } finally {
+        setBusy(false);
+      }
+      return;
+    }
     const link = document.createElement("a");
     link.href = photoUrl;
     link.download = "shivasha-camera-" + new Date().toISOString().replace(/[:.]/g, "-") + ".jpg";
