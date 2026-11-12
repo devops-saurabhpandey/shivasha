@@ -11,7 +11,7 @@ Move legacy HR records into verified company tenants without guessing which comp
 - Take and verify a restorable MongoDB backup before applying any migration.
 - Run the migration during a maintenance window with HR writes paused.
 - The migration scripts are not run automatically at application startup.
-- `companyId` remains optional in the schema only to permit a staged migration. The HR API never reads or writes unassigned legacy records.
+- `companyId` is required for newly created HR documents; legacy documents without it remain readable by the migration scripts only. The HR API never reads or writes unassigned legacy records.
 - The existing global unique indexes on employee code and payroll month remain in MongoDB until the guarded index migration is explicitly applied.
 
 ## 1. Create and verify company workspaces
