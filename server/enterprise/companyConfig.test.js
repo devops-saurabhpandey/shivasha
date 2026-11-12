@@ -70,3 +70,14 @@ test("platform admin bypass requires explicit platform scope", () => {
 test("unknown roles receive no permissions", () => {
   assert.deepEqual(getRolePermissions("unknown_role"), []);
 });
+
+test("UTC is accepted as a valid IANA time-zone identifier", () => {
+  const profile = normalizeCompanyProfile({ ...validProfile, timeZone: "UTC" });
+  assert.equal(profile.timeZone, "UTC");
+});
+
+test("unsupported currency codes are rejected", () => {
+  const result = validateCompanyProfile({ ...validProfile, functionalCurrency: "ZZZ" });
+  assert.equal(result.valid, false);
+  assert.ok(result.errors.some(error => error.includes("functionalCurrency")));
+});
