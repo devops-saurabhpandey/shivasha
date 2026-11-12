@@ -24,7 +24,7 @@ const employeeSchema = new mongoose.Schema({
   status: { type: String, enum: ["Active", "On leave", "Inactive"], default: "Active" },
   createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true }
 }, { timestamps: true });
-employeeSchema.index({ companyId: 1, employeeCode: 1 });
+employeeSchema.index({ companyId: 1, employeeCode: 1 }, { unique: true, partialFilterExpression: { companyId: { $type: "objectId" } }, name: "company_employee_code_unique" });
 
 const attendanceSchema = new mongoose.Schema({
   companyId: { type: mongoose.Schema.Types.ObjectId, ref: "EnterpriseCompany", default: null, index: true },
@@ -99,5 +99,5 @@ const payrollRunSchema = new mongoose.Schema({
     netPay: { type: Number, required: true }
   }]
 }, { timestamps: true });
-payrollRunSchema.index({ companyId: 1, month: 1 });
+payrollRunSchema.index({ companyId: 1, month: 1 }, { unique: true, partialFilterExpression: { companyId: { $type: "objectId" } }, name: "company_payroll_month_unique" });
 export const HRPayrollRun = mongoose.models.HRPayrollRun || mongoose.model("HRPayrollRun", payrollRunSchema);
