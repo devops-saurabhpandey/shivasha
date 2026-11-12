@@ -79,6 +79,7 @@ test("all HR record models carry an optional company ownership field during migr
   for (const model of [HREmployee, HRAttendance, HRLeave, HRChallan, HRPayrollRun]) {
     assert.ok(model.schema.path("companyId"), model.modelName + " must define companyId");
     assert.equal(model.schema.path("companyId").options.ref, "EnterpriseCompany");
+    assert.equal(model.schema.path("companyId").isRequired, true, model.modelName + " must require tenant ownership for new documents");
   }
 });
 
