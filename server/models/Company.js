@@ -1,5 +1,19 @@
 import mongoose from "mongoose";
 
+const validCurrency = value => {
+  if (!/^[A-Z]{3}$/.test(value)) return false;
+  return typeof Intl.supportedValuesOf !== "function" ||
+    Intl.supportedValuesOf("currency").includes(value);
+};
+const validTimeZone = value => {
+  try {
+    new Intl.DateTimeFormat("en", { timeZone: value }).format(0);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
 const companySchema = new mongoose.Schema({
   name: { type: String, required: true, trim: true, maxlength: 160 },
   legalName: { type: String, required: true, trim: true, maxlength: 200 },
@@ -9,10 +23,10 @@ const companySchema = new mongoose.Schema({
     enum: ["private_limited", "public_limited", "government_department", "public_sector_undertaking", "partnership", "llp", "sole_proprietorship", "non_profit", "other"]
   },
   countryCode: { type: String, required: true, uppercase: true, match: /^[A-Z]{2}$/ },
-  functionalCurrency: { type: String, required: true, uppercase: true, match: /^[A-Z]{3}$/ },
-  reportingCurrency: { type: String, required: true, uppercase: true, match: /^[A-Z]{3}$/ },
+  functionalCurrency: { type: String, required: true, uppercase: true, validate: { validator: validCurrency, message: "Unsupported functional currency code" } },
+  reportingCurrency: { type: String, required: true, uppercase: true, validate: { validator: validCurrency, message: "Unsupported reporting currency code" } },
   fiscalYearStartMonth: { type: Number, required: true, min: 1, max: 12, validate: Number.isInteger },
-  timeZone: { type: String, required: true, trim: true, maxlength: 80 },
+  timeZone: { type: String, required: true, trim: true, maxlength: 80, validate: { validator: validTimeZone, message: "Invalid IANA time-zone identifier" } },
   taxJurisdictions: {
     type: [{ type: String, uppercase: true, trim: true, match: /^[A-Z0-9-]{2,12}$/ }],
     default: [],
