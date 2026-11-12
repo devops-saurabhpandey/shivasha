@@ -151,7 +151,7 @@ The current feature branch should remain an estimation-only prototype until Phas
 
 ## Phase 2A implementation note — HR tenant isolation
 
-The feature branch now adds optional `companyId` ownership fields and company-first query indexes to Employee, Attendance, Leave, Challan and Payroll Run models. The HR API requires an active company membership for every request, derives the required HR permission from the route, and scopes all HR reads/writes/deletes to the selected company. Payroll snapshots must reference distinct employees belonging to the selected company; employee code, name and UAN are taken from the server-side employee master rather than trusted from the browser.
+The feature branch now adds `companyId` ownership fields (required on new HR documents) and company-first query indexes to Employee, Attendance, Leave, Challan and Payroll Run models. The HR API requires an active company membership for every request, derives the required HR permission from the route, and scopes all HR reads/writes/deletes to the selected company. Payroll snapshots must reference distinct employees belonging to the selected company; employee code, name and UAN are taken from the server-side employee master rather than trusted from the browser.
 
 The HR and Payroll browser pages now load company memberships, support company creation from the HR workspace, and send the selected company ID in the `X-Company-ID` header. The server re-verifies membership on every request.
 
