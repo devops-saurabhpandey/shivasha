@@ -1,11 +1,13 @@
 import "dotenv/config";
 import mongoose from "mongoose";
+import { HREmployee, HRAttendance, HRLeave, HRChallan, HRPayrollRun } from "../models/HR.js";
 
 const APPLY = process.argv.includes("--apply");
 const COLLECTIONS = [
-  { name: "hremployees", legacyUnique: "employeeCode_1", scopedKeys: { companyId: 1, employeeCode: 1 } },
-  { name: "hrpayrollruns", legacyUnique: "month_1", scopedKeys: { companyId: 1, month: 1 } }
+  { name: HREmployee.collection.name, legacyUnique: "employeeCode_1", scopedKeys: { companyId: 1, employeeCode: 1 } },
+  { name: HRPayrollRun.collection.name, legacyUnique: "month_1", scopedKeys: { companyId: 1, month: 1 } }
 ];
+const HR_COLLECTION_NAMES = [HREmployee, HRAttendance, HRLeave, HRChallan, HRPayrollRun].map(model => model.collection.name);
 
 function sameKeys(left, right) {
   return JSON.stringify(Object.entries(left)) === JSON.stringify(Object.entries(right));
@@ -15,9 +17,8 @@ async function main() {
   if (!process.env.MONGODB_URI) throw new Error("MONGODB_URI is required");
   await mongoose.connect(process.env.MONGODB_URI);
   const db = mongoose.connection.db;
-  const hrCollections = ["hremployees", "hrattendances", "hrleaves", "hrchallans", "hrpayrollruns"];
   const missing = {};
-  for (const name of hrCollections) {
+  for (const name of HR_COLLECTION_NAMES) {
     const collection = db.collection(name);
     missing[name] = await collection.countDocuments({
       $or: [{ companyId: { $exists: false } }, { companyId: null }]
