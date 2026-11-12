@@ -109,3 +109,12 @@ test("employee code and payroll month uniqueness are company-scoped while legacy
     assert.deepEqual(index[1].partialFilterExpression, { companyId: { $type: "objectId" } });
   }
 });
+
+test("attendance uniqueness is scoped to a company and excludes legacy null tenants", () => {
+  const index = HRAttendance.schema.indexes().find(([keys]) =>
+    JSON.stringify(keys) === JSON.stringify({ companyId: 1, employee: 1, date: 1 })
+  );
+  assert.ok(index);
+  assert.equal(index[1].unique, true);
+  assert.deepEqual(index[1].partialFilterExpression, { companyId: { $type: "objectId" } });
+});
