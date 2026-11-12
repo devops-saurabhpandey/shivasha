@@ -18,6 +18,9 @@ export default function CameraStudio() {
 
   useEffect(() => () => {
     streamRef.current?.getTracks().forEach(track => track.stop());
+  }, []);
+
+  useEffect(() => () => {
     if (photoUrl) URL.revokeObjectURL(photoUrl);
   }, [photoUrl]);
 
