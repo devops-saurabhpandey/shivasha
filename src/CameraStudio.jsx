@@ -222,13 +222,13 @@ export default function CameraStudio() {
   const displayedMax = Math.max(zoomMin, zoomMax);
   const cameraActive = Capacitor.isNativePlatform() ? nativePreviewActive : !!streamRef.current;
   return (
-    <section style={{ maxWidth: 920, margin: "0 auto", padding: "18px 12px 32px", background: "rgba(2,6,23,.58)", minHeight: "100vh" }}>
+    <section style={{ maxWidth: 920, margin: "0 auto", padding: "18px 12px 32px", background: "rgba(2,6,23,.18)", minHeight: "100vh" }}>
       <div style={{ marginBottom: 16 }}>
         <span style={{ color: "#6b4eff", fontWeight: 900, letterSpacing: 1, fontSize: 12 }}>SHIVASHA IMAGING LAB</span>
         <h2 style={{ margin: "6px 0", fontSize: 26 }}>2000X Super Zoom Camera</h2>
         <p style={{ color: "var(--muted, #64748b)", margin: 0 }}>पहला चरण: Rear camera preview, zoom control और photo capture.</p>
       </div>
-      <div style={{ ...panel, background: "rgba(16,24,39,.88)" }}>
+      <div style={{ ...panel, background: "rgba(16,24,39,.56)" }}>
         <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap", alignItems: "center", marginBottom: 12 }}>
           <b>{status}</b>
           <span style={{ fontSize: 12, color: "#a5b4fc" }}>{Capacitor.isNativePlatform() ? "Native Camera2 still capture" : (hardwareZoom ? "Web camera hardware zoom" : "Software crop fallback")}</span>
