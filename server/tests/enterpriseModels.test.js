@@ -118,3 +118,9 @@ test("attendance uniqueness is scoped to a company and excludes legacy null tena
   assert.equal(index[1].unique, true);
   assert.deepEqual(index[1].partialFilterExpression, { companyId: { $type: "objectId" } });
 });
+
+test("payroll run model stores maker-checker approval and payment evidence", () => {
+  for (const path of ["createdBy", "approvedBy", "approvedAt", "paidBy", "paidAt"]) {
+    assert.ok(HRPayrollRun.schema.path(path), "Payroll run must store " + path);
+  }
+});
