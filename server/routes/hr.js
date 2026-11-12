@@ -4,27 +4,13 @@ import { requireAuth } from "../middleware/auth.js";
 import Company from "../models/Company.js";
 import CompanyMembership from "../models/CompanyMembership.js";
 import { hasCompanyPermission } from "../enterprise/companyConfig.js";
+import { getHRPermission } from "../enterprise/hrAuthorization.js";
 import { HREmployee, HRAttendance, HRLeave, HRChallan, HRPayrollRun } from "../models/HR.js";
 
 const router = Router();
 router.use(requireAuth);
 
 const validId = id => mongoose.isValidObjectId(id);
-
-function requiredHRPermission(req) {
-  if (req.method === "GET") {
-    return /^(?:\/payroll-runs|\/challans)(?:\/|$)/.test(req.path)
-      ? "hr.payroll.prepare"
-      : "hr.employee.read";
-  }
-  if (req.method === "PATCH" && /^\/payroll-runs\/[^/]+\/status$/.test(req.path)) {
-    return "hr.payroll.approve";
-  }
-  if (/^\/payroll-runs(?:\/|$)/.test(req.path) || /^\/challans(?:\/|$)/.test(req.path)) {
-    return "hr.payroll.prepare";
-  }
-  return "hr.employee.manage";
-}
 
 async function requireHRCompany(req, res, next) {
   const companyId = String(req.get("x-company-id") || "");
@@ -39,7 +25,7 @@ async function requireHRCompany(req, res, next) {
     if (!company || company.status !== "active") {
       return res.status(404).json({ message: "Company not found or inactive" });
     }
-    const permission = requiredHRPermission(req);
+    const permission = getHRPermission(req.method, req.path);
     if (!membership || !hasCompanyPermission(membership, companyId, permission)) {
       return res.status(403).json({ message: "You do not have permission for this HR action in the selected company" });
     }
