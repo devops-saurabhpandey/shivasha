@@ -292,6 +292,8 @@ export default function CameraStudio() {
   };
 
   const displayedMax = 2000;
+  const zoomSliderPosition = Math.round((Math.log(Math.max(1, zoom)) / Math.log(displayedMax)) * 1000);
+  const zoomPresets = [1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1000, 2000];
   const cameraActive = Capacitor.isNativePlatform() ? nativePreviewActive : !!streamRef.current;
   return (
     <section style={{ maxWidth: 920, margin: "0 auto", padding: "18px 12px 32px", background: "rgba(2,6,23,.08)", minHeight: "100vh" }}>
@@ -317,11 +319,19 @@ export default function CameraStudio() {
           <label htmlFor="shivasha-zoom" style={{ fontWeight: 800 }}>Zoom</label>
           <strong style={{ fontSize: 22, color: "#c4b5fd" }}>{zoom.toFixed(1)}X</strong>
         </div>
-        <input id="shivasha-zoom" type="range" min="1" max={displayedMax} step="0.1" value={Math.min(zoom, displayedMax)} onChange={e => changeZoom(e.target.value)} disabled={!cameraActive}
+        <input id="shivasha-zoom" type="range" min="0" max="1000" step="1" value={zoomSliderPosition} onChange={e => changeZoom(Math.pow(displayedMax, Number(e.target.value) / 1000))} disabled={!cameraActive}
           style={{ width: "100%", accentColor: "#8b5cf6" }} />
         <div style={{ display: "flex", justifyContent: "space-between", color: "#cbd5e1", fontSize: 12 }}>
           <span>1X</span><span>2000X digital scale · native preview max {nativeZoomMax.toFixed(1)}X</span>
         </div>
+        <div aria-label="Zoom presets" style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 10 }}>
+          {zoomPresets.map(level => <button key={level} type="button" onClick={() => changeZoom(level)} disabled={!cameraActive}
+            aria-pressed={Math.abs(zoom - level) < 0.05}
+            style={{ ...button, padding: "7px 10px", fontSize: 12, background: Math.abs(zoom - level) < 0.05 ? "#6d28d9" : "#334155", color: "#fff" }}>{level}X</button>)}
+        </div>
+        <p style={{ color: "#cbd5e1", fontSize: 12, margin: "8px 0 0" }}>
+          Fine control uses a logarithmic slider. Above {nativeZoomMax.toFixed(1)}X, Android preview stays at its native limit and the saved photo receives additional software crop/enlargement.
+        </p>
         {Capacitor.isNativePlatform() && nativePreviewActive && <p style={{ color: "#fcd34d", fontSize: 12, margin: "8px 0 0" }}>{softwareZoom ? "Software zoom active: preview native limit पर रहेगा; saved photo crop/enlarge होगी।" : "Native camera zoom active."}</p>}
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 18 }}>
           {!cameraActive
