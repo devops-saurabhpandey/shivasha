@@ -7,6 +7,28 @@ const NativeCamera2 = registerPlugin("ShivashaCamera2");
 const panel = { background: "#101827", color: "#f8fafc", borderRadius: 18, padding: 18, boxShadow: "0 12px 36px rgba(15,23,42,.16)" };
 const button = { border: 0, borderRadius: 12, padding: "12px 16px", fontWeight: 800, cursor: "pointer" };
 
+async function cropAndEnlargeJpeg(base64, factor) {
+  const image = new Image();
+  image.src = "data:image/jpeg;base64," + base64;
+  await new Promise((resolve, reject) => { image.onload = resolve; image.onerror = () => reject(new Error("Captured photo decode नहीं हो सकी।")); });
+  const width = image.naturalWidth;
+  const height = image.naturalHeight;
+  const cropWidth = Math.max(1, Math.floor(width / factor));
+  const cropHeight = Math.max(1, Math.floor(height / factor));
+  const sx = Math.floor((width - cropWidth) / 2);
+  const sy = Math.floor((height - cropHeight) / 2);
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const context = canvas.getContext("2d", { alpha: false });
+  if (!context) throw new Error("Software zoom canvas उपलब्ध नहीं है।");
+  context.imageSmoothingEnabled = true;
+  context.imageSmoothingQuality = "high";
+  context.drawImage(image, sx, sy, cropWidth, cropHeight, 0, 0, width, height);
+  const dataUrl = canvas.toDataURL("image/jpeg", 0.94);
+  return dataUrl.replace(/^data:image\\/jpeg;base64,/, "");
+}
+
 export default function CameraStudio() {
   const videoRef = useRef(null);
   const previewBoxRef = useRef(null);
@@ -17,6 +39,8 @@ export default function CameraStudio() {
   const [zoom, setZoom] = useState(1);
   const [zoomMin, setZoomMin] = useState(1);
   const [zoomMax, setZoomMax] = useState(8);
+  const [nativeZoomMax, setNativeZoomMax] = useState(8);
+  const [softwareZoom, setSoftwareZoom] = useState(false);
   const [hardwareZoom, setHardwareZoom] = useState(false);
   const [photoUrl, setPhotoUrl] = useState("");
   const [nativePhotoBase64, setNativePhotoBase64] = useState("");
@@ -91,6 +115,8 @@ export default function CameraStudio() {
         const max = Math.max(1, Number(zoomInfo.max || cameraInfo.maxZoomRatio || cameraInfo.maxDigitalZoom || 1));
         setZoomMin(Math.max(1, Number(zoomInfo.min || 1)));
         setZoomMax(max);
+        setNativeZoomMax(max);
+        setSoftwareZoom(false);
         setZoom(1);
         setHardwareZoom(true);
         setNativePreviewActive(true);
@@ -142,10 +168,12 @@ export default function CameraStudio() {
   };
 
   const changeZoom = async value => {
-    const next = Number(value);
+    const next = Math.min(2000, Math.max(1, Number(value)));
     setZoom(next);
     if (Capacitor.isNativePlatform() && nativePreviewActive) {
-      try { await CameraPreview.setZoom({ level: next }); }
+      const nativeLevel = Math.min(next, nativeZoomMax);
+      setSoftwareZoom(next > nativeZoomMax);
+      try { await CameraPreview.setZoom({ level: nativeLevel }); }
       catch (e) { setError(e.message || "Native zoom लागू नहीं हो सका।"); }
       return;
     }
@@ -165,8 +193,11 @@ export default function CameraStudio() {
       setError("");
       try {
         const result = await CameraPreview.capture({ quality: 95 });
-        const encoded = String(result.value || "").replace(/^data:image\/[^;]+;base64,/, "");
-        if (!encoded) throw new Error("Native preview ने photo data नहीं लौटाया।");
+        const source = String(result.value || "").replace(/^data:image\/[^;]+;base64,/, "");
+        if (!source) throw new Error("Native preview ने photo data नहीं लौटाया।");
+        const extraCrop = Math.max(1, zoom / Math.max(1, nativeZoomMax));
+        let encoded = source;
+        if (extraCrop > 1.001) encoded = await cropAndEnlargeJpeg(source, extraCrop);
         const binary = atob(encoded);
         const bytes = new Uint8Array(binary.length);
         for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
@@ -174,7 +205,7 @@ export default function CameraStudio() {
         setNativePhotoBase64(encoded);
         if (photoUrl) URL.revokeObjectURL(photoUrl);
         setPhotoUrl(URL.createObjectURL(blob));
-        setStatus("Native live preview से photo captured · " + zoom.toFixed(1) + "X");
+        setStatus("Photo captured · " + zoom.toFixed(1) + "X" + (extraCrop > 1.001 ? " (software crop)" : " (native zoom)"));
       } catch (e) {
         setStatus("Native preview capture नहीं हो सका");
         setError(e.message || "Native camera preview से photo capture में समस्या आई।");
@@ -234,7 +265,7 @@ export default function CameraStudio() {
     link.click();
   };
 
-  const displayedMax = Math.max(zoomMin, zoomMax);
+  const displayedMax = 2000;
   const cameraActive = Capacitor.isNativePlatform() ? nativePreviewActive : !!streamRef.current;
   return (
     <section style={{ maxWidth: 920, margin: "0 auto", padding: "18px 12px 32px", background: "rgba(2,6,23,.08)", minHeight: "100vh" }}>
@@ -246,7 +277,7 @@ export default function CameraStudio() {
       <div style={{ ...panel, background: "rgba(16,24,39,.28)" }}>
         <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap", alignItems: "center", marginBottom: 12 }}>
           <b>{status}</b>
-          <span style={{ fontSize: 12, color: "#a5b4fc" }}>{Capacitor.isNativePlatform() ? "CameraX native preview + capture" : (hardwareZoom ? "Web camera hardware zoom" : "Software crop fallback")}</span>
+          <span style={{ fontSize: 12, color: "#a5b4fc" }}>{Capacitor.isNativePlatform() ? "CameraX preview + software photo zoom" : (hardwareZoom ? "Web camera hardware + software zoom" : "Software crop zoom")}</span>
         </div>
         {nativeInfo && <div style={{ background: "#172554", color: "#dbeafe", borderRadius: 10, padding: 10, marginBottom: 12, fontSize: 13 }}>
           Native Camera2: {nativeInfo.hardwareSupportLevel} · Maximum reported zoom ratio: {Number(nativeInfo.maxZoomRatio || nativeInfo.maxDigitalZoom || 1).toFixed(1)}X · Camera ID {nativeInfo.cameraId}
@@ -260,11 +291,12 @@ export default function CameraStudio() {
           <label htmlFor="shivasha-zoom" style={{ fontWeight: 800 }}>Zoom</label>
           <strong style={{ fontSize: 22, color: "#c4b5fd" }}>{zoom.toFixed(1)}X</strong>
         </div>
-        <input id="shivasha-zoom" type="range" min={zoomMin} max={displayedMax} step="0.1" value={Math.min(zoom, displayedMax)} onChange={e => changeZoom(e.target.value)} disabled={!cameraActive}
+        <input id="shivasha-zoom" type="range" min="1" max={displayedMax} step="0.1" value={Math.min(zoom, displayedMax)} onChange={e => changeZoom(e.target.value)} disabled={!cameraActive}
           style={{ width: "100%", accentColor: "#8b5cf6" }} />
         <div style={{ display: "flex", justifyContent: "space-between", color: "#cbd5e1", fontSize: 12 }}>
-          <span>{zoomMin.toFixed(1)}X</span><span>{displayedMax.toFixed(1)}X available in this camera session</span>
+          <span>1X</span><span>2000X digital scale · native preview max {nativeZoomMax.toFixed(1)}X</span>
         </div>
+        {Capacitor.isNativePlatform() && nativePreviewActive && <p style={{ color: "#fcd34d", fontSize: 12, margin: "8px 0 0" }}>{softwareZoom ? "Software zoom active: preview native limit पर रहेगा; saved photo crop/enlarge होगी।" : "Native camera zoom active."}</p>}
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 18 }}>
           {!cameraActive
             ? <button style={{ ...button, background: "#8b5cf6", color: "#fff" }} onClick={startCamera}>Start Rear Camera</button>
