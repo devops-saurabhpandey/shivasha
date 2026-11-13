@@ -48,13 +48,11 @@ export default function CameraStudio() {
   const [nativeInfo, setNativeInfo] = useState(null);
   const [nativePreviewActive, setNativePreviewActive] = useState(false);
   const nativePreviewRef = useRef(false);
+  const startingRef = useRef(false);
 
   useEffect(() => () => {
     streamRef.current?.getTracks().forEach(track => track.stop());
     if (Capacitor.isNativePlatform()) CameraPreview.stop().catch(() => {});
-    document.documentElement.style.backgroundColor = "";
-    document.body.style.backgroundColor = "";
-    document.documentElement.classList.remove("shivasha-camera-preview-active");
   }, []);
 
   useEffect(() => () => {
@@ -62,8 +60,8 @@ export default function CameraStudio() {
   }, [photoUrl]);
 
   const stopCamera = async () => {
-    if (Capacitor.isNativePlatform() && nativePreviewRef.current) {
-      try { await CameraPreview.stop(); } catch (e) { setError(e.message || "Native camera बंद नहीं हो सका।"); }
+    if (Capacitor.isNativePlatform()) {
+      try { await CameraPreview.stop(); } catch (e) { if (nativePreviewRef.current) setError(e.message || "Native camera बंद नहीं हो सका।"); }
     }
     streamRef.current?.getTracks().forEach(track => track.stop());
     streamRef.current = null;
@@ -71,14 +69,14 @@ export default function CameraStudio() {
     if (videoRef.current) videoRef.current.srcObject = null;
     nativePreviewRef.current = false;
     setNativePreviewActive(false);
-    document.documentElement.style.backgroundColor = "";
-    document.body.style.backgroundColor = "";
     setStatus("Camera बंद है");
     setHardwareZoom(false);
     setZoom(1);
   };
 
   const startCamera = async () => {
+    if (startingRef.current) return;
+    startingRef.current = true;
     setError("");
     setPhotoUrl("");
     if (!Capacitor.isNativePlatform() && !navigator.mediaDevices?.getUserMedia) {
@@ -93,9 +91,8 @@ export default function CameraStudio() {
         setNativeInfo(cameraInfo);
         const permission = await CameraPreview.requestPermissions({ disableAudio: true });
         if (permission.camera !== "granted") throw new Error("Camera permission नहीं मिली। Android Settings में SHIVASHA को Camera permission दें।");
-        document.documentElement.style.backgroundColor = "transparent";
-        document.body.style.backgroundColor = "transparent";
-        document.documentElement.classList.add("shivasha-camera-preview-active");
+        // Use a native preview surface above the WebView so opaque app-shell layers cannot hide it.
+        // The preview bounds match this camera viewport; controls remain outside that rectangle.
         const previewBounds = previewBoxRef.current?.getBoundingClientRect();
         if (!previewBounds || previewBounds.width < 1 || previewBounds.height < 1) throw new Error("Camera preview area तैयार नहीं है।");
         await CameraPreview.start({
@@ -104,7 +101,7 @@ export default function CameraStudio() {
           y: Math.max(0, previewBounds.top),
           width: previewBounds.width,
           height: previewBounds.height,
-          toBack: true,
+          toBack: false,
           disableAudio: true,
           aspectMode: "cover",
           initialZoomLevel: 1
@@ -157,13 +154,23 @@ export default function CameraStudio() {
       setZoom(1);
       setStatus("Rear camera चालू है");
     } catch (e) {
+      if (Capacitor.isNativePlatform()) {
+        try { await CameraPreview.stop(); } catch {}
+      }
+      streamRef.current?.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
+      trackRef.current = null;
+      nativePreviewRef.current = false;
+      setNativePreviewActive(false);
+      setHardwareZoom(false);
       setStatus("Camera चालू नहीं हुआ");
       setError(e.name === "NotAllowedError"
         ? "Camera permission नहीं मिली। Android Settings में SHIVASHA को Camera permission दें।"
         : e.name === "NotFoundError"
           ? "इस device पर usable camera नहीं मिला।"
           : e.message || "Camera शुरू करने में समस्या आई।");
-      stopCamera();
+    } finally {
+      startingRef.current = false;
     }
   };
 
