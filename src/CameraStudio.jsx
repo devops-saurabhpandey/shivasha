@@ -26,7 +26,7 @@ async function cropAndEnlargeJpeg(base64, factor) {
   context.imageSmoothingQuality = "high";
   context.drawImage(image, sx, sy, cropWidth, cropHeight, 0, 0, width, height);
   const dataUrl = canvas.toDataURL("image/jpeg", 0.94);
-  return dataUrl.replace(/^data:image\\/jpeg;base64,/, "");
+  return dataUrl.replace(/^data:image\/jpeg;base64,/, "");
 }
 
 export default function CameraStudio() {
