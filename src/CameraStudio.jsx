@@ -30,6 +30,7 @@ export default function CameraStudio() {
     if (Capacitor.isNativePlatform()) CameraPreview.stop().catch(() => {});
     document.documentElement.style.backgroundColor = "";
     document.body.style.backgroundColor = "";
+    document.documentElement.classList.remove("shivasha-camera-preview-active");
   }, []);
 
   useEffect(() => () => {
@@ -70,6 +71,7 @@ export default function CameraStudio() {
         if (permission.camera !== "granted") throw new Error("Camera permission नहीं मिली। Android Settings में SHIVASHA को Camera permission दें।");
         document.documentElement.style.backgroundColor = "transparent";
         document.body.style.backgroundColor = "transparent";
+        document.documentElement.classList.add("shivasha-camera-preview-active");
         const previewBounds = previewBoxRef.current?.getBoundingClientRect();
         if (!previewBounds || previewBounds.width < 1 || previewBounds.height < 1) throw new Error("Camera preview area तैयार नहीं है।");
         await CameraPreview.start({
