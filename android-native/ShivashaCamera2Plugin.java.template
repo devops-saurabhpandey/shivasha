@@ -1,0 +1,308 @@
+package com.shivasha.next;
+
+import android.Manifest;
+import android.content.Context;
+import android.content.ContentValues;
+import android.net.Uri;
+import android.provider.MediaStore;
+import java.io.OutputStream;
+import android.graphics.Rect;
+import android.hardware.camera2.*;
+import android.media.Image;
+import android.media.ImageReader;
+import android.os.Build;
+import android.os.Handler;
+import android.os.HandlerThread;
+import android.util.Base64;
+import android.util.Size;
+import com.getcapacitor.*;
+import com.getcapacitor.annotation.*;
+import java.nio.ByteBuffer;
+import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
+
+@CapacitorPlugin(name = "ShivashaCamera2", permissions = {
+    @Permission(alias = "camera", strings = { Manifest.permission.CAMERA })
+})
+public class ShivashaCamera2Plugin extends Plugin {
+    @PluginMethod public void getCameraInfo(PluginCall call) {
+        if (getPermissionState("camera") != PermissionState.GRANTED) {
+            requestPermissionForAlias("camera", call, "cameraPermissionCallback");
+            return;
+        }
+        readCameraInfo(call);
+    }
+
+    @PermissionCallback private void cameraPermissionCallback(PluginCall call) {
+        if (getPermissionState("camera") == PermissionState.GRANTED) readCameraInfo(call);
+        else call.reject("Camera permission is required.");
+    }
+
+    @PluginMethod public void capturePhoto(PluginCall call) {
+        if (getPermissionState("camera") != PermissionState.GRANTED) {
+            requestPermissionForAlias("camera", call, "capturePermissionCallback");
+            return;
+        }
+        new CaptureTask(call).start();
+    }
+
+    @PluginMethod public void savePhoto(PluginCall call) {
+        if (Build.VERSION.SDK_INT < 29) {
+            call.reject("Gallery saving currently requires Android 10 or newer.");
+            return;
+        }
+        String encoded = call.getString("base64");
+        if (encoded == null || encoded.isEmpty()) {
+            call.reject("Photo data is missing.");
+            return;
+        }
+        Uri imageUri = null;
+        try {
+            byte[] bytes = Base64.decode(encoded, Base64.DEFAULT);
+            String filename = "SHIVASHA-" + System.currentTimeMillis() + ".jpg";
+            ContentValues values = new ContentValues();
+            values.put(MediaStore.Images.Media.DISPLAY_NAME, filename);
+            values.put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg");
+            values.put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/SHIVASHA");
+            values.put(MediaStore.Images.Media.IS_PENDING, 1);
+            imageUri = getContext().getContentResolver().insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values);
+            if (imageUri == null) throw new IllegalStateException("Android could not create a gallery image entry.");
+            try (OutputStream output = getContext().getContentResolver().openOutputStream(imageUri, "w")) {
+                if (output == null) throw new IllegalStateException("Could not open the gallery image for writing.");
+                output.write(bytes);
+                output.flush();
+            }
+            ContentValues published = new ContentValues();
+            published.put(MediaStore.Images.Media.IS_PENDING, 0);
+            getContext().getContentResolver().update(imageUri, published, null, null);
+            JSObject result = new JSObject();
+            result.put("uri", imageUri.toString());
+            result.put("fileName", filename);
+            call.resolve(result);
+        } catch (Exception e) {
+            if (imageUri != null) {
+                try { getContext().getContentResolver().delete(imageUri, null, null); } catch (Exception ignored) {}
+            }
+            call.reject("Unable to save photo to Pictures/SHIVASHA: " + e.getMessage(), e);
+        }
+    }
+
+    @PermissionCallback private void capturePermissionCallback(PluginCall call) {
+        if (getPermissionState("camera") == PermissionState.GRANTED) new CaptureTask(call).start();
+        else call.reject("Camera permission is required to capture a photo.");
+    }
+
+    private void readCameraInfo(PluginCall call) {
+        try {
+            CameraManager manager = (CameraManager) getContext().getSystemService(Context.CAMERA_SERVICE);
+            for (String id : manager.getCameraIdList()) {
+                CameraCharacteristics c = manager.getCameraCharacteristics(id);
+                Integer facing = c.get(CameraCharacteristics.LENS_FACING);
+                if (facing == null || facing != CameraCharacteristics.LENS_FACING_BACK) continue;
+                Float digital = c.get(CameraCharacteristics.SCALER_AVAILABLE_MAX_DIGITAL_ZOOM);
+                Float maxZoom = digital;
+                if (Build.VERSION.SDK_INT >= 30) {
+                    android.util.Range<Float> range = c.get(CameraCharacteristics.CONTROL_ZOOM_RATIO_RANGE);
+                    if (range != null) maxZoom = range.getUpper();
+                }
+                JSObject out = new JSObject();
+                out.put("cameraId", id);
+                out.put("facing", "BACK");
+                out.put("hardwareSupportLevel", hardwareLevelName(c.get(CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL)));
+                out.put("maxDigitalZoom", digital == null ? 1.0 : digital.doubleValue());
+                out.put("maxZoomRatio", maxZoom == null ? 1.0 : maxZoom.doubleValue());
+                out.put("androidApiLevel", Build.VERSION.SDK_INT);
+                JSArray focal = new JSArray();
+                float[] focalValues = c.get(CameraCharacteristics.LENS_INFO_AVAILABLE_FOCAL_LENGTHS);
+                if (focalValues != null) for (float value : focalValues) focal.put(value);
+                out.put("focalLengthsMm", focal);
+                JSArray caps = new JSArray();
+                int[] available = c.get(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES);
+                if (available != null) for (int cap : available) {
+                    if (cap == CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_MANUAL_SENSOR) caps.put("MANUAL_SENSOR");
+                    if (cap == CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_RAW) caps.put("RAW");
+                    if (cap == CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_BURST_CAPTURE) caps.put("BURST_CAPTURE");
+                    if (cap == CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_MANUAL_POST_PROCESSING) caps.put("MANUAL_POST_PROCESSING");
+                }
+                out.put("capabilities", caps);
+                int[] ois = c.get(CameraCharacteristics.LENS_INFO_AVAILABLE_OPTICAL_STABILIZATION);
+                out.put("oisAvailable", containsMode(ois, CameraCharacteristics.LENS_OPTICAL_STABILIZATION_MODE_ON));
+                int[] eis = c.get(CameraCharacteristics.CONTROL_AVAILABLE_VIDEO_STABILIZATION_MODES);
+                out.put("videoStabilizationAvailable", containsMode(eis, CameraCharacteristics.CONTROL_VIDEO_STABILIZATION_MODE_ON));
+                call.resolve(out);
+                return;
+            }
+            call.reject("No rear-facing Camera2 camera was found.");
+        } catch (Exception e) {
+            call.reject("Unable to read Camera2 characteristics: " + e.getMessage(), e);
+        }
+    }
+
+    private final class CaptureTask {
+        private final PluginCall call;
+        private final AtomicBoolean done = new AtomicBoolean(false);
+        private final HandlerThread thread = new HandlerThread("ShivashaCamera2Capture");
+        private Handler handler;
+        private CameraDevice camera;
+        private CameraCaptureSession session;
+        private ImageReader reader;
+        private Runnable timeout;
+
+        CaptureTask(PluginCall call) { this.call = call; }
+
+        void start() {
+            thread.start();
+            handler = new Handler(thread.getLooper());
+            timeout = () -> fail("Camera2 capture timed out. Please try again.", null);
+            handler.postDelayed(timeout, 15000);
+            try {
+                CameraManager manager = (CameraManager) getContext().getSystemService(Context.CAMERA_SERVICE);
+                String id = null;
+                CameraCharacteristics chars = null;
+                for (String candidate : manager.getCameraIdList()) {
+                    CameraCharacteristics c = manager.getCameraCharacteristics(candidate);
+                    Integer facing = c.get(CameraCharacteristics.LENS_FACING);
+                    if (facing != null && facing == CameraCharacteristics.LENS_FACING_BACK) {
+                        id = candidate; chars = c; break;
+                    }
+                }
+                if (id == null || chars == null) throw new IllegalStateException("Rear Camera2 device not found.");
+                final CameraCharacteristics characteristics = chars;
+                final float requestedZoom = Math.max(1f, call.getFloat("zoom", 1f));
+                Float max = chars.get(CameraCharacteristics.SCALER_AVAILABLE_MAX_DIGITAL_ZOOM);
+                float limit = max == null ? 1f : max;
+                if (Build.VERSION.SDK_INT >= 30) {
+                    android.util.Range<Float> range = chars.get(CameraCharacteristics.CONTROL_ZOOM_RATIO_RANGE);
+                    if (range != null) limit = range.getUpper();
+                }
+                final float appliedZoom = Math.min(requestedZoom, Math.max(1f, limit));
+                manager.openCamera(id, new CameraDevice.StateCallback() {
+                    @Override public void onOpened(CameraDevice opened) {
+                        if (done.get()) { opened.close(); return; }
+                        camera = opened;
+                        try {
+                            android.hardware.camera2.params.StreamConfigurationMap map =
+                                characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
+                            Size[] sizes = map.getOutputSizes(android.graphics.ImageFormat.JPEG);
+                            if (sizes == null || sizes.length == 0) throw new IllegalStateException("JPEG output unavailable.");
+                            Size selected = sizes[0];
+                            for (Size size : sizes) {
+                                long area = (long) size.getWidth() * size.getHeight();
+                                long selectedArea = (long) selected.getWidth() * selected.getHeight();
+                                if ((area <= 12000000L && (selectedArea > 12000000L || area > selectedArea))
+                                    || (selectedArea > 12000000L && area > selectedArea)) selected = size;
+                            }
+                            reader = ImageReader.newInstance(selected.getWidth(), selected.getHeight(), android.graphics.ImageFormat.JPEG, 2);
+                            reader.setOnImageAvailableListener(source -> {
+                                Image image = null;
+                                try {
+                                    image = source.acquireNextImage();
+                                    if (image == null || done.get()) return;
+                                    ByteBuffer buffer = image.getPlanes()[0].getBuffer();
+                                    byte[] jpeg = new byte[buffer.remaining()];
+                                    buffer.get(jpeg);
+                                    if (done.compareAndSet(false, true)) {
+                                        handler.removeCallbacks(timeout);
+                                        JSObject result = new JSObject();
+                                        result.put("base64", Base64.encodeToString(jpeg, Base64.NO_WRAP));
+                                        result.put("mimeType", "image/jpeg");
+                                        result.put("width", image.getWidth());
+                                        result.put("height", image.getHeight());
+                                        result.put("requestedZoom", requestedZoom);
+                                        result.put("appliedZoom", appliedZoom);
+                                        result.put("zoomMode", Build.VERSION.SDK_INT >= 30 ? "Camera2 zoom ratio / sensor crop" : "Camera2 sensor crop");
+                                        release();
+                                        call.resolve(result);
+                                    }
+                                } catch (Exception e) { fail("Could not read captured JPEG: " + e.getMessage(), e); }
+                                finally { if (image != null) image.close(); }
+                            }, handler);
+
+                            opened.createCaptureSession(Collections.singletonList(reader.getSurface()), new CameraCaptureSession.StateCallback() {
+                                @Override public void onConfigured(CameraCaptureSession configured) {
+                                    if (done.get()) { configured.close(); return; }
+                                    session = configured;
+                                    try {
+                                        CaptureRequest.Builder request = opened.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE);
+                                        request.addTarget(reader.getSurface());
+                                        request.set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO);
+                                        request.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
+                                        request.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON);
+                                        Integer orientation = characteristics.get(CameraCharacteristics.SENSOR_ORIENTATION);
+                                        if (orientation != null) request.set(CaptureRequest.JPEG_ORIENTATION, orientation);
+                                        boolean ratioApplied = false;
+                                        if (Build.VERSION.SDK_INT >= 30) {
+                                            try {
+                                                android.util.Range<Float> range = characteristics.get(CameraCharacteristics.CONTROL_ZOOM_RATIO_RANGE);
+                                                if (range != null) {
+                                                    request.set(CaptureRequest.CONTROL_ZOOM_RATIO, appliedZoom);
+                                                    ratioApplied = true;
+                                                }
+                                            } catch (Exception ignored) {}
+                                        }
+                                        if (!ratioApplied) {
+                                            Rect active = characteristics.get(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE);
+                                            if (active != null) {
+                                                int w = Math.round(active.width() / appliedZoom);
+                                                int h = Math.round(active.height() / appliedZoom);
+                                                int left = active.centerX() - w / 2;
+                                                int top = active.centerY() - h / 2;
+                                                request.set(CaptureRequest.SCALER_CROP_REGION, new Rect(left, top, left + w, top + h));
+                                            }
+                                        }
+                                        configured.capture(request.build(), new CameraCaptureSession.CaptureCallback() {
+                                            @Override public void onCaptureFailed(CameraCaptureSession s, CaptureRequest r, CaptureFailure failure) {
+                                                fail("Camera2 capture failed: " + failure.getReason(), null);
+                                            }
+                                        }, handler);
+                                    } catch (Exception e) { fail("Unable to capture photo: " + e.getMessage(), e); }
+                                }
+                                @Override public void onConfigureFailed(CameraCaptureSession failed) {
+                                    fail("Camera2 could not configure a still-photo session.", null);
+                                }
+                            }, handler);
+                        } catch (Exception e) { fail("Unable to prepare Camera2 capture: " + e.getMessage(), e); }
+                    }
+                    @Override public void onDisconnected(CameraDevice disconnected) {
+                        disconnected.close(); fail("Camera disconnected during capture.", null);
+                    }
+                    @Override public void onError(CameraDevice failedCamera, int error) {
+                        failedCamera.close(); fail("Camera2 open failed with error " + error + ".", null);
+                    }
+                }, handler);
+            } catch (Exception e) { fail("Unable to open Camera2: " + e.getMessage(), e); }
+        }
+
+        private void fail(String message, Exception error) {
+            if (!done.compareAndSet(false, true)) return;
+            if (handler != null && timeout != null) handler.removeCallbacks(timeout);
+            release();
+            if (error == null) call.reject(message); else call.reject(message, error);
+        }
+
+        private void release() {
+            try { if (session != null) session.close(); } catch (Exception ignored) {}
+            try { if (camera != null) camera.close(); } catch (Exception ignored) {}
+            try { if (reader != null) reader.close(); } catch (Exception ignored) {}
+            thread.quitSafely();
+        }
+    }
+
+    private boolean containsMode(int[] modes, int expected) {
+        if (modes == null) return false;
+        for (int mode : modes) if (mode == expected) return true;
+        return false;
+    }
+
+    private String hardwareLevelName(Integer level) {
+        if (level == null) return "UNKNOWN";
+        switch (level) {
+            case CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_LEGACY: return "LEGACY";
+            case CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_LIMITED: return "LIMITED";
+            case CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_FULL: return "FULL";
+            case CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_3: return "LEVEL_3";
+            case CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_EXTERNAL: return "EXTERNAL";
+            default: return "UNKNOWN";
+        }
+    }
+}

@@ -959,3 +959,4 @@ a, .hashtag-link, .switch-auth { color: #287d79; }
 .yt-draft-badge{font-size:10px;font-weight:800;background:#f3f4f6;padding:5px 8px;border-radius:999px;white-space:nowrap}.yt-remove{border:0;background:transparent;color:#9ca3af;font-size:20px;cursor:pointer}
 @media(max-width:800px){.yt-workspace-grid{grid-template-columns:1fr}.yt-hero{align-items:flex-start}.yt-fields-row{grid-template-columns:1fr}}
 @media(max-width:480px){.yt-format-grid{grid-template-columns:1fr}.yt-project{gap:8px}.yt-project-info{max-width:calc(100% - 100px)}.yt-status{display:none}}
+
