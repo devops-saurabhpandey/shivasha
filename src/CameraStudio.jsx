@@ -46,6 +46,7 @@ export default function CameraStudio() {
   const [nativePhotoBase64, setNativePhotoBase64] = useState("");
   const [busy, setBusy] = useState(false);
   const [nativeInfo, setNativeInfo] = useState(null);
+  const [captureDimensions, setCaptureDimensions] = useState(null);
   const [nativePreviewActive, setNativePreviewActive] = useState(false);
   const nativePreviewRef = useRef(false);
   const startingRef = useRef(false);
@@ -109,6 +110,21 @@ export default function CameraStudio() {
         });
         nativePreviewRef.current = true;
         setNativePreviewActive(true);
+        // Select a supported high-resolution rear still size, capped at 12 MP for memory safety.
+        try {
+          const sizeResult = await CameraPreview.getSupportedPictureSizes();
+          const rearCamera = (sizeResult.supportedPictureSizes || []).find(item =>
+            /rear|back/i.test(String(item.facing || ""))
+          );
+          const candidates = (rearCamera?.supportedPictureSizes || [])
+            .filter(size => Number(size.width) > 0 && Number(size.height) > 0);
+          const withinMemoryCap = candidates.filter(size => size.width * size.height <= 12000000);
+          const pool = withinMemoryCap.length ? withinMemoryCap : candidates;
+          const best = pool.sort((a, b) => (b.width * b.height) - (a.width * a.height))[0];
+          if (best) setCaptureDimensions({ width: best.width, height: best.height });
+        } catch {
+          setCaptureDimensions(null);
+        }
         const zoomInfo = await CameraPreview.getZoom();
         const max = Math.max(1, Number(zoomInfo.max || cameraInfo.maxZoomRatio || cameraInfo.maxDigitalZoom || 1));
         setZoomMin(Math.max(1, Number(zoomInfo.min || 1)));
@@ -200,7 +216,9 @@ export default function CameraStudio() {
       setBusy(true);
       setError("");
       try {
-        const result = await CameraPreview.capture({ quality: 95 });
+        const captureOptions = { quality: 100 };
+        if (captureDimensions) Object.assign(captureOptions, captureDimensions);
+        const result = await CameraPreview.capture(captureOptions);
         const source = String(result.value || "").replace(/^data:image\/[^;]+;base64,/, "");
         if (!source) throw new Error("Native preview ने photo data नहीं लौटाया।");
         const extraCrop = Math.max(1, zoom / Math.max(1, nativeZoomMax));
@@ -321,7 +339,7 @@ export default function CameraStudio() {
       <div style={{ marginTop: 16, padding: 14, border: "1px solid var(--border, #dbe2ea)", borderRadius: 14 }}>
         <b>महत्वपूर्ण जानकारी</b>
         <p style={{ marginBottom: 0, color: "var(--muted, #64748b)", lineHeight: 1.6 }}>
-          Android app में native CameraX live preview, live zoom और उसी active preview session से photo capture इस्तेमाल होता है। Gallery save के लिए फोटो native MediaStore bridge से Pictures/SHIVASHA में भेजी जाती है। Browser build में WebView camera fallback चलता है। यह digital zoom है, optical zoom नहीं; 2000X quality का दावा नहीं है। OnePlus 6 पर वास्तविक camera और lifecycle testing अभी आवश्यक है।
+          Android app में native CameraX live preview और उसी camera session से high-resolution photo capture इस्तेमाल होता है। उपलब्ध rear-camera sizes में से 12 MP तक का सबसे बड़ा supported size चुना जाता है; Gallery save के लिए फोटो native MediaStore bridge से Pictures/SHIVASHA में भेजी जाती है। Browser build में WebView camera fallback चलता है। यह digital zoom है, optical zoom नहीं; 2000X पर वास्तविक नई detail नहीं बनती। OnePlus 6 पर वास्तविक camera और lifecycle testing अभी आवश्यक है।
         </p>
       </div>
     </section>
