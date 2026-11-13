@@ -960,14 +960,3 @@ a, .hashtag-link, .switch-auth { color: #287d79; }
 @media(max-width:800px){.yt-workspace-grid{grid-template-columns:1fr}.yt-hero{align-items:flex-start}.yt-fields-row{grid-template-columns:1fr}}
 @media(max-width:480px){.yt-format-grid{grid-template-columns:1fr}.yt-project{gap:8px}.yt-project-info{max-width:calc(100% - 100px)}.yt-status{display:none}}
 
-
-/* Make every app-shell layer transparent while native CameraX is placed behind the WebView. */
-html.shivasha-camera-preview-active,
-html.shivasha-camera-preview-active body,
-html.shivasha-camera-preview-active #root,
-html.shivasha-camera-preview-active .social-shell,
-html.shivasha-camera-preview-active .main,
-html.shivasha-camera-preview-active .content {
-  background: transparent !important;
-  background-image: none !important;
-}
