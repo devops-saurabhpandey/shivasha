@@ -80,6 +80,7 @@ export default function CameraStudio() {
     setError("");
     setPhotoUrl("");
     if (!Capacitor.isNativePlatform() && !navigator.mediaDevices?.getUserMedia) {
+      startingRef.current = false;
       setError("इस browser में camera access उपलब्ध नहीं है।");
       return;
     }
