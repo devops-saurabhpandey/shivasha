@@ -333,6 +333,29 @@ test("real MongoDB HR routes enforce tenant isolation, maker-checker and durable
       });
       const mappingPath = resolve(temporaryDirectory, "owner-company-map.json");
       writeFileSync(mappingPath, JSON.stringify({ [String(hrUser._id)]: String(companyA._id) }));
+
+      // Non-test database targets and --apply without exact approval are
+      // rejected before any connection or migration work can begin.
+      const migrationCommands = [
+        [resolve(scriptsDirectory, "migrateHRIndexes.js"), []],
+        [resolve(scriptsDirectory, "migrateHRCompanyOwnership.js"), ["--mapping=" + mappingPath]]
+      ];
+      for (const [script, args] of migrationCommands) {
+        const blockedTarget = spawnSync(process.execPath, [script, ...args], {
+          cwd: resolve(scriptsDirectory, ".."), encoding: "utf8",
+          env: { ...process.env, MONGODB_URI: "mongodb://127.0.0.1:27017/shivasha_migration_guard", HR_MIGRATION_ALLOW_NON_TEST_DATABASE: "" }
+        });
+        assert.notEqual(blockedTarget.status, 0);
+        assert.match(blockedTarget.stderr, /Refusing non-test database/);
+
+        const blockedApply = spawnSync(process.execPath, [script, ...args, "--apply"], {
+          cwd: resolve(scriptsDirectory, ".."), encoding: "utf8",
+          env: { ...process.env, MONGODB_URI: mongoUri, HR_MIGRATION_ALLOW_APPLY: "true" }
+        });
+        assert.notEqual(blockedApply.status, 0);
+        assert.match(blockedApply.stderr, /Refusing --apply/);
+      }
+
       const beforeOwnershipDryRun = await snapshotCollections();
       const ownershipDryRun = spawnSync(process.execPath, [
         resolve(scriptsDirectory, "migrateHRCompanyOwnership.js"), "--mapping=" + mappingPath
