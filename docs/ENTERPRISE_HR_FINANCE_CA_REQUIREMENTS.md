@@ -169,3 +169,10 @@ Loan schedules calculate monthly interest and principal in paise, adjust the fin
 Unit tests cover invalid and boundary inputs, payroll deductions, paise rounding, zero-interest and interest-bearing amortization, final-balance closure, GST inclusive/exclusive reconciliation, TDS net payable, depreciation bounds, and negative cash positions.
 
 These calculations remain planning estimates. They do not yet implement effective-dated statutory PF/ESI, professional tax, GST, TDS or income-tax rules, accounting journals, lender-specific conventions, or legally approved rounding policies. Do not use them for statutory filing, payroll release, or audited financial statements without jurisdiction-specific configuration and independent domain review.
+
+
+## Phase 2D.1 — effective-dated statutory rule configuration
+
+Added `src/statutoryRuleConfig.js` as a configuration and resolution foundation for India and future jurisdictions. Rule records require an explicit country, jurisdiction, domain, rule code, effective-from date, optional exclusive effective-to date, value payload, approval status, and HTTPS source references. The validator rejects invalid calendar dates and overlapping periods for the same jurisdiction/domain/rule code. The resolver returns exactly one approved rule for an explicit jurisdiction and as-of date; it never silently falls back to another state or accepts draft rules.
+
+The module intentionally contains no statutory rates or slabs. Official rates and thresholds must be populated only after source verification and HR/payroll/tax domain approval. These rules are not yet connected to payroll calculations or production persistence. Unit tests cover date boundaries, overlapping periods, missing sources, draft rules, and jurisdiction mismatch.
