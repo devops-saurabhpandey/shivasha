@@ -213,7 +213,7 @@ async function start() {
   try {
     if (!process.env.JWT_SECRET) throw new Error("JWT_SECRET is required");
     if (process.env.MONGODB_URI) {
-      await mongoose.connect(process.env.MONGODB_URI);
+      await mongoose.connect(process.env.MONGODB_URI, { writeConcern: { w: 1, j: true, wtimeout: 10000 } });
       console.log("MongoDB connected");
       startHRAuditOutboxWorker();
     } else {

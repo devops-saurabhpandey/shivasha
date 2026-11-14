@@ -26,7 +26,7 @@ test("real MongoDB HR routes enforce tenant isolation, maker-checker and durable
   }
 
   process.env.JWT_SECRET = "shivasha-hr-integration-test-only-secret";
-  await mongoose.connect(mongoUri, { serverSelectionTimeoutMS: 15000 });
+  await mongoose.connect(mongoUri, { serverSelectionTimeoutMS: 15000, writeConcern: { w: 1, j: true, wtimeout: 10000 } });
   const serverApp = express();
   serverApp.use(express.json());
   serverApp.use("/api/hr", hrRoutes);

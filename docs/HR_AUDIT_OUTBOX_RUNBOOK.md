@@ -10,7 +10,7 @@ The repository's self-hosted Compose topology runs MongoDB 8 as a standalone mon
 4. The worker removes the embedded intent only after it has verified the central audit record. If it crashes after inserting but before removing, retry sees the same _id and safely completes the acknowledgement.
 5. The worker runs after MongoDB connects and retries every five seconds. A mutation also attempts an immediate flush.
 
-This design does not require replica-set transactions and is compatible with the repository's standalone MongoDB Compose service as well as replica-set deployments. It deliberately does not claim protection from disk loss, database administrators with write access, or a total loss of the database; backups and access controls remain necessary.
+The application MongoDB connection requests acknowledged, journaled writes (w: 1, j: true, 10-second write timeout) so a successful HR write does not depend only on an unjournaled acknowledgement. This design does not require replica-set transactions and is compatible with the repository's standalone MongoDB Compose service as well as replica-set deployments. It deliberately does not claim protection from disk loss, database administrators with write access, or a total loss of the database; backups and access controls remain necessary.
 
 ## Failure behavior
 
