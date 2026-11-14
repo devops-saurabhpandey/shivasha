@@ -190,3 +190,10 @@ Important scope boundary: this value is the mandatory-coverage wage ceiling unde
 Added an attendance-proration engine and HR calculator panel. It classifies present days, paid leave, weekly offs, paid holidays and unpaid leave; all categories must sum exactly to the payroll-day denominator. Fixed salary components (basic, HRA and allowances) are prorated to paise; variable earnings and other approved deductions are entered separately. Invalid fractional days, incomplete/duplicated day totals and deductions above payable gross are rejected.
 
 The payroll-day denominator and paid-day policy differ by employer, state rules, contract and attendance policy. The feature therefore requires the operator to enter the organization's approved convention and does not infer statutory leave entitlements, overtime, minimum wages, PF/ESI or tax deductions. Unit tests cover full attendance, unpaid leave, category reconciliation, fractional days and excessive deductions.
+
+
+## Phase 2D.4 — monthly payroll register snapshot
+
+Added `src/hrPayrollRegister.js` to build a monthly payroll register from explicit employee and attendance snapshots. It validates the payroll month, employee identity/status, case-insensitive duplicate employee codes, UAN format, and attendance-day reconciliation. Inactive employees are excluded with a recorded reason. The output includes per-employee attendance and salary snapshots plus reconciled gross, variable earnings, other deductions and net-pay totals. Tests cover successful totals and invalid/missing data.
+
+Scope boundary: this is a deterministic calculation/snapshot builder only. It does not persist payroll runs, calculate PF/EPS/EDLI/ESI or income tax, decide eligibility, apply leave law, or replace maker-checker approval and payment controls. Statutory contribution fields remain deliberately unpopulated until the relevant approved rule sets and employee-level applicability are integrated.
