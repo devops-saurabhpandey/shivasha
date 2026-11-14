@@ -154,10 +154,14 @@ export function calculateWorkingCapital(input) {
   const payables = roundMoney(parseNonNegative(input.payables, "Trade payables"));
   const debt = roundMoney(parseNonNegative(input.shortTermDebt, "Short-term debt"));
   const cash = roundMoney(openingCash + receipts - payments);
-  const currentAssets = roundMoney(cash + receivables + inventory);
-  const currentLiabilities = roundMoney(payables + debt);
+  // A negative bank balance is an overdraft liability, not a negative current asset.
+  const cashAsset = Math.max(0, cash);
+  const bankOverdraft = roundMoney(Math.max(0, -cash));
+  const currentAssets = roundMoney(cashAsset + receivables + inventory);
+  const currentLiabilities = roundMoney(payables + debt + bankOverdraft);
   return {
-    cash, netCashFlow: roundMoney(receipts - payments), currentAssets, currentLiabilities,
+    cash, cashAsset, bankOverdraft, netCashFlow: roundMoney(receipts - payments),
+    currentAssets, currentLiabilities,
     workingCapital: roundMoney(currentAssets - currentLiabilities),
     currentRatio: currentLiabilities > 0 ? currentAssets / currentLiabilities : null
   };
