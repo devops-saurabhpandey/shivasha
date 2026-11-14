@@ -86,7 +86,7 @@ After review, apply:
 npm run migrate:hr-indexes -- --apply
 ```
 
-This replaces the old global employee-code, attendance employee/date and payroll-month unique indexes with company-scoped unique indexes. It does not change HR documents.
+This replaces the old global employee-code, attendance employee/date and payroll-month unique indexes with company-scoped unique indexes. It also creates the non-unique auditOutbox.eventId scan index on all five HR collections so the retry worker can locate pending audit intents efficiently. It does not change HR documents.
 
 ## 6. Verify tenant isolation
 
@@ -102,7 +102,7 @@ Use two test companies and at least two users with different memberships. Verify
 - The payroll preparer cannot approve their own run, and the approver cannot mark that same run as paid.
 - HR manager cannot use finance ledger or tax APIs; payroll actions require their distinct `hr.payroll.*` permission.
 
-The current automated tests cover permission mapping and model ownership/index definitions. Route-level database integration tests and production security review are still required before this phase is approved for production.
+CI now runs real MongoDB route-level integration tests against an isolated standalone MongoDB service. They verify company A cannot read, update or archive company B records, reject foreign-tenant payroll employees, enforce maker-checker/release permissions and retry a pending audit outbox event. Production security review, backup/restore drills and verified legacy ownership migration are still required before this phase is approved for production.
 
 ## Current implementation boundary
 

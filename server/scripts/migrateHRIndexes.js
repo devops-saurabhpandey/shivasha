@@ -58,6 +58,28 @@ async function main() {
     await collection.createIndex(item.scopedKeys, { unique: true, partialFilterExpression: { companyId: { $type: "objectId" } }, name: item.name === HREmployee.collection.name ? "company_employee_code_unique" : item.name === HRPayrollRun.collection.name ? "company_payroll_month_unique" : "company_employee_attendance_date_unique" });
     console.log("Created company-scoped unique index for " + item.name);
   }
+
+  // The HR audit worker scans these multikey indexes to find durable outbox
+  // entries without repeatedly scanning every HR document.
+  for (const model of [HREmployee, HRAttendance, HRLeave, HRChallan, HRPayrollRun]) {
+    const collection = db.collection(model.collection.name);
+    const keys = { "auditOutbox.eventId": 1 };
+    const indexes = await collection.indexes();
+    const existing = indexes.find(index => sameKeys(index.key, keys));
+    if (!APPLY) {
+      console.log(JSON.stringify({
+        collection: model.collection.name,
+        existingAuditOutboxIndex: existing?.name || null,
+        plannedAction: existing ? "keep existing audit outbox scan index" : "create audit outbox scan index"
+      }));
+      continue;
+    }
+    if (!existing) {
+      await collection.createIndex(keys, { name: "hr_audit_outbox_pending" });
+      console.log("Created HR audit outbox scan index for " + model.collection.name);
+    }
+  }
+
 }
 
 main().catch(error => {
