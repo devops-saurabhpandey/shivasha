@@ -124,8 +124,12 @@ const payrollRunSchema = new mongoose.Schema({
     uan: { type: String, default: "", maxlength: 12 },
     attendanceSnapshot: {
       totalDays: { type: Number, min: 0 },
-      paidDays: { type: Number, min: 0 },
-      unpaidLeaveDays: { type: Number, min: 0 }
+      presentDays: { type: Number, min: 0 },
+      paidLeaveDays: { type: Number, min: 0 },
+      weeklyOffDays: { type: Number, min: 0 },
+      paidHolidayDays: { type: Number, min: 0 },
+      unpaidLeaveDays: { type: Number, min: 0 },
+      paidDays: { type: Number, min: 0 }
     },
     salaryComponents: {
       basic: { type: Number, min: 0 },
