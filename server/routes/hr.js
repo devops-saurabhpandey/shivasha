@@ -6,7 +6,7 @@ import CompanyMembership from "../models/CompanyMembership.js";
 import { hasCompanyPermission } from "../enterprise/companyConfig.js";
 import { createHRCompanyAuthorizationMiddleware } from "../enterprise/hrAuthorization.js";
 import { validatePayrollTransition } from "../enterprise/payrollWorkflow.js";
-import { createHRAuditEvent, flushHRAuditOutboxForDocument, withHRAuditCapacity } from "../enterprise/hrAuditOutbox.js";
+import { MAX_PENDING_HR_AUDIT_EVENTS, createHRAuditEvent, flushHRAuditOutboxForDocument, withHRAuditCapacity } from "../enterprise/hrAuditOutbox.js";
 import { HREmployee, HRAttendance, HRLeave, HRChallan, HRPayrollRun } from "../models/HR.js";
 
 const router = Router();
@@ -512,7 +512,19 @@ router.patch("/payroll-runs/:id/status", async (req, res) => {
       { $set: updates, $push: { auditOutbox: event } },
       { new: true, runValidators: true }
     );
-    if (!run) return res.status(409).json({ message: "Payroll changed concurrently or its audit outbox is at capacity. Reload and retry after audit recovery." });
+    if (!run) {
+      const latest = await HRPayrollRun.findOne({
+        _id: current._id, companyId: req.companyId, deletedAt: null
+      }).select("status auditOutbox").lean();
+      if (!latest) return res.status(404).json({ message: "Payroll run not found" });
+      if (latest.status !== current.status) {
+        return res.status(409).json({ message: "Payroll changed concurrently. Reload before retrying the transition." });
+      }
+      if ((latest.auditOutbox?.length || 0) >= MAX_PENDING_HR_AUDIT_EVENTS) {
+        return res.status(503).json({ message: "The HR audit outbox is at capacity. No payroll status change was applied; retry after audit recovery." });
+      }
+      return res.status(409).json({ message: "Payroll transition could not be applied. Reload and retry." });
+    }
     return respondWithAudit(res, HRPayrollRun, run._id, event, { run });
   } catch {
     res.status(500).json({ message: "Could not update payroll status" });
