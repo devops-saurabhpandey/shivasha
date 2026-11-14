@@ -158,3 +158,14 @@ The HR and Payroll browser pages now load company memberships, support company c
 **Legacy-data migration is deliberately separate.** Existing HR records are not automatically assigned to a company. The explicit owner-to-company mapping migration and company-scoped unique-index migration are documented in [HR Tenant Migration Runbook](./HR_TENANT_MIGRATION_RUNBOOK.md). Both scripts default to dry-run and require explicit `--apply`; the ownership migration refuses to guess when a creator mapping or employee relationship is missing.
 
 Current limits: company ownership is required for newly created HR documents, while legacy documents may remain unassigned until the explicit migration is approved and applied; legacy global unique indexes may still exist until the guarded index migration is applied; route-level database integration tests, full tenant-isolation tests, production backup/restore validation, and security review remain release gates. Do not use unassigned legacy HR records or claim production readiness until these gates pass.
+
+
+## Phase 2D implementation note — shared calculator math
+
+The HR/Finance/CA calculator screen now consumes a shared frontend calculation module at `src/roleCalculatorMath.js`. It provides bounded non-negative input parsing, paise-rounded INR amounts, salary calculations, amortized loan schedules, GST, TDS, straight-line/first-year WDV depreciation, and working-capital calculations. Invalid input is surfaced beside the relevant calculator instead of silently coerced to zero.
+
+Loan schedules calculate monthly interest and principal in paise, adjust the final payment to the outstanding balance, and expose a final-balance reconciliation value. The first 12 instalments are shown in the UI; totals are calculated across the full configured tenure. A zero-liability current ratio is shown as unavailable rather than as a fabricated zero ratio.
+
+Unit tests cover invalid and boundary inputs, payroll deductions, paise rounding, zero-interest and interest-bearing amortization, final-balance closure, GST inclusive/exclusive reconciliation, TDS net payable, depreciation bounds, and negative cash positions.
+
+These calculations remain planning estimates. They do not yet implement effective-dated statutory PF/ESI, professional tax, GST, TDS or income-tax rules, accounting journals, lender-specific conventions, or legally approved rounding policies. Do not use them for statutory filing, payroll release, or audited financial statements without jurisdiction-specific configuration and independent domain review.
