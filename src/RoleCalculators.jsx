@@ -89,7 +89,7 @@ export default function RoleCalculators() {
     `}</style>
     <div className="role-hero"><span className="role-kicker">SHIVASHA • PROFESSIONAL TOOLS</span><h2>HR, Finance & CA Calculators</h2><p>Practical India-focused tools for payroll, cash flow, working capital, loan EMI, GST, TDS and accounts.</p></div>
     <div className="role-tabs" role="tablist" aria-label="Professional calculator categories">{tabs.map(([key,icon,label])=><button type="button" role="tab" aria-selected={tab===key} key={key} className={tab===key?"active":""} onClick={()=>setTab(key)}>{icon} {label}</button>)}</div>
-    {tab==="hr"&&<div className="role-grid">
+    {tab==="hr"&&<><div className="role-grid">
       <div className="panel role-panel"><h3>HR Manager · Salary Calculator</h3><p className="muted">Enter monthly salary components and contribution rates.</p><div className="role-fields">
         <Field label="Basic salary" value={basic} onChange={setBasic} suffix="₹ / month"/><Field label="HRA" value={hra} onChange={setHra} suffix="₹ / month"/><Field label="Other allowances" value={allowance} onChange={setAllowance} suffix="₹ / month"/><Field label="Employee PF rate" value={employeePf} onChange={setEmployeePf} suffix="%"/><Field label="Employer PF rate" value={employerPf} onChange={setEmployerPf} suffix="%"/><Field label="Professional tax" value={professionalTax} onChange={setProfessionalTax} suffix="₹ / month"/>
       </div><label className="role-check"><input type="checkbox" checked={esiEnabled} onChange={e=>setEsiEnabled(e.target.checked)}/> Include ESI (enter applicable rates)</label>{esiEnabled&&<div className="role-fields"><Field label="Employee ESI rate" value={esiEmployee} onChange={setEsiEmployee} suffix="%"/><Field label="Employer ESI rate" value={esiEmployer} onChange={setEsiEmployer} suffix="%"/></div>}</div>
@@ -117,7 +117,7 @@ export default function RoleCalculators() {
           <Stat label="Net payable" value={money(attendance.net)}/>
         </div>
         <div className="role-note">Paid leave, weekly offs and paid holidays count as paid days. Every calendar/payroll day must be classified exactly once. Variable earnings and other deductions are entered as approved amounts. This tool does not determine statutory eligibility or deductions.</div>
-      </div>}
+      </div></>}
     {tab==="loan"&&<><div className="role-grid">
       <div className="panel role-panel"><h3>Finance Manager · Cash Flow & Working Capital</h3><p className="muted">Monitor cash position, operating cash flow, receivables, inventory and short-term obligations.</p><div className="role-fields">
         <Field label="Opening cash balance" value={openingCash} onChange={setOpeningCash} suffix="₹"/>
