@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   parseNonNegative, roundMoney, calculateSalary, calculateLoan, calculateGST,
-  calculateTDS, calculateDepreciation, calculateWorkingCapital, calculateAttendancePayroll
+  calculateTDS, calculateDepreciation, calculateWorkingCapital, calculateAttendancePayroll, calculateProfitLoss
 } from "../../src/roleCalculatorMath.js";
 
 test("amount validation rejects blanks, negative values, non-finite values and excessive precision", () => {
@@ -278,4 +278,24 @@ test("working capital explicitly handles zero liabilities and cash overdraft", (
   assert.equal(overdraft.currentAssets, 0);
   assert.equal(overdraft.currentLiabilities, 0.01);
   assert.equal(overdraft.workingCapital, -0.01);
+});
+
+
+test("profit and loss validates required amounts and reconciles paise-level profit", () => {
+  assert.deepEqual(calculateProfitLoss({
+    revenue: "1000.10", expenses: "1200.05", otherIncome: "50.05"
+  }), {
+    revenue: 1000.1, expenses: 1200.05, otherIncome: 50.05,
+    profit: -149.9, margin: -14.99
+  });
+  assert.deepEqual(calculateProfitLoss({
+    revenue: "0", expenses: "10", otherIncome: "0"
+  }), {
+    revenue: 0, expenses: 10, otherIncome: 0, profit: -10, margin: 0
+  });
+  for (const invalid of ["", " ", "-1", "NaN", "1000000000001"]) {
+    assert.throws(() => calculateProfitLoss({
+      revenue: invalid, expenses: "0", otherIncome: "0"
+    }));
+  }
 });
