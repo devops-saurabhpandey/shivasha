@@ -4,6 +4,11 @@ import mongoose from "mongoose";
 import Company from "../models/Company.js";
 import { HREmployee, HRAttendance, HRLeave, HRChallan, HRPayrollRun } from "../models/HR.js";
 
+// Migration scripts must never create collections or indexes implicitly.
+// DDL is performed only by the explicit --apply path below.
+mongoose.set("autoIndex", false);
+mongoose.set("autoCreate", false);
+
 const APPLY = process.argv.includes("--apply");
 const mappingArg = process.argv.find(value => value.startsWith("--mapping="));
 if (!mappingArg) throw new Error("Provide an explicit mapping file: --mapping=/absolute/path/owner-company-map.json");
