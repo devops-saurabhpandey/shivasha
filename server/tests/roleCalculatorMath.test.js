@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   parseNonNegative, roundMoney, calculateSalary, calculateLoan, calculateGST,
-  calculateTDS, calculateDepreciation, calculateWorkingCapital
+  calculateTDS, calculateDepreciation, calculateWorkingCapital, calculateAttendancePayroll
 } from "../../src/roleCalculatorMath.js";
 
 test("amount validation rejects blanks, negative values, non-finite values and excessive precision", () => {
@@ -107,4 +107,38 @@ test("working capital handles negative cash and zero liabilities explicitly", ()
   assert.equal(result.currentLiabilities, 30);
   assert.equal(result.workingCapital, 45);
   assert.equal(result.currentRatio, 2.5);
+});
+
+
+test("attendance payroll prorates fixed earnings and validates complete day allocation", () => {
+  const result = calculateAttendancePayroll({
+    totalDays: 30, presentDays: 24, paidLeaveDays: 2, weeklyOffDays: 4,
+    paidHolidayDays: 0, unpaidLeaveDays: 0,
+    basic: 30000, hra: 12000, allowance: 3000,
+    variableEarnings: 1500, otherDeductions: 500
+  });
+  assert.equal(result.paidDays, 30);
+  assert.equal(result.payableRatio, 1);
+  assert.equal(result.fixedGross, 45000);
+  assert.equal(result.gross, 46500);
+  assert.equal(result.net, 46000);
+
+  assert.throws(() => calculateAttendancePayroll({
+    totalDays: 30, presentDays: 24, paidLeaveDays: 2, weeklyOffDays: 3,
+    paidHolidayDays: 0, unpaidLeaveDays: 0,
+    basic: 30000, hra: 12000, allowance: 3000,
+    variableEarnings: 0, otherDeductions: 0
+  }), /must equal total payroll days/);
+  assert.throws(() => calculateAttendancePayroll({
+    totalDays: 30, presentDays: 24, paidLeaveDays: 2, weeklyOffDays: 4,
+    paidHolidayDays: 0, unpaidLeaveDays: 0,
+    basic: 30000, hra: 12000, allowance: 3000,
+    variableEarnings: 0, otherDeductions: 50000
+  }), /cannot exceed payable gross salary/);
+  assert.throws(() => calculateAttendancePayroll({
+    totalDays: 30, presentDays: 24.5, paidLeaveDays: 2, weeklyOffDays: 3.5,
+    paidHolidayDays: 0, unpaidLeaveDays: 0,
+    basic: 30000, hra: 12000, allowance: 3000,
+    variableEarnings: 0, otherDeductions: 0
+  }), /whole number/);
 });
