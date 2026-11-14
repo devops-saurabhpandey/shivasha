@@ -79,6 +79,9 @@ export function calculateLoan(input) {
       (Math.pow(1 + monthlyRate, months) - 1);
   if (!Number.isFinite(rawEmi) || rawEmi <= 0) throw new RangeError("Unable to calculate a valid EMI");
   const emiCents = Math.max(1, Math.round(rawEmi));
+  if (!Number.isSafeInteger(emiCents)) {
+    throw new RangeError("Calculated EMI exceeds safe paise precision");
+  }
   let balance = principalCents;
   let totalInterestCents = 0;
   let totalPaidCents = 0;
@@ -88,12 +91,20 @@ export function calculateLoan(input) {
     // emit zero-value instalments for the unused remainder of the tenure.
     if (balance === 0) break;
     const interestCents = Math.round(balance * monthlyRate);
+    if (!Number.isSafeInteger(interestCents)) {
+      throw new RangeError("Loan interest exceeds safe paise precision");
+    }
     // The final instalment clears the exact remaining principal plus accrued interest.
     // This absorbs paise rounding differences and guarantees a zero closing balance.
     const paymentCents = month === months
       ? balance + interestCents
       : Math.min(balance + interestCents, Math.max(emiCents, interestCents + 1));
     const principalPartCents = paymentCents - interestCents;
+    if (!Number.isSafeInteger(paymentCents) || !Number.isSafeInteger(principalPartCents) ||
+        !Number.isSafeInteger(totalInterestCents + interestCents) ||
+        !Number.isSafeInteger(totalPaidCents + paymentCents)) {
+      throw new RangeError("Loan schedule exceeds safe paise precision");
+    }
     balance = Math.max(0, balance - principalPartCents);
     totalInterestCents += interestCents;
     totalPaidCents += paymentCents;
