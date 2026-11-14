@@ -29,6 +29,7 @@ import adsRoutes from "./routes/ads.js";
 import aiAssistantRoutes from "./routes/aiAssistant.js";
 import uiuxDesignerAIRoutes from "./routes/uiuxDesignerAI.js";
 import hrRoutes from "./routes/hr.js";
+import { startHRAuditOutboxWorker } from "./enterprise/hrAuditOutbox.js";
 import enterpriseRoutes from "./routes/enterprise.js";
 import analyticsRoutes from "./routes/analytics.js";
 import youtubeAutomationRoutes from "./routes/youtubeAutomation.js";
@@ -214,6 +215,7 @@ async function start() {
     if (process.env.MONGODB_URI) {
       await mongoose.connect(process.env.MONGODB_URI);
       console.log("MongoDB connected");
+      startHRAuditOutboxWorker();
     } else {
       console.log("MONGODB_URI not configured; starting without database");
     }

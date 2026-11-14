@@ -24,8 +24,21 @@ jobs:
         run: npm run build
 
   backend-syntax:
-    name: Backend syntax check
+    name: Backend tests, MongoDB integration and syntax check
     runs-on: ubuntu-latest
+    services:
+      mongodb:
+        image: mongo:8
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --quiet --eval 'db.adminCommand({ ping: 1 }).ok'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      MONGODB_TEST_URI: mongodb://127.0.0.1:27017/shivasha_hr_test
+      JWT_SECRET: ci-only-hr-integration-secret-not-for-production
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4

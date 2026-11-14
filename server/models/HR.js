@@ -1,7 +1,21 @@
 import mongoose from "mongoose";
 
+const hrAuditOutboxEntrySchema = new mongoose.Schema({
+  eventId: { type: mongoose.Schema.Types.ObjectId, required: true },
+  companyId: { type: mongoose.Schema.Types.ObjectId, ref: "EnterpriseCompany", required: true },
+  actorUserId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+  action: { type: String, required: true, maxlength: 100 },
+  resourceType: { type: String, required: true, maxlength: 80 },
+  resourceId: { type: String, required: true, maxlength: 100 },
+  details: { type: mongoose.Schema.Types.Mixed, default: {} },
+  occurredAt: { type: Date, required: true }
+}, { _id: false, versionKey: false, strict: "throw" });
+
 const employeeSchema = new mongoose.Schema({
   companyId: { type: mongoose.Schema.Types.ObjectId, ref: "EnterpriseCompany", required: function () { return this.isNew; }, default: null, index: true },
+  auditOutbox: { type: [hrAuditOutboxEntrySchema], default: [] },
+  deletedAt: { type: Date, default: null },
+  deletedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
   employeeCode: { type: String, required: true, trim: true, maxlength: 30 },
   name: { type: String, required: true, trim: true, maxlength: 100 },
   department: { type: String, default: "Other", trim: true, maxlength: 80 },
@@ -28,6 +42,9 @@ employeeSchema.index({ companyId: 1, employeeCode: 1 }, { unique: true, partialF
 
 const attendanceSchema = new mongoose.Schema({
   companyId: { type: mongoose.Schema.Types.ObjectId, ref: "EnterpriseCompany", required: function () { return this.isNew; }, default: null, index: true },
+  auditOutbox: { type: [hrAuditOutboxEntrySchema], default: [] },
+  deletedAt: { type: Date, default: null },
+  deletedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
   employee: { type: mongoose.Schema.Types.ObjectId, ref: "HREmployee", required: true },
   date: { type: String, required: true },
   status: { type: String, enum: ["Present", "Absent", "Half day", "Work from home", "Holiday"], required: true },
@@ -38,6 +55,9 @@ attendanceSchema.index({ companyId: 1, employee: 1, date: 1 }, { unique: true, p
 
 const leaveSchema = new mongoose.Schema({
   companyId: { type: mongoose.Schema.Types.ObjectId, ref: "EnterpriseCompany", required: function () { return this.isNew; }, default: null, index: true },
+  auditOutbox: { type: [hrAuditOutboxEntrySchema], default: [] },
+  deletedAt: { type: Date, default: null },
+  deletedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
   employee: { type: mongoose.Schema.Types.ObjectId, ref: "HREmployee", required: true },
   type: { type: String, enum: ["Casual", "Sick", "Earned", "Unpaid", "Other"], default: "Casual" },
   from: { type: String, required: true },
@@ -49,12 +69,18 @@ const leaveSchema = new mongoose.Schema({
   reviewedAt: { type: Date, default: null }
 }, { timestamps: true });
 
+employeeSchema.index({ "auditOutbox.eventId": 1 });
+attendanceSchema.index({ "auditOutbox.eventId": 1 });
+leaveSchema.index({ "auditOutbox.eventId": 1 });
 export const HREmployee = mongoose.models.HREmployee || mongoose.model("HREmployee", employeeSchema);
 export const HRAttendance = mongoose.models.HRAttendance || mongoose.model("HRAttendance", attendanceSchema);
 export const HRLeave = mongoose.models.HRLeave || mongoose.model("HRLeave", leaveSchema);
 
 const challanSchema = new mongoose.Schema({
   companyId: { type: mongoose.Schema.Types.ObjectId, ref: "EnterpriseCompany", required: function () { return this.isNew; }, default: null, index: true },
+  auditOutbox: { type: [hrAuditOutboxEntrySchema], default: [] },
+  deletedAt: { type: Date, default: null },
+  deletedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
   month: { type: String, required: true, match: /^[0-9]{4}-[0-9]{2}$/ },
   type: { type: String, enum: ["PF", "ESIC", "Other"], default: "PF" },
   amount: { type: Number, required: true, min: 0, max: 1000000000 },
@@ -64,11 +90,15 @@ const challanSchema = new mongoose.Schema({
   createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true }
 }, { timestamps: true });
 challanSchema.index({ companyId: 1, month: 1, type: 1 });
+challanSchema.index({ "auditOutbox.eventId": 1 });
 export const HRChallan = mongoose.models.HRChallan || mongoose.model("HRChallan", challanSchema);
 
 
 const payrollRunSchema = new mongoose.Schema({
   companyId: { type: mongoose.Schema.Types.ObjectId, ref: "EnterpriseCompany", required: function () { return this.isNew; }, default: null, index: true },
+  auditOutbox: { type: [hrAuditOutboxEntrySchema], default: [] },
+  deletedAt: { type: Date, default: null },
+  deletedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
   month: { type: String, required: true, match: /^[0-9]{4}-[0-9]{2}$/ },
   status: { type: String, enum: ["Draft", "Approved", "Paid"], default: "Draft" },
   employeeCount: { type: Number, min: 0, required: true },
@@ -104,4 +134,5 @@ const payrollRunSchema = new mongoose.Schema({
   }]
 }, { timestamps: true });
 payrollRunSchema.index({ companyId: 1, month: 1 }, { unique: true, partialFilterExpression: { companyId: { $type: "objectId" } }, name: "company_payroll_month_unique" });
+payrollRunSchema.index({ "auditOutbox.eventId": 1 });
 export const HRPayrollRun = mongoose.models.HRPayrollRun || mongoose.model("HRPayrollRun", payrollRunSchema);

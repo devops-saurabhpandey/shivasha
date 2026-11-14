@@ -6,6 +6,7 @@ import CompanyMembership from "../models/CompanyMembership.js";
 import { hasCompanyPermission } from "../enterprise/companyConfig.js";
 import { createHRCompanyAuthorizationMiddleware } from "../enterprise/hrAuthorization.js";
 import { validatePayrollTransition } from "../enterprise/payrollWorkflow.js";
+import { createHRAuditEvent, flushHRAuditOutboxForDocument, withHRAuditCapacity } from "../enterprise/hrAuditOutbox.js";
 import { HREmployee, HRAttendance, HRLeave, HRChallan, HRPayrollRun } from "../models/HR.js";
 
 const router = Router();
@@ -17,9 +18,44 @@ const requireHRCompany = createHRCompanyAuthorizationMiddleware({ CompanyModel: 
 router.use(requireHRCompany);
 const clean = (v, max=100) => typeof v === "string" ? v.trim().slice(0, max) : "";
 
+const makeAudit = (req, action, resourceType, resourceId, details = {}) =>
+  createHRAuditEvent({
+    companyId: req.companyId,
+    actorUserId: req.user.id,
+    action,
+    resourceType,
+    resourceId,
+    details
+  });
+
+async function respondWithAudit(res, Model, documentId, event, body, successStatus = 200) {
+  const result = await flushHRAuditOutboxForDocument(Model, documentId);
+  return res.status(result.recorded ? successStatus : 202).json({
+    ...body,
+    audit: {
+      status: result.recorded ? "recorded" : "pending",
+      eventId: String(event.eventId),
+      pendingEvents: result.pending,
+      ...(result.recorded ? {} : {
+        message: "The HR change is saved and its audit event is durably queued for retry. Do not resubmit this mutation."
+      })
+    }
+  });
+}
+
+async function respondNotFoundOrAuditBacklog(res, Model, filter, message) {
+  const exists = await Model.exists(filter);
+  if (exists) {
+    return res.status(503).json({
+      message: "The HR audit outbox is at capacity. No change was applied; retry after audit recovery."
+    });
+  }
+  return res.status(404).json({ message });
+}
+
 router.get("/employees", async (req, res) => {
   try {
-    const employees = await HREmployee.find({ companyId: req.companyId }).sort({ createdAt: -1 }).lean();
+    const employees = await HREmployee.find({ companyId: req.companyId, deletedAt: null }).sort({ createdAt: -1 }).lean();
     res.json({ employees });
   } catch { res.status(500).json({ message: "Could not load employees" }); }
 });
@@ -36,10 +72,15 @@ router.post("/employees", async (req, res) => {
     const components = {};
     for (const key of ["basicSalary","hra","da","otherAllowances"]) {
       const n = Number(req.body?.[key] ?? 0);
-      if (!Number.isFinite(n) || n < 0 || n > 100000000) return res.status(400).json({ message: `Invalid ${key} amount` });
+      if (!Number.isFinite(n) || n < 0 || n > 100000000) return res.status(400).json({ message: "Invalid " + key + " amount" });
       components[key] = n;
     }
+    const id = new mongoose.Types.ObjectId();
+    const event = makeAudit(req, "hr.employee.created", "employee", id, {
+      changedFields: ["employeeCode", "name", "department", "jobTitle", "workEmail", "salary", "statutoryFlags"]
+    });
     const employee = await HREmployee.create({
+      _id: id,
       companyId: req.companyId, employeeCode, name, department: clean(req.body?.department, 80) || "Other",
       jobTitle: clean(req.body?.jobTitle, 80), workEmail: clean(req.body?.workEmail, 120).toLowerCase(),
       joiningDate: clean(req.body?.joiningDate, 10), monthlyGrossSalary, annualCtc, ...components,
@@ -51,9 +92,10 @@ router.post("/employees", async (req, res) => {
       pfApplicable: req.body?.pfApplicable === true,
       esiApplicable: req.body?.esiApplicable === true,
       status: ["Active", "On leave", "Inactive"].includes(req.body?.status) ? req.body.status : "Active",
-      createdBy: req.user.id
+      createdBy: req.user.id,
+      auditOutbox: [event]
     });
-    res.status(201).json({ employee });
+    return respondWithAudit(res, HREmployee, employee._id, event, { employee }, 201);
   } catch (e) {
     if (e?.code === 11000) return res.status(409).json({ message: "Employee code already exists" });
     res.status(500).json({ message: "Could not create employee" });
@@ -76,7 +118,7 @@ router.patch("/employees/:id", async (req, res) => {
     for (const key of ["basicSalary","hra","da","otherAllowances"]) {
       if (req.body?.[key] !== undefined) {
         const n = Number(req.body[key]);
-        if (!Number.isFinite(n) || n < 0 || n > 100000000) return res.status(400).json({ message: `Invalid ${key} amount` });
+        if (!Number.isFinite(n) || n < 0 || n > 100000000) return res.status(400).json({ message: "Invalid " + key + " amount" });
         updates[key] = n;
       }
     }
@@ -84,7 +126,7 @@ router.patch("/employees/:id", async (req, res) => {
       if (req.body?.[key] !== undefined) {
         const n = Number(req.body[key]);
         const max = key === "ncpDays" ? 31 : 100000000;
-        if (!Number.isFinite(n) || n < 0 || n > max) return res.status(400).json({ message: `Invalid ${key} value` });
+        if (!Number.isFinite(n) || n < 0 || n > max) return res.status(400).json({ message: "Invalid " + key + " value" });
         updates[key] = n;
       }
     }
@@ -95,7 +137,7 @@ router.patch("/employees/:id", async (req, res) => {
     }
     for (const key of ["pfApplicable","esiApplicable"]) {
       if (req.body?.[key] !== undefined) {
-        if (typeof req.body[key] !== "boolean") return res.status(400).json({ message: `Invalid ${key} value` });
+        if (typeof req.body[key] !== "boolean") return res.status(400).json({ message: "Invalid " + key + " value" });
         updates[key] = req.body[key];
       }
     }
@@ -108,9 +150,17 @@ router.patch("/employees/:id", async (req, res) => {
       if (!["Active","On leave","Inactive"].includes(req.body.status)) return res.status(400).json({ message: "Invalid employee status" });
       updates.status = req.body.status;
     }
-    const employee = await HREmployee.findOneAndUpdate({ _id: req.params.id, companyId: req.companyId }, updates, { new: true, runValidators: true });
-    if (!employee) return res.status(404).json({ message: "Employee not found" });
-    res.json({ employee });
+    if (!Object.keys(updates).length) return res.status(400).json({ message: "No supported employee fields supplied" });
+    const event = makeAudit(req, "hr.employee.updated", "employee", req.params.id, { changedFields: Object.keys(updates) });
+    const employee = await HREmployee.findOneAndUpdate(
+      withHRAuditCapacity({ _id: req.params.id, companyId: req.companyId, deletedAt: null }),
+      { $set: updates, $push: { auditOutbox: event } },
+      { new: true, runValidators: true }
+    );
+    if (!employee) return respondNotFoundOrAuditBacklog(
+      res, HREmployee, { _id: req.params.id, companyId: req.companyId, deletedAt: null }, "Employee not found"
+    );
+    return respondWithAudit(res, HREmployee, employee._id, event, { employee });
   } catch (e) {
     if (e?.code === 11000) return res.status(409).json({ message: "Employee code already exists" });
     res.status(500).json({ message: "Could not update employee" });
@@ -120,15 +170,24 @@ router.patch("/employees/:id", async (req, res) => {
 router.delete("/employees/:id", async (req, res) => {
   if (!validId(req.params.id)) return res.status(400).json({ message: "Invalid employee ID" });
   try {
-    const employee = await HREmployee.findOneAndDelete({ _id: req.params.id, companyId: req.companyId });
-    if (!employee) return res.status(404).json({ message: "Employee not found" });
-    await Promise.all([HRAttendance.deleteMany({ companyId: req.companyId, employee: employee._id }), HRLeave.deleteMany({ companyId: req.companyId, employee: employee._id })]);
-    res.json({ deleted: true });
-  } catch { res.status(500).json({ message: "Could not delete employee" }); }
+    const filter = { _id: req.params.id, companyId: req.companyId, deletedAt: null };
+    const event = makeAudit(req, "hr.employee.archived", "employee", req.params.id, { changedFields: ["deletedAt", "deletedBy"] });
+    const employee = await HREmployee.findOneAndUpdate(
+      withHRAuditCapacity(filter),
+      { $set: { deletedAt: new Date(), deletedBy: req.user.id }, $push: { auditOutbox: event } },
+      { new: true, runValidators: true }
+    );
+    if (!employee) return respondNotFoundOrAuditBacklog(res, HREmployee, filter, "Employee not found");
+    // Archive instead of cascading physical deletes so attendance, leave and
+    // payroll evidence remains available for reconciliation and audit.
+    return respondWithAudit(res, HREmployee, employee._id, event, { deleted: true, archived: true });
+  } catch {
+    res.status(500).json({ message: "Could not archive employee" });
+  }
 });
 
 router.get("/attendance", async (req, res) => {
-  try { res.json({ attendance: await HRAttendance.find({ companyId: req.companyId }).populate("employee", "employeeCode name department").sort({ date: -1 }).limit(1000).lean() }); }
+  try { res.json({ attendance: await HRAttendance.find({ companyId: req.companyId, deletedAt: null }).populate("employee", "employeeCode name department").sort({ date: -1 }).limit(1000).lean() }); }
   catch { res.status(500).json({ message: "Could not load attendance" }); }
 });
 
@@ -140,25 +199,53 @@ router.post("/attendance", async (req, res) => {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || Number.isNaN(Date.parse(date))) return res.status(400).json({ message: "Valid attendance date is required" });
   if (!["Present","Absent","Half day","Work from home","Holiday"].includes(status)) return res.status(400).json({ message: "Invalid attendance status" });
   try {
-    if (!await HREmployee.exists({ _id: employeeId, companyId: req.companyId })) return res.status(404).json({ message: "Employee not found" });
-    const record = await HRAttendance.findOneAndUpdate({ companyId: req.companyId, employee: employeeId, date }, {
-      $set: { companyId: req.companyId, status, note: clean(req.body?.note, 160), recordedBy: req.user.id }
-    }, { upsert: true, new: true, runValidators: true, setDefaultsOnInsert: true }).populate("employee", "employeeCode name department");
-    res.status(200).json({ attendance: record });
-  } catch { res.status(500).json({ message: "Could not save attendance" }); }
+    if (!await HREmployee.exists({ _id: employeeId, companyId: req.companyId, deletedAt: null })) return res.status(404).json({ message: "Employee not found" });
+    const existing = await HRAttendance.findOne({ companyId: req.companyId, employee: employeeId, date });
+    const id = existing?._id || new mongoose.Types.ObjectId();
+    const event = makeAudit(req, "hr.attendance.saved", "attendance", id, {
+      date, changedFields: ["status", "note", "recordedBy"]
+    });
+    let record;
+    if (existing) {
+      record = await HRAttendance.findOneAndUpdate(
+        withHRAuditCapacity({ _id: existing._id, companyId: req.companyId }),
+        { $set: { status, note: clean(req.body?.note, 160), recordedBy: req.user.id, deletedAt: null, deletedBy: null }, $push: { auditOutbox: event } },
+        { new: true, runValidators: true }
+      );
+      if (!record) return res.status(503).json({ message: "The HR audit outbox is at capacity. No attendance change was applied; retry after audit recovery." });
+    } else {
+      record = await HRAttendance.create({
+        _id: id, companyId: req.companyId, employee: employeeId, date, status,
+        note: clean(req.body?.note, 160), recordedBy: req.user.id, auditOutbox: [event]
+      });
+    }
+    await record.populate("employee", "employeeCode name department");
+    return respondWithAudit(res, HRAttendance, record._id, event, { attendance: record }, existing ? 200 : 201);
+  } catch (error) {
+    if (error?.code === 11000) return res.status(409).json({ message: "Attendance was changed concurrently. Refresh and retry." });
+    res.status(500).json({ message: "Could not save attendance" });
+  }
 });
 
 router.delete("/attendance/:id", async (req, res) => {
   if (!validId(req.params.id)) return res.status(400).json({ message: "Invalid attendance ID" });
   try {
-    const record = await HRAttendance.findOneAndDelete({ _id: req.params.id, companyId: req.companyId });
-    if (!record) return res.status(404).json({ message: "Attendance record not found" });
-    res.json({ deleted: true });
-  } catch { res.status(500).json({ message: "Could not delete attendance" }); }
+    const filter = { _id: req.params.id, companyId: req.companyId, deletedAt: null };
+    const event = makeAudit(req, "hr.attendance.archived", "attendance", req.params.id, { changedFields: ["deletedAt", "deletedBy"] });
+    const record = await HRAttendance.findOneAndUpdate(
+      withHRAuditCapacity(filter),
+      { $set: { deletedAt: new Date(), deletedBy: req.user.id }, $push: { auditOutbox: event } },
+      { new: true, runValidators: true }
+    );
+    if (!record) return respondNotFoundOrAuditBacklog(res, HRAttendance, filter, "Attendance record not found");
+    return respondWithAudit(res, HRAttendance, record._id, event, { deleted: true, archived: true });
+  } catch {
+    res.status(500).json({ message: "Could not archive attendance record" });
+  }
 });
 
 router.get("/leaves", async (req, res) => {
-  try { res.json({ leaves: await HRLeave.find({ companyId: req.companyId }).populate("employee", "employeeCode name department").sort({ createdAt: -1 }).limit(1000).lean() }); }
+  try { res.json({ leaves: await HRLeave.find({ companyId: req.companyId, deletedAt: null }).populate("employee", "employeeCode name department").sort({ createdAt: -1 }).limit(1000).lean() }); }
   catch { res.status(500).json({ message: "Could not load leave requests" }); }
 });
 
@@ -169,10 +256,19 @@ router.post("/leaves", async (req, res) => {
   if (!validId(employeeId)) return res.status(400).json({ message: "Valid employee is required" });
   if (!/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(to) || to < from) return res.status(400).json({ message: "Valid leave date range is required" });
   try {
-    if (!await HREmployee.exists({ _id: employeeId, companyId: req.companyId })) return res.status(404).json({ message: "Employee not found" });
-    const leave = await HRLeave.create({ companyId: req.companyId, employee: employeeId, type, from, to, reason: clean(req.body?.reason, 200), requestedBy: req.user.id });
-    res.status(201).json({ leave });
-  } catch { res.status(500).json({ message: "Could not create leave request" }); }
+    if (!await HREmployee.exists({ _id: employeeId, companyId: req.companyId, deletedAt: null })) return res.status(404).json({ message: "Employee not found" });
+    const id = new mongoose.Types.ObjectId();
+    const event = makeAudit(req, "hr.leave.created", "leave", id, {
+      leaveType: type, changedFields: ["employee", "type", "from", "to", "reason", "status"]
+    });
+    const leave = await HRLeave.create({
+      _id: id, companyId: req.companyId, employee: employeeId, type, from, to,
+      reason: clean(req.body?.reason, 200), requestedBy: req.user.id, auditOutbox: [event]
+    });
+    return respondWithAudit(res, HRLeave, leave._id, event, { leave }, 201);
+  } catch {
+    res.status(500).json({ message: "Could not create leave request" });
+  }
 });
 
 router.patch("/leaves/:id/review", async (req, res) => {
@@ -180,15 +276,25 @@ router.patch("/leaves/:id/review", async (req, res) => {
   const status = req.body?.status;
   if (!["Approved","Rejected"].includes(status)) return res.status(400).json({ message: "Status must be Approved or Rejected" });
   try {
-    const leave = await HRLeave.findOneAndUpdate({ _id: req.params.id, companyId: req.companyId }, { status, reviewedBy: req.user.id, reviewedAt: new Date() }, { new: true, runValidators: true }).populate("employee", "employeeCode name department");
-    if (!leave) return res.status(404).json({ message: "Leave request not found" });
-    res.json({ leave });
-  } catch { res.status(500).json({ message: "Could not review leave request" }); }
+    const filter = { _id: req.params.id, companyId: req.companyId, deletedAt: null };
+    const event = makeAudit(req, "hr.leave.reviewed", "leave", req.params.id, {
+      status, changedFields: ["status", "reviewedBy", "reviewedAt"]
+    });
+    const leave = await HRLeave.findOneAndUpdate(
+      withHRAuditCapacity(filter),
+      { $set: { status, reviewedBy: req.user.id, reviewedAt: new Date() }, $push: { auditOutbox: event } },
+      { new: true, runValidators: true }
+    );
+    if (!leave) return respondNotFoundOrAuditBacklog(res, HRLeave, filter, "Leave request not found");
+    await leave.populate("employee", "employeeCode name department");
+    return respondWithAudit(res, HRLeave, leave._id, event, { leave });
+  } catch {
+    res.status(500).json({ message: "Could not review leave request" });
+  }
 });
 
-
 router.get("/challans", async (req, res) => {
-  try { res.json({ challans: await HRChallan.find({ companyId: req.companyId }).sort({ month: -1, createdAt: -1 }).limit(1000).lean() }); }
+  try { res.json({ challans: await HRChallan.find({ companyId: req.companyId, deletedAt: null }).sort({ month: -1, createdAt: -1 }).limit(1000).lean() }); }
   catch { res.status(500).json({ message: "Could not load challan register" }); }
 });
 
@@ -200,20 +306,37 @@ router.post("/challans", async (req, res) => {
   if (!/^\d{4}-\d{2}$/.test(month) || Number(month.slice(5, 7)) < 1 || Number(month.slice(5, 7)) > 12) return res.status(400).json({ message: "Valid wage month is required" });
   if (!Number.isFinite(amount) || amount < 0 || amount > 1000000000) return res.status(400).json({ message: "Valid challan amount is required" });
   try {
-    const challan = await HRChallan.create({ companyId: req.companyId, month, type, status, amount, reference: clean(req.body?.reference, 100), notes: clean(req.body?.notes, 200), createdBy: req.user.id });
-    res.status(201).json({ challan });
-  } catch { res.status(500).json({ message: "Could not save challan register entry" }); }
+    const id = new mongoose.Types.ObjectId();
+    const event = makeAudit(req, "hr.challan.created", "challan", id, {
+      month, challanType: type, changedFields: ["month", "type", "amount", "status", "reference", "notes"]
+    });
+    const challan = await HRChallan.create({
+      _id: id, companyId: req.companyId, month, type, status, amount,
+      reference: clean(req.body?.reference, 100), notes: clean(req.body?.notes, 200),
+      createdBy: req.user.id, auditOutbox: [event]
+    });
+    return respondWithAudit(res, HRChallan, challan._id, event, { challan }, 201);
+  } catch {
+    res.status(500).json({ message: "Could not save challan register entry" });
+  }
 });
 
 router.delete("/challans/:id", async (req, res) => {
   if (!validId(req.params.id)) return res.status(400).json({ message: "Invalid challan ID" });
   try {
-    const challan = await HRChallan.findOneAndDelete({ _id: req.params.id, companyId: req.companyId });
-    if (!challan) return res.status(404).json({ message: "Challan entry not found" });
-    res.json({ deleted: true });
-  } catch { res.status(500).json({ message: "Could not delete challan entry" }); }
+    const filter = { _id: req.params.id, companyId: req.companyId, deletedAt: null };
+    const event = makeAudit(req, "hr.challan.archived", "challan", req.params.id, { changedFields: ["deletedAt", "deletedBy"] });
+    const challan = await HRChallan.findOneAndUpdate(
+      withHRAuditCapacity(filter),
+      { $set: { deletedAt: new Date(), deletedBy: req.user.id }, $push: { auditOutbox: event } },
+      { new: true, runValidators: true }
+    );
+    if (!challan) return respondNotFoundOrAuditBacklog(res, HRChallan, filter, "Challan entry not found");
+    return respondWithAudit(res, HRChallan, challan._id, event, { deleted: true, archived: true });
+  } catch {
+    res.status(500).json({ message: "Could not archive challan entry" });
+  }
 });
-
 
 router.get("/payroll-attendance-summary", async (req, res) => {
   const month = clean(req.query?.month, 7);
@@ -224,8 +347,8 @@ router.get("/payroll-attendance-summary", async (req, res) => {
     const start = month + "-01";
     const end = month + "-" + String(new Date(Number(month.slice(0, 4)), Number(month.slice(5, 7)), 0).getDate()).padStart(2, "0");
     const [attendance, unpaidLeaves] = await Promise.all([
-      HRAttendance.find({ companyId: req.companyId, date: { $gte: start, $lte: end } }).select("employee date status").lean(),
-      HRLeave.find({ companyId: req.companyId, type: "Unpaid", status: "Approved", from: { $lte: end }, to: { $gte: start } }).select("employee from to").lean()
+      HRAttendance.find({ companyId: req.companyId, deletedAt: null, date: { $gte: start, $lte: end } }).select("employee date status").lean(),
+      HRLeave.find({ companyId: req.companyId, deletedAt: null, type: "Unpaid", status: "Approved", from: { $lte: end }, to: { $gte: start } }).select("employee from to").lean()
     ]);
     const stats = new Map();
     for (const row of attendance) {
@@ -277,7 +400,7 @@ router.get("/payroll-attendance-summary", async (req, res) => {
 
 router.get("/payroll-runs", async (req, res) => {
   try {
-    const runs = await HRPayrollRun.find({ companyId: req.companyId }).sort({ month: -1 }).limit(120).lean();
+    const runs = await HRPayrollRun.find({ companyId: req.companyId, deletedAt: null }).sort({ month: -1 }).limit(120).lean();
     res.json({ runs });
   } catch { res.status(500).json({ message: "Could not load monthly payroll history" }); }
 });
@@ -285,45 +408,31 @@ router.get("/payroll-runs", async (req, res) => {
 router.post("/payroll-runs", async (req, res) => {
   const month = clean(req.body?.month, 7);
   const records = req.body?.records;
-  if (!/^[0-9]{4}-[0-9]{2}$/.test(month) || Number(month.slice(5, 7)) < 1 || Number(month.slice(5, 7)) > 12) {
-    return res.status(400).json({ message: "Valid payroll month is required" });
-  }
-  if (!Array.isArray(records) || records.length > 2000) {
-    return res.status(400).json({ message: "Payroll records must be a valid list of up to 2000 employees" });
-  }
+  if (!/^\d{4}-\d{2}$/.test(month) || Number(month.slice(5, 7)) < 1 || Number(month.slice(5, 7)) > 12) return res.status(400).json({ message: "Valid payroll month is required" });
+  if (!Array.isArray(records) || records.length > 2000) return res.status(400).json({ message: "Payroll records must be a valid list of up to 2000 employees" });
   const fields = ["gross", "pfWage", "employeePF", "employerPF", "employeeESIC", "employerESIC", "otherEarnings", "otherDeductions"];
   const snapshot = [];
   for (const row of records) {
     const employeeCode = clean(row?.employeeCode, 30), name = clean(row?.name, 100);
     if (!employeeCode || !name) return res.status(400).json({ message: "Each payroll row needs employee code and name" });
-    const record = {
-      employeeId: validId(String(row?.employeeId || "")) ? row.employeeId : undefined,
-      employeeCode, name, uan: clean(row?.uan, 12)
-    };
+    const record = { employeeId: validId(String(row?.employeeId || "")) ? row.employeeId : undefined, employeeCode, name, uan: clean(row?.uan, 12) };
     for (const field of fields) {
       const value = Number(row?.[field] ?? 0);
-      if (!Number.isFinite(value) || value < 0 || value > 1000000000) {
-        return res.status(400).json({ message: "Invalid payroll amount: " + field });
-      }
+      if (!Number.isFinite(value) || value < 0 || value > 1000000000) return res.status(400).json({ message: "Invalid payroll amount: " + field });
       record[field] = value;
     }
     record.netPay = record.gross + record.otherEarnings - record.employeePF - record.employeeESIC - record.otherDeductions;
     snapshot.push(record);
   }
-  if (snapshot.some(row => !validId(String(row.employeeId || "")))) {
-    return res.status(400).json({ message: "Every payroll row must reference an employee in the selected company" });
-  }
+  if (snapshot.some(row => !validId(String(row.employeeId || "")))) return res.status(400).json({ message: "Every payroll row must reference an employee in the selected company" });
   const employeeIds = snapshot.map(row => String(row.employeeId));
-  if (new Set(employeeIds).size !== employeeIds.length) {
-    return res.status(400).json({ message: "A payroll employee can appear only once per month" });
-  }
+  if (new Set(employeeIds).size !== employeeIds.length) return res.status(400).json({ message: "A payroll employee can appear only once per month" });
   try {
     const employees = await HREmployee.find({
-      companyId: req.companyId,
-      _id: { $in: employeeIds }
+      companyId: req.companyId, deletedAt: null, _id: { $in: employeeIds }
     }).select("_id employeeCode name uan").lean();
     if (employees.length !== snapshot.length) {
-      return res.status(400).json({ message: "Payroll contains an employee outside the selected company or an unknown employee" });
+      return res.status(400).json({ message: "Payroll contains an employee outside the selected company or an unknown/archived employee" });
     }
     const employeeById = new Map(employees.map(employee => [String(employee._id), employee]));
     for (const row of snapshot) {
@@ -342,16 +451,35 @@ router.post("/payroll-runs", async (req, res) => {
     employeeESIC: sum("employeeESIC"), employerESIC: sum("employerESIC"), netPay: sum("netPay")
   };
   try {
-    const existing = await HRPayrollRun.findOne({ companyId: req.companyId, month }).select("status").lean();
-    if (existing && existing.status !== "Draft") {
-      return res.status(409).json({ message: "This payroll month is " + existing.status + " and is locked. Only Draft payroll can be replaced." });
+    const existing = await HRPayrollRun.findOne({ companyId: req.companyId, month });
+    if (existing && existing.status !== "Draft") return res.status(409).json({ message: "This payroll month is " + existing.status + " and is locked. Only Draft payroll can be replaced." });
+    const id = existing?._id || new mongoose.Types.ObjectId();
+    const action = !existing ? "hr.payroll.draft.created" : existing.deletedAt ? "hr.payroll.draft.restored" : "hr.payroll.draft.replaced";
+    const event = makeAudit(req, action, "payroll_run", id, {
+      month, employeeCount: snapshot.length,
+      changedFields: ["status", "employeeCount", "totals", "records", "createdBy"]
+    });
+    let run;
+    if (existing) {
+      run = await HRPayrollRun.findOneAndUpdate(
+        withHRAuditCapacity({ _id: existing._id, companyId: req.companyId, status: "Draft" }),
+        { $set: {
+          companyId: req.companyId, month, status: "Draft", employeeCount: snapshot.length,
+          totals, records: snapshot, createdBy: req.user.id,
+          approvedBy: null, approvedAt: null, paidBy: null, paidAt: null,
+          deletedAt: null, deletedBy: null
+        }, $push: { auditOutbox: event } },
+        { new: true, runValidators: true }
+      );
+      if (!run) return res.status(503).json({ message: "Payroll changed concurrently or its audit outbox is at capacity. No replacement was applied; refresh and retry after audit recovery." });
+    } else {
+      run = await HRPayrollRun.create({
+        _id: id, companyId: req.companyId, month, status: "Draft",
+        employeeCount: snapshot.length, totals, records: snapshot, createdBy: req.user.id,
+        auditOutbox: [event]
+      });
     }
-    const run = await HRPayrollRun.findOneAndUpdate(
-      { companyId: req.companyId, month },
-      { $set: { companyId: req.companyId, month, status: "Draft", employeeCount: snapshot.length, totals, records: snapshot, createdBy: req.user.id } },
-      { new: true, upsert: true, runValidators: true, setDefaultsOnInsert: true }
-    );
-    res.status(existing ? 200 : 201).json({ run, replacedExistingMonth: Boolean(existing) });
+    return respondWithAudit(res, HRPayrollRun, run._id, event, { run, replacedExistingMonth: Boolean(existing) }, existing ? 200 : 201);
   } catch (e) {
     if (e?.code === 11000) return res.status(409).json({ message: "Payroll month is already being saved. Refresh and try again." });
     res.status(500).json({ message: "Could not save monthly payroll snapshot" });
@@ -363,30 +491,53 @@ router.patch("/payroll-runs/:id/status", async (req, res) => {
   const status = req.body?.status;
   if (!["Draft", "Approved", "Paid"].includes(status)) return res.status(400).json({ message: "Status must be Draft, Approved or Paid" });
   try {
-    const run = await HRPayrollRun.findOne({ _id: req.params.id, companyId: req.companyId });
-    if (!run) return res.status(404).json({ message: "Payroll run not found" });
+    const current = await HRPayrollRun.findOne({ _id: req.params.id, companyId: req.companyId, deletedAt: null });
+    if (!current) return res.status(404).json({ message: "Payroll run not found" });
     const decision = validatePayrollTransition({
-      currentStatus: run.status,
-      nextStatus: status,
-      createdBy: run.createdBy,
-      approvedBy: run.approvedBy,
-      userId: req.user.id
+      currentStatus: current.status, nextStatus: status,
+      createdBy: current.createdBy, approvedBy: current.approvedBy, userId: req.user.id
     });
     if (!decision.allowed) return res.status(decision.statusCode).json({ message: decision.message });
-    if (decision.noChange) return res.json({ run });
+    if (decision.noChange) return res.json({ run: current });
     const now = new Date();
-    if (status === "Approved") {
-      run.approvedBy = req.user.id;
-      run.approvedAt = now;
-    }
-    if (status === "Paid") {
-      run.paidBy = req.user.id;
-      run.paidAt = now;
-    }
-    run.status = status;
-    await run.save();
-    res.json({ run });
-  } catch { res.status(500).json({ message: "Could not update payroll status" }); }
+    const updates = { status };
+    if (status === "Approved") { updates.approvedBy = req.user.id; updates.approvedAt = now; }
+    if (status === "Paid") { updates.paidBy = req.user.id; updates.paidAt = now; }
+    const event = makeAudit(req, status === "Approved" ? "hr.payroll.approved" : "hr.payroll.released", "payroll_run", current._id, {
+      fromStatus: current.status, toStatus: status,
+      changedFields: status === "Approved" ? ["status", "approvedBy", "approvedAt"] : ["status", "paidBy", "paidAt"]
+    });
+    const run = await HRPayrollRun.findOneAndUpdate(
+      withHRAuditCapacity({ _id: current._id, companyId: req.companyId, status: current.status, deletedAt: null }),
+      { $set: updates, $push: { auditOutbox: event } },
+      { new: true, runValidators: true }
+    );
+    if (!run) return res.status(409).json({ message: "Payroll changed concurrently or its audit outbox is at capacity. Reload and retry after audit recovery." });
+    return respondWithAudit(res, HRPayrollRun, run._id, event, { run });
+  } catch {
+    res.status(500).json({ message: "Could not update payroll status" });
+  }
+});
+
+router.delete("/payroll-runs/:id", async (req, res) => {
+  if (!validId(req.params.id)) return res.status(400).json({ message: "Invalid payroll run ID" });
+  try {
+    const current = await HRPayrollRun.findOne({ _id: req.params.id, companyId: req.companyId, deletedAt: null });
+    if (!current) return res.status(404).json({ message: "Payroll run not found" });
+    if (current.status !== "Draft") return res.status(409).json({ message: "Only Draft payroll can be archived. Approved and Paid runs are retained as financial evidence." });
+    const event = makeAudit(req, "hr.payroll.draft.archived", "payroll_run", current._id, {
+      month: current.month, changedFields: ["deletedAt", "deletedBy"]
+    });
+    const run = await HRPayrollRun.findOneAndUpdate(
+      withHRAuditCapacity({ _id: current._id, companyId: req.companyId, status: "Draft", deletedAt: null }),
+      { $set: { deletedAt: new Date(), deletedBy: req.user.id }, $push: { auditOutbox: event } },
+      { new: true, runValidators: true }
+    );
+    if (!run) return res.status(503).json({ message: "Payroll changed concurrently or its audit outbox is at capacity. No archive was applied." });
+    return respondWithAudit(res, HRPayrollRun, run._id, event, { deleted: true, archived: true });
+  } catch {
+    res.status(500).json({ message: "Could not archive payroll run" });
+  }
 });
 
 export default router;
