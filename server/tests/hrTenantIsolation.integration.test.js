@@ -11,6 +11,11 @@ import EnterpriseAuditEvent from "../models/EnterpriseAuditEvent.js";
 import { HREmployee, HRAttendance, HRLeave, HRChallan, HRPayrollRun } from "../models/HR.js";
 import hrRoutes from "../routes/hr.js";
 import { drainHRAuditOutbox } from "../enterprise/hrAuditOutbox.js";
+import { spawnSync } from "node:child_process";
+import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 
 const mongoUri = process.env.MONGODB_TEST_URI;
 
@@ -292,6 +297,61 @@ test("real MongoDB HR routes enforce tenant isolation, maker-checker and durable
     assert.ok(await EnterpriseAuditEvent.findById(pendingEventId));
     const clearedChallan = await HRChallan.findById(pendingChallan._id).lean();
     assert.equal(clearedChallan.auditOutbox.length, 0);
+
+    // Migration dry-runs must be read-only: verify both document state and
+    // collection/index metadata against the isolated standalone MongoDB.
+    const snapshotCollections = async () => {
+      const names = (await mongoose.connection.db.listCollections({}, { nameOnly: true }).toArray())
+        .map(item => item.name).sort();
+      const indexes = {};
+      for (const name of names) {
+        indexes[name] = (await mongoose.connection.db.collection(name).listIndexes().toArray())
+          .map(item => ({ name: item.name, key: item.key, unique: Boolean(item.unique) }))
+          .sort((a, b) => a.name.localeCompare(b.name));
+      }
+      return { names, indexes };
+    };
+    const scriptsDirectory = resolve(dirname(fileURLToPath(import.meta.url)), "../scripts");
+    const temporaryDirectory = mkdtempSync(resolve(tmpdir(), "shivasha-hr-migration-test-"));
+    try {
+      const beforeIndexDryRun = await snapshotCollections();
+      const indexDryRun = spawnSync(process.execPath, [resolve(scriptsDirectory, "migrateHRIndexes.js")], {
+        cwd: resolve(scriptsDirectory, ".."),
+        encoding: "utf8",
+        env: { ...process.env, MONGODB_URI: mongoUri, HR_MIGRATION_ALLOW_NON_TEST_DATABASE: "" }
+      });
+      assert.equal(indexDryRun.status, 0, indexDryRun.stderr || indexDryRun.stdout);
+      assert.match(indexDryRun.stdout, /"mode": "dry-run"/);
+      assert.deepEqual(await snapshotCollections(), beforeIndexDryRun,
+        "index dry-run must not create/drop collections or indexes");
+
+      const legacyEmployeeId = new mongoose.Types.ObjectId();
+      await HREmployee.collection.insertOne({
+        _id: legacyEmployeeId, companyId: null, employeeCode: "LEGACY-DRY-RUN",
+        name: "Legacy Dry Run Employee", createdBy: hrUser._id,
+        createdAt: new Date(), updatedAt: new Date()
+      });
+      const mappingPath = resolve(temporaryDirectory, "owner-company-map.json");
+      writeFileSync(mappingPath, JSON.stringify({ [String(hrUser._id)]: String(companyA._id) }));
+      const beforeOwnershipDryRun = await snapshotCollections();
+      const ownershipDryRun = spawnSync(process.execPath, [
+        resolve(scriptsDirectory, "migrateHRCompanyOwnership.js"), "--mapping=" + mappingPath
+      ], {
+        cwd: resolve(scriptsDirectory, ".."),
+        encoding: "utf8",
+        env: { ...process.env, MONGODB_URI: mongoUri, HR_MIGRATION_ALLOW_NON_TEST_DATABASE: "" }
+      });
+      assert.equal(ownershipDryRun.status, 0, ownershipDryRun.stderr || ownershipDryRun.stdout);
+      assert.match(ownershipDryRun.stdout, /"mode": "dry-run"/);
+      assert.match(ownershipDryRun.stdout, /"employees": 1/);
+      assert.deepEqual(await snapshotCollections(), beforeOwnershipDryRun,
+        "ownership dry-run must not change documents, collections or indexes");
+      const unchangedLegacyEmployee = await HREmployee.collection.findOne({ _id: legacyEmployeeId });
+      assert.equal(unchangedLegacyEmployee.companyId, null,
+        "ownership dry-run must report but never assign tenant ownership");
+    } finally {
+      rmSync(temporaryDirectory, { recursive: true, force: true });
+    }
   } finally {
     await new Promise(resolve => server.close(resolve));
     await mongoose.connection.dropDatabase();
