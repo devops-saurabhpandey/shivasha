@@ -43,6 +43,15 @@ Create a secure JSON file outside the repository and do not commit it:
 
 Every legacy employee, challan and payroll-run creator must have a verified mapping. If one user created records for more than one company, stop: the simple creator map is insufficient. Those records need a record-level ownership mapping and manual review before migration.
 
+## Migration command safety gates
+
+Both HR migration scripts disable Mongoose automatic index/collection creation and require an explicit database name in `MONGODB_URI`.
+
+- Any database whose name does not end in `_test` is refused unless `HR_MIGRATION_ALLOW_NON_TEST_DATABASE=1` is explicitly set in the migration process environment.
+- Any `--apply` invocation is refused unless `HR_MIGRATION_ALLOW_APPLY=1` is also explicitly set.
+- These flags are independent safeguards, not substitutes for a verified backup, approved change ticket, maintenance window and authorized operator.
+- Never put these override flags in the normal application runtime environment or CI secrets. CI migration tests use only an isolated `*_test` database and verify that unapproved non-test targets and apply commands are rejected before connecting.
+
 ## 3. Dry-run the ownership migration
 
 From the `server` directory, set `MONGODB_URI` and run:
