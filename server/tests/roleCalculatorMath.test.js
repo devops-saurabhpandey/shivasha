@@ -67,6 +67,7 @@ test("GST inclusive and exclusive calculations reconcile to invoice totals", () 
   assert.equal(inclusive.base, 100);
   assert.equal(inclusive.gst, 18);
   assert.equal(inclusive.total, 118);
+  assert.throws(() => calculateGST({ amount: 100, rate: 18, mode: "unknown" }), /mode must be inclusive or exclusive/);
 });
 
 test("TDS never returns a negative net payable", () => {
