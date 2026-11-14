@@ -70,6 +70,9 @@ export function validateStatutoryRuleSet(rules) {
   const normalized = rules.map(validateStatutoryRule);
   const groups = new Map();
   for (const rule of normalized) {
+    // Draft and retired records are retained for review/history. Only
+    // approved records must have mutually exclusive effective-date windows.
+    if (rule.status !== "approved") continue;
     const key = [rule.country, rule.jurisdiction, rule.domain, rule.ruleCode].join("|");
     const group = groups.get(key) || [];
     group.push(rule);
@@ -93,6 +96,9 @@ export function validateStatutoryRuleSet(rules) {
  * supply an explicit jurisdiction; there is no silent country-wide fallback.
  */
 export function resolveStatutoryRule(rules, query) {
+  if (!query || typeof query !== "object" || Array.isArray(query)) {
+    throw new TypeError("Rule query must be an object");
+  }
   const country = nonEmpty(query.country, "Country").toUpperCase();
   const jurisdiction = nonEmpty(query.jurisdiction, "Jurisdiction").toUpperCase();
   const domain = nonEmpty(query.domain, "Rule domain").toUpperCase();
