@@ -257,7 +257,7 @@ test("real MongoDB HR routes enforce tenant isolation, maker-checker and durable
     assert.equal(registerDraft.body.run.records[0].salaryComponents.otherEarnings, 500);
     assert.equal(registerDraft.body.run.records[0].salaryComponents.otherDeductions, 250);
     assert.equal(registerDraft.body.run.records[0].netPay, 14750);
-    assert.equal(registerDraft.body.totals.employeePF, 0, "statutory contributions stay explicitly unconfigured");
+    assert.equal(registerDraft.body.run.totals.employeePF, 0, "statutory contributions stay explicitly unconfigured");
     assert.equal((await call(hrUser, companyAId, "/payroll-runs/register", "POST", {
       month: "2026-08",
       employees: [{ employeeId: String(employeeB._id), attendance: {
