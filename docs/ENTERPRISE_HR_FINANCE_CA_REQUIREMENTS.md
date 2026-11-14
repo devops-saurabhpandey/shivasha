@@ -183,3 +183,10 @@ The module intentionally contains no statutory rates or slabs. Official rates an
 Added `src/indiaPayrollRules.js` with the EPF mandatory-coverage wage-ceiling history: ₹15,000/month through 16 September 2026 and ₹25,000/month from 17 September 2026, based on the Ministry of Labour & Employment / PIB release and Labour Ministry FAQ. The resolver uses the payroll as-of date and exposes the source references with the resolved value. Tests cover 16/17 September boundary and invalid dates.
 
 Important scope boundary: this value is the mandatory-coverage wage ceiling under the cited notification. It is not a complete PF wage definition, an employee membership determination, a contribution-rate table, EPS allocation, EDLI calculation, or a substitute for establishment-specific legal applicability checks. The existing generic salary calculator is not silently switched to statutory PF deductions by this change. Payroll integration must separately model existing EPF membership, joining wages, establishment coverage, applicable wage definition, contribution periods and approved scheme rules.
+
+
+## Phase 2D.3 — attendance-based payroll
+
+Added an attendance-proration engine and HR calculator panel. It classifies present days, paid leave, weekly offs, paid holidays and unpaid leave; all categories must sum exactly to the payroll-day denominator. Fixed salary components (basic, HRA and allowances) are prorated to paise; variable earnings and other approved deductions are entered separately. Invalid fractional days, incomplete/duplicated day totals and deductions above payable gross are rejected.
+
+The payroll-day denominator and paid-day policy differ by employer, state rules, contract and attendance policy. The feature therefore requires the operator to enter the organization's approved convention and does not infer statutory leave entitlements, overtime, minimum wages, PF/ESI or tax deductions. Unit tests cover full attendance, unpaid leave, category reconciliation, fractional days and excessive deductions.
