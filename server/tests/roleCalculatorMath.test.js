@@ -6,7 +6,8 @@ import {
 } from "../../src/roleCalculatorMath.js";
 
 test("amount validation rejects blanks, negative values, non-finite values and excessive precision", () => {
-  for (const value of ["", -1, "not-a-number", Infinity, 1_000_000_000_001]) {
+  for (const value of ["", -1, "not-a-number", Infinity, 1_000_000_000_001,
+    null, undefined, true, false, [], [2], {}]) {
     assert.throws(() => parseNonNegative(value, "Test amount"));
   }
   assert.equal(parseNonNegative("0.10"), 0.1);
@@ -56,6 +57,8 @@ test("zero-interest loan is evenly amortized with a final paise adjustment", () 
 test("loan input rejects fractional or unreasonable tenures and invalid rates", () => {
   assert.throws(() => calculateLoan({ principal: 1000, annualRate: 8, months: 0 }));
   assert.throws(() => calculateLoan({ principal: 1000, annualRate: 8, months: 1.5 }));
+  assert.throws(() => calculateLoan({ principal: 1000, annualRate: 8, months: null }));
+  assert.throws(() => calculateLoan({ principal: 1000, annualRate: 8, months: true }));
   assert.throws(() => calculateLoan({ principal: 1000, annualRate: 101, months: 12 }));
 });
 
