@@ -18,9 +18,10 @@ export const INDIA_EPF_COVERAGE_CEILING_RULES = [
     status: "approved",
     value: { monthlyWageCeiling: 15000, currency: "INR", unit: "month" },
     sources: [
+      "https://www.epfindia.gov.in/site_docs/PDFs/PQ_PDFs/PQ_BudgetSession2015_RS_English.pdf",
       "https://www.pib.gov.in/PressReleasePage.aspx?PRID=2310973&lang=2&reg=48"
     ],
-    note: "Previous ceiling; historical reference only. Verify the applicable law for the payroll period."
+    note: "Historical ceiling effective 1 September 2014; historical reference only."
   },
   {
     country: "IN",
