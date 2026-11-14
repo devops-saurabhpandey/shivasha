@@ -176,3 +176,10 @@ These calculations remain planning estimates. They do not yet implement effectiv
 Added `src/statutoryRuleConfig.js` as a configuration and resolution foundation for India and future jurisdictions. Rule records require an explicit country, jurisdiction, domain, rule code, effective-from date, optional exclusive effective-to date, value payload, approval status, and HTTPS source references. The validator rejects invalid calendar dates and overlapping periods for the same jurisdiction/domain/rule code. The resolver returns exactly one approved rule for an explicit jurisdiction and as-of date; it never silently falls back to another state or accepts draft rules.
 
 The module intentionally contains no statutory rates or slabs. Official rates and thresholds must be populated only after source verification and HR/payroll/tax domain approval. These rules are not yet connected to payroll calculations or production persistence. Unit tests cover date boundaries, overlapping periods, missing sources, draft rules, and jurisdiction mismatch.
+
+
+## Phase 2D.2 — India EPF mandatory-coverage ceiling (source-backed)
+
+Added `src/indiaPayrollRules.js` with the EPF mandatory-coverage wage-ceiling history: ₹15,000/month through 16 September 2026 and ₹25,000/month from 17 September 2026, based on the Ministry of Labour & Employment / PIB release and Labour Ministry FAQ. The resolver uses the payroll as-of date and exposes the source references with the resolved value. Tests cover 16/17 September boundary and invalid dates.
+
+Important scope boundary: this value is the mandatory-coverage wage ceiling under the cited notification. It is not a complete PF wage definition, an employee membership determination, a contribution-rate table, EPS allocation, EDLI calculation, or a substitute for establishment-specific legal applicability checks. The existing generic salary calculator is not silently switched to statutory PF deductions by this change. Payroll integration must separately model existing EPF membership, joining wages, establishment coverage, applicable wage definition, contribution periods and approved scheme rules.
