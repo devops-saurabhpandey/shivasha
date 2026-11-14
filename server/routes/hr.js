@@ -8,6 +8,7 @@ import { createHRCompanyAuthorizationMiddleware } from "../enterprise/hrAuthoriz
 import { validatePayrollTransition } from "../enterprise/payrollWorkflow.js";
 import { MAX_PENDING_HR_AUDIT_EVENTS, createHRAuditEvent, flushHRAuditOutboxForDocument, withHRAuditCapacity } from "../enterprise/hrAuditOutbox.js";
 import { HREmployee, HRAttendance, HRLeave, HRChallan, HRPayrollRun } from "../models/HR.js";
+import { buildMonthlyPayrollRegister } from "../../src/hrPayrollRegister.js";
 
 const router = Router();
 router.use(requireAuth);
@@ -483,6 +484,106 @@ router.post("/payroll-runs", async (req, res) => {
   } catch (e) {
     if (e?.code === 11000) return res.status(409).json({ message: "Payroll month is already being saved. Refresh and try again." });
     res.status(500).json({ message: "Could not save monthly payroll snapshot" });
+  }
+});
+
+router.post("/payroll-runs/register", async (req, res) => {
+  const month = clean(req.body?.month, 7);
+  const inputRows = req.body?.employees;
+  if (!/^\\d{4}-(0[1-9]|1[0-2])$/.test(month)) {
+    return res.status(400).json({ message: "Valid payroll month is required (YYYY-MM)" });
+  }
+  if (!Array.isArray(inputRows) || inputRows.length < 1 || inputRows.length > 2000) {
+    return res.status(400).json({ message: "Select between 1 and 2000 employee attendance snapshots" });
+  }
+  const employeeIds = inputRows.map(row => String(row?.employeeId || ""));
+  if (employeeIds.some(id => !validId(id)) || new Set(employeeIds).size !== employeeIds.length) {
+    return res.status(400).json({ message: "Each employee must have one valid, unique employee ID" });
+  }
+  try {
+    const employees = await HREmployee.find({
+      companyId: req.companyId, deletedAt: null, _id: { $in: employeeIds }
+    }).select("_id employeeCode name uan status basicSalary hra da otherAllowances").lean();
+    if (employees.length !== employeeIds.length) {
+      return res.status(400).json({ message: "Payroll contains an employee outside this company or an unknown/archived employee" });
+    }
+    const attendanceById = new Map(inputRows.map(row => [String(row.employeeId), row.attendance]));
+    const register = buildMonthlyPayrollRegister({
+      month,
+      employees: employees.map(employee => ({
+        ...employee,
+        attendance: attendanceById.get(String(employee._id))
+      }))
+    });
+    if (!register.records.length) {
+      return res.status(400).json({ message: "No eligible employees remain after excluding inactive employees" });
+    }
+    const employeeByCode = new Map(employees.map(employee => [employee.employeeCode.toUpperCase(), employee]));
+    const records = register.records.map(row => {
+      const employee = employeeByCode.get(row.employeeCode.toUpperCase());
+      return {
+        employeeId: employee._id,
+        employeeCode: employee.employeeCode,
+        name: employee.name,
+        uan: employee.uan || "",
+        gross: row.salary.gross,
+        otherEarnings: row.salary.otherEarnings,
+        otherDeductions: row.salary.otherDeductions,
+        pfWage: 0,
+        employeePF: 0,
+        employerPF: 0,
+        employeeESIC: 0,
+        employerESIC: 0,
+        netPay: row.salary.netPay,
+        attendanceSnapshot: row.attendance,
+        salaryComponents: row.salary
+      };
+    });
+    const total = key => Math.round(records.reduce((sum, row) => sum + row[key], 0) * 100) / 100;
+    const totals = {
+      gross: register.totals.gross,
+      otherEarnings: register.totals.otherEarnings,
+      otherDeductions: register.totals.otherDeductions,
+      employeePF: 0, employerPF: 0, employeeESIC: 0, employerESIC: 0,
+      netPay: total("netPay")
+    };
+    const existing = await HRPayrollRun.findOne({ companyId: req.companyId, month });
+    if (existing && existing.status !== "Draft") {
+      return res.status(409).json({ message: "This payroll month is " + existing.status + " and is locked. Only Draft payroll can be replaced." });
+    }
+    const id = existing?._id || new mongoose.Types.ObjectId();
+    const action = !existing ? "hr.payroll.register.created" : existing.deletedAt ? "hr.payroll.register.restored" : "hr.payroll.register.replaced";
+    const event = makeAudit(req, action, "payroll_run", id, {
+      month, employeeCount: records.length, excludedEmployeeCount: register.excludedEmployees.length,
+      changedFields: ["status", "employeeCount", "totals", "records", "createdBy"]
+    });
+    let run;
+    if (existing) {
+      run = await HRPayrollRun.findOneAndUpdate(
+        withHRAuditCapacity({ _id: existing._id, companyId: req.companyId, status: "Draft" }),
+        { $set: {
+          companyId: req.companyId, month, status: "Draft", employeeCount: records.length,
+          totals, records, createdBy: req.user.id, approvedBy: null, approvedAt: null,
+          paidBy: null, paidAt: null, deletedAt: null, deletedBy: null
+        }, $push: { auditOutbox: event } },
+        { new: true, runValidators: true }
+      );
+      if (!run) return res.status(409).json({ message: "Payroll changed concurrently or audit capacity is full. Refresh before retrying." });
+    } else {
+      run = await HRPayrollRun.create({
+        _id: id, companyId: req.companyId, month, status: "Draft",
+        employeeCount: records.length, totals, records, createdBy: req.user.id, auditOutbox: [event]
+      });
+    }
+    return respondWithAudit(res, HRPayrollRun, run._id, event, {
+      run, register: { excludedEmployees: register.excludedEmployees }
+    }, existing ? 200 : 201);
+  } catch (error) {
+    if (error?.code === 11000) return res.status(409).json({ message: "Payroll month is already being saved. Refresh and retry." });
+    if (error instanceof TypeError || error instanceof RangeError) {
+      return res.status(400).json({ message: error.message });
+    }
+    return res.status(500).json({ message: "Could not build and save monthly payroll register" });
   }
 });
 
