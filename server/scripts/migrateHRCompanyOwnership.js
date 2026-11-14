@@ -29,7 +29,7 @@ async function main() {
   if (!/_test$/i.test(migrationDatabase) && process.env.HR_MIGRATION_ALLOW_NON_TEST_DATABASE !== "1") {
     throw new Error("Refusing non-test database. Set HR_MIGRATION_ALLOW_NON_TEST_DATABASE=1 only after an independently approved migration plan.");
   }
-  if (APPLY && !process.env.HR_MIGRATION_ALLOW_APPLY) {
+  if (APPLY && process.env.HR_MIGRATION_ALLOW_APPLY !== "1") {
     throw new Error("Refusing --apply without HR_MIGRATION_ALLOW_APPLY=1 and explicit operational approval.");
   }
   await mongoose.connect(process.env.MONGODB_URI);
