@@ -78,7 +78,11 @@ export function calculateLoan(input) {
   const schedule = [];
   for (let month = 1; month <= months; month += 1) {
     const interestCents = Math.round(balance * monthlyRate);
-    const paymentCents = Math.min(balance + interestCents, Math.max(emiCents, interestCents + 1));
+    // The final instalment clears the exact remaining principal plus accrued interest.
+    // This absorbs paise rounding differences and guarantees a zero closing balance.
+    const paymentCents = month === months
+      ? balance + interestCents
+      : Math.min(balance + interestCents, Math.max(emiCents, interestCents + 1));
     const principalPartCents = paymentCents - interestCents;
     balance = Math.max(0, balance - principalPartCents);
     totalInterestCents += interestCents;
