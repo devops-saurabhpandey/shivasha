@@ -29,6 +29,9 @@ This design does not require replica-set transactions and is compatible with the
 
 ## Integration tests
 
+The pull-request CI backend job runs the same integration suite against the isolated standalone MongoDB service, then runs the complete backend test suite and JavaScript syntax scan. The separate frontend job runs the production Vite build; the repository's Docker and business-module workflows remain additional checks.
+
+
 The route-level integration test uses an actual MongoDB server, not mocked Mongoose models. CI provisions a standalone mongo:8 service and sets MONGODB_TEST_URI to shivasha_hr_test. The test refuses to run unless the database name ends in _test, drops only that explicitly isolated database, and never reads MONGODB_URI. No production migration is run by this test.
 
 ## Release limitations
