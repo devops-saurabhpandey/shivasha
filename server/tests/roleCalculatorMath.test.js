@@ -98,7 +98,10 @@ test("working capital handles negative cash and zero liabilities explicitly", ()
     inventory: 25, payables: 0, shortTermDebt: 0
   });
   assert.equal(result.cash, -30);
-  assert.equal(result.currentAssets, 45);
+  assert.equal(result.cashAsset, 0);
+  assert.equal(result.bankOverdraft, 30);
+  assert.equal(result.currentAssets, 75);
+  assert.equal(result.currentLiabilities, 30);
   assert.equal(result.workingCapital, 45);
-  assert.equal(result.currentRatio, null);
+  assert.equal(result.currentRatio, 2.5);
 });
