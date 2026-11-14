@@ -79,7 +79,7 @@ export default function RoleCalculators() {
     receivables, inventory, payables, shortTermDebt
   })), [openingCash,cashReceipts,cashPayments,receivables,inventory,payables,shortTermDebt]);
   const finance = financeResult.value || {
-    cash:0,netCashFlow:0,currentAssets:0,currentLiabilities:0,workingCapital:0,currentRatio:null
+    cash:0,bankOverdraft:0,netCashFlow:0,currentAssets:0,currentLiabilities:0,workingCapital:0,currentRatio:null
   };
 
   const tabs=[["hr","🧑‍💼","HR Manager"],["loan","💼","Finance Manager"],["ca","📊","Chartered Accountant"]];
@@ -130,6 +130,7 @@ export default function RoleCalculators() {
       </div><div className="role-note">Use reconciled figures for the same reporting period. This management estimate is not a substitute for a formal cash-flow statement.</div></div>
       <div className="panel role-panel"><h3>Finance Dashboard</h3>{financeResult.error&&<div className="role-note" role="alert">{financeResult.error}</div>}<div className="role-stats">
         <Stat label="Closing cash balance" value={money(finance.cash)}/>
+        <Stat label="Bank overdraft liability" value={money(finance.bankOverdraft)}/>
         <Stat label="Net cash flow" value={money(finance.netCashFlow)}/>
         <Stat label="Current assets" value={money(finance.currentAssets)}/>
         <Stat label="Current liabilities" value={money(finance.currentLiabilities)}/>
