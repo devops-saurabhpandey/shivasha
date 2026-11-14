@@ -84,6 +84,9 @@ export function calculateLoan(input) {
   let totalPaidCents = 0;
   const schedule = [];
   for (let month = 1; month <= months; month += 1) {
+    // Stop once paise rounding has fully repaid a very small balance; do not
+    // emit zero-value instalments for the unused remainder of the tenure.
+    if (balance === 0) break;
     const interestCents = Math.round(balance * monthlyRate);
     // The final instalment clears the exact remaining principal plus accrued interest.
     // This absorbs paise rounding differences and guarantees a zero closing balance.
