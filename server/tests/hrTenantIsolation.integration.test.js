@@ -237,6 +237,35 @@ test("real MongoDB HR routes enforce tenant isolation, maker-checker and durable
     const payrollId = payroll.body.run._id;
     assert.equal(payroll.body.run.records[0].employeeCode, "A-AUDIT-1", "payroll identity must be canonicalized from the employee master");
 
+    const registerDraft = await call(hrUser, companyAId, "/payroll-runs/register", "POST", {
+      month: "2026-09",
+      employees: [{
+        employeeId: newEmployeeId,
+        attendance: {
+          totalDays: 30, presentDays: 28, paidLeaveDays: 1, weeklyOffDays: 0,
+          paidHolidayDays: 0, unpaidLeaveDays: 1, variableEarnings: 500, otherDeductions: 250
+        }
+      }]
+    });
+    assert.equal(registerDraft.status, 201, JSON.stringify(registerDraft.body));
+    assertRecorded(registerDraft);
+    assert.equal(registerDraft.body.run.records[0].employeeCode, "A-AUDIT-1");
+    assert.deepEqual(registerDraft.body.run.records[0].attendanceSnapshot, {
+      totalDays: 30, paidDays: 29, unpaidLeaveDays: 1
+    });
+    assert.equal(registerDraft.body.run.records[0].salaryComponents.basic, 14500);
+    assert.equal(registerDraft.body.run.records[0].salaryComponents.otherEarnings, 500);
+    assert.equal(registerDraft.body.run.records[0].salaryComponents.otherDeductions, 250);
+    assert.equal(registerDraft.body.run.records[0].netPay, 14750);
+    assert.equal(registerDraft.body.totals.employeePF, 0, "statutory contributions stay explicitly unconfigured");
+    assert.equal((await call(hrUser, companyAId, "/payroll-runs/register", "POST", {
+      month: "2026-08",
+      employees: [{ employeeId: String(employeeB._id), attendance: {
+        totalDays: 30, presentDays: 30, paidLeaveDays: 0, weeklyOffDays: 0,
+        paidHolidayDays: 0, unpaidLeaveDays: 0
+      }}]
+    })).status, 400, "monthly register must reject a foreign-company employee");
+
     // Maker-checker: maker cannot approve; independent admin can approve;
     // the approver cannot release; finance can release; HR cannot release.
     assert.equal((await call(hrUser, companyAId, "/payroll-runs/" + payrollId + "/status", "PATCH", { status: "Approved" })).status, 403);
