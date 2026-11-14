@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from "react";
 import {
   calculateSalary, calculateLoan, calculateGST, calculateTDS,
-  calculateDepreciation, calculateWorkingCapital, calculateAttendancePayroll
+  calculateDepreciation, calculateWorkingCapital, calculateAttendancePayroll, calculateProfitLoss
 } from "./roleCalculatorMath.js";
 
 const safeCalculate = callback => {
@@ -56,14 +56,9 @@ export default function RoleCalculators() {
   const depreciationResult = useMemo(() => safeCalculate(() => calculateDepreciation({
     cost: assetCost, salvage, usefulLife, method: depreciationMethod, rate: depreciationRate
   })), [assetCost,salvage,usefulLife,depreciationMethod,depreciationRate]);
-  const profitResult = useMemo(() => safeCalculate(() => {
-    const income = Number(revenue), expense = Number(expenses), other = Number(otherIncome);
-    if (![income,expense,other].every(value => Number.isFinite(value) && value >= 0 && value <= 1000000000000)) {
-      throw new RangeError("Revenue, expenses and other income must be valid non-negative amounts");
-    }
-    const profit = Math.round((income + other - expense + Number.EPSILON) * 100) / 100;
-    return {profit, margin: income > 0 ? profit / income * 100 : 0};
-  }), [revenue,expenses,otherIncome]);
+  const profitResult = useMemo(() => safeCalculate(() => calculateProfitLoss({
+    revenue, expenses, otherIncome
+  })), [revenue,expenses,otherIncome]);
   const ca = {
     base: gstResult.value?.base || 0, gst: gstResult.value?.gst || 0,
     total: gstResult.value?.total || 0, cgst: gstResult.value?.cgst || 0,
