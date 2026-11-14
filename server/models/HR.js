@@ -122,6 +122,20 @@ const payrollRunSchema = new mongoose.Schema({
     employeeCode: { type: String, required: true, maxlength: 30 },
     name: { type: String, required: true, maxlength: 100 },
     uan: { type: String, default: "", maxlength: 12 },
+    attendanceSnapshot: {
+      totalDays: { type: Number, min: 0 },
+      paidDays: { type: Number, min: 0 },
+      unpaidLeaveDays: { type: Number, min: 0 }
+    },
+    salaryComponents: {
+      basic: { type: Number, min: 0 },
+      hra: { type: Number, min: 0 },
+      allowances: { type: Number, min: 0 },
+      gross: { type: Number, min: 0 },
+      otherEarnings: { type: Number, min: 0 },
+      otherDeductions: { type: Number, min: 0 },
+      netPay: { type: Number }
+    },
     gross: { type: Number, min: 0, required: true },
     otherEarnings: { type: Number, default: 0, min: 0 },
     otherDeductions: { type: Number, default: 0, min: 0 },
