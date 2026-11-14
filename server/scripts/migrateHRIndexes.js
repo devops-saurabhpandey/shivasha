@@ -2,6 +2,11 @@ import "dotenv/config";
 import mongoose from "mongoose";
 import { HREmployee, HRAttendance, HRLeave, HRChallan, HRPayrollRun } from "../models/HR.js";
 
+// Migration scripts must never create collections or indexes implicitly.
+// DDL is performed only by the explicit --apply path below.
+mongoose.set("autoIndex", false);
+mongoose.set("autoCreate", false);
+
 const APPLY = process.argv.includes("--apply");
 const COLLECTIONS = [
   { name: HREmployee.collection.name, legacyUnique: "employeeCode_1", scopedKeys: { companyId: 1, employeeCode: 1 } },
