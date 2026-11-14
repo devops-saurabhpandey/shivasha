@@ -30,6 +30,10 @@ test("rule sets allow adjacent effective periods but reject overlaps", () => {
   assert.throws(() => validateStatutoryRuleSet([
     first, approved({ effectiveFrom: "2027-03-01", effectiveTo: null })
   ]), /Overlapping effective dates/);
+  // A draft can be prepared for review while the current approved rule remains active.
+  assert.equal(validateStatutoryRuleSet([
+    first, approved({ status: "draft", effectiveFrom: "2026-08-01", effectiveTo: null })
+  ]).length, 2);
 });
 
 test("resolver selects only approved rules for exact jurisdiction and inclusive start/exclusive end", () => {
