@@ -200,7 +200,8 @@ $("runRows").onclick=async e=>{
   }catch(err){select.value=run.status;alert(err.message)}
   finally{button.disabled=false}
 };
-window.addEventListener("afterprint",()=>document.body.classList.remove("printing-review"));\n$("savePayroll").onclick=saveMonthlyPayroll;
+window.addEventListener("afterprint",()=>document.body.classList.remove("printing-review"));
+$("savePayroll").onclick=saveMonthlyPayroll;
 $("registerMonth").addEventListener("change",renderRegisterInputs);$("registerRows").addEventListener("input",e=>{const row=e.target.closest("[data-register-employee]");if(row)updateRegisterRow(row)});$("saveRegister").onclick=saveAttendanceRegister;
 
 async function loadChallans(){try{const r=await fetch(base+"/api/hr/challans",{headers:companyHeaders({Authorization:"Bearer "+token})});const d=await r.json();if(!r.ok)throw Error(d.message||"Could not load challans");challanData=d.challans||[];renderChallans()}catch(e){$("challanRows").innerHTML='<tr><td colspan="7">Challan API error: '+esc(e.message)+'</td></tr>'}}
