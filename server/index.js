@@ -29,6 +29,8 @@ import adsRoutes from "./routes/ads.js";
 import aiAssistantRoutes from "./routes/aiAssistant.js";
 import uiuxDesignerAIRoutes from "./routes/uiuxDesignerAI.js";
 import hrRoutes from "./routes/hr.js";
+import { startHRAuditOutboxWorker } from "./enterprise/hrAuditOutbox.js";
+import enterpriseRoutes from "./routes/enterprise.js";
 import analyticsRoutes from "./routes/analytics.js";
 import youtubeAutomationRoutes from "./routes/youtubeAutomation.js";
 import youtubeRenderWorkerRoutes from "./routes/youtubeRenderWorker.js";
@@ -198,6 +200,7 @@ app.use("/api/ayurveda-ai", ayurvedaAIRoutes);
 app.use("/api/subscriptions", subscriptionRoutes);
 app.use("/api/ads", adsRoutes);
 app.use("/api/hr", hrRoutes);
+app.use("/api/enterprise", enterpriseRoutes);
 app.use("/api/analytics", analyticsRoutes);
 app.use("/api/youtube-automation", youtubeAutomationRoutes);
 app.use("/api/youtube/projects", youtubeRenderWorkerRoutes);
@@ -210,8 +213,9 @@ async function start() {
   try {
     if (!process.env.JWT_SECRET) throw new Error("JWT_SECRET is required");
     if (process.env.MONGODB_URI) {
-      await mongoose.connect(process.env.MONGODB_URI);
+      await mongoose.connect(process.env.MONGODB_URI, { writeConcern: { w: 1, j: true, wtimeout: 10000 } });
       console.log("MongoDB connected");
+      startHRAuditOutboxWorker();
     } else {
       console.log("MONGODB_URI not configured; starting without database");
     }

@@ -13,7 +13,9 @@
     "youtube:render": "node scripts/renderYouTubeProject.js",
     "youtube:worker": "node scripts/pollYouTubeRenderQueue.js",
     "cinematic:check": "node scripts/checkCinematicWorker.js",
-    "cinematic:worker": "node scripts/pollCinematicRenderQueue.js"
+    "cinematic:worker": "node scripts/pollCinematicRenderQueue.js",
+    "migrate:hr-indexes": "node scripts/migrateHRIndexes.js",
+    "migrate:hr-tenant": "node scripts/migrateHRCompanyOwnership.js"
   },
   "dependencies": {
     "bcryptjs": "^3.0.2",
