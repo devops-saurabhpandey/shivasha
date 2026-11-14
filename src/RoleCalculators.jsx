@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from "react";
 import {
   calculateSalary, calculateLoan, calculateGST, calculateTDS,
-  calculateDepreciation, calculateWorkingCapital
+  calculateDepreciation, calculateWorkingCapital, calculateAttendancePayroll
 } from "./roleCalculatorMath.js";
 
 const safeCalculate = callback => {
@@ -18,6 +18,10 @@ export default function RoleCalculators() {
   const [basic, setBasic] = useState("30000"), [hra, setHra] = useState("12000"), [allowance, setAllowance] = useState("5000");
   const [employeePf, setEmployeePf] = useState("12"), [employerPf, setEmployerPf] = useState("12"), [professionalTax, setProfessionalTax] = useState("200");
   const [esiEnabled, setEsiEnabled] = useState(false), [esiEmployee, setEsiEmployee] = useState("0.75"), [esiEmployer, setEsiEmployer] = useState("3.25");
+  const [presentDays, setPresentDays] = useState("20"), [paidLeaveDays, setPaidLeaveDays] = useState("1");
+  const [weeklyOffDays, setWeeklyOffDays] = useState("4"), [paidHolidayDays, setPaidHolidayDays] = useState("1");
+  const [unpaidLeaveDays, setUnpaidLeaveDays] = useState("0"), [totalPayrollDays, setTotalPayrollDays] = useState("26");
+  const [variableEarnings, setVariableEarnings] = useState("0"), [otherDeductions, setOtherDeductions] = useState("0");
   const [principal, setPrincipal] = useState("1000000"), [interest, setInterest] = useState("9"), [months, setMonths] = useState("120");
   const [gstBase, setGstBase] = useState("100000"), [gstRate, setGstRate] = useState("18"), [gstMode, setGstMode] = useState("exclusive");
   const [tdsBase, setTdsBase] = useState("50000"), [tdsRate, setTdsRate] = useState("10");
@@ -31,6 +35,12 @@ export default function RoleCalculators() {
     professionalTax, esiEnabled, esiEmployeeRate: esiEmployee, esiEmployerRate: esiEmployer
   })), [basic,hra,allowance,employeePf,employerPf,professionalTax,esiEnabled,esiEmployee,esiEmployer]);
   const hr = hrResult.value || {gross:0,net:0,annualGross:0,annualNet:0,employeePF:0,employerPF:0,deductions:0,employeeESI:0,employerESI:0};
+  const attendanceResult = useMemo(() => safeCalculate(() => calculateAttendancePayroll({
+    basic, hra, allowance, variableEarnings, otherDeductions,
+    presentDays, paidLeaveDays, weeklyOffDays, paidHolidayDays,
+    unpaidLeaveDays, totalDays: totalPayrollDays
+  })), [basic,hra,allowance,variableEarnings,otherDeductions,presentDays,paidLeaveDays,weeklyOffDays,paidHolidayDays,unpaidLeaveDays,totalPayrollDays]);
+  const attendance = attendanceResult.value || {paidDays:0,totalDays:0,payableRatio:0,fixedGross:0,gross:0,net:0};
 
   const loanResult = useMemo(() => safeCalculate(() => calculateLoan({
     principal, annualRate: interest, months
@@ -84,7 +94,30 @@ export default function RoleCalculators() {
         <Field label="Basic salary" value={basic} onChange={setBasic} suffix="₹ / month"/><Field label="HRA" value={hra} onChange={setHra} suffix="₹ / month"/><Field label="Other allowances" value={allowance} onChange={setAllowance} suffix="₹ / month"/><Field label="Employee PF rate" value={employeePf} onChange={setEmployeePf} suffix="%"/><Field label="Employer PF rate" value={employerPf} onChange={setEmployerPf} suffix="%"/><Field label="Professional tax" value={professionalTax} onChange={setProfessionalTax} suffix="₹ / month"/>
       </div><label className="role-check"><input type="checkbox" checked={esiEnabled} onChange={e=>setEsiEnabled(e.target.checked)}/> Include ESI (enter applicable rates)</label>{esiEnabled&&<div className="role-fields"><Field label="Employee ESI rate" value={esiEmployee} onChange={setEsiEmployee} suffix="%"/><Field label="Employer ESI rate" value={esiEmployer} onChange={setEsiEmployer} suffix="%"/></div>}</div>
       <div className="panel role-panel"><h3>Salary Summary</h3>{hrResult.error&&<div className="role-note" role="alert">{hrResult.error}</div>}<div className="role-stats"><Stat label="Monthly gross salary" value={money(hr.gross)}/><Stat label="Monthly take-home" value={money(hr.net)}/><Stat label="Annual gross salary" value={money(hr.annualGross)}/><Stat label="Annual take-home" value={money(hr.annualNet)}/><Stat label="Employee PF deduction" value={money(hr.employeePF)}/><Stat label="Employer PF contribution" value={money(hr.employerPF)}/><Stat label="Total monthly deductions" value={money(hr.deductions)}/><Stat label="Estimated annual CTC" value={money(hr.ctc)}/></div><p className="muted">ESI employee deduction: {money(hr.employeeESI)} · Employer ESI: {money(hr.employerESI)}</p><div className="role-note">PF/ESI eligibility, wage ceiling, basic-wage definition, professional tax and exemptions vary by law and employee circumstances. Confirm current statutory rules before payroll processing.</div></div>
-    </div>}
+    </div>
+      <div className="panel role-panel" style={{marginTop:14}}>
+        <h3>Attendance-Based Payroll</h3>
+        <p className="muted">Prorate fixed salary components using the company's approved payroll-day convention.</p>
+        <div className="role-fields">
+          <Field label="Present days" value={presentDays} onChange={setPresentDays} suffix="days"/>
+          <Field label="Paid leave days" value={paidLeaveDays} onChange={setPaidLeaveDays} suffix="days"/>
+          <Field label="Weekly off days" value={weeklyOffDays} onChange={setWeeklyOffDays} suffix="days"/>
+          <Field label="Paid holiday days" value={paidHolidayDays} onChange={setPaidHolidayDays} suffix="days"/>
+          <Field label="Unpaid leave days" value={unpaidLeaveDays} onChange={setUnpaidLeaveDays} suffix="days"/>
+          <Field label="Total payroll days" value={totalPayrollDays} onChange={setTotalPayrollDays} suffix="days"/>
+          <Field label="Variable earnings" value={variableEarnings} onChange={setVariableEarnings} suffix="₹"/>
+          <Field label="Other approved deductions" value={otherDeductions} onChange={setOtherDeductions} suffix="₹"/>
+        </div>
+        {attendanceResult.error&&<div className="role-note" role="alert">{attendanceResult.error}</div>}
+        <div className="role-stats">
+          <Stat label="Paid days" value={attendance.paidDays+" / "+attendance.totalDays}/>
+          <Stat label="Payable ratio" value={(attendance.payableRatio*100).toFixed(2)+"%"}/>
+          <Stat label="Prorated fixed gross" value={money(attendance.fixedGross)}/>
+          <Stat label="Payable gross" value={money(attendance.gross)}/>
+          <Stat label="Net payable" value={money(attendance.net)}/>
+        </div>
+        <div className="role-note">Paid leave, weekly offs and paid holidays count as paid days. Every calendar/payroll day must be classified exactly once. Variable earnings and other deductions are entered as approved amounts. This tool does not determine statutory eligibility or deductions.</div>
+      </div>}
     {tab==="loan"&&<><div className="role-grid">
       <div className="panel role-panel"><h3>Finance Manager · Cash Flow & Working Capital</h3><p className="muted">Monitor cash position, operating cash flow, receivables, inventory and short-term obligations.</p><div className="role-fields">
         <Field label="Opening cash balance" value={openingCash} onChange={setOpeningCash} suffix="₹"/>
