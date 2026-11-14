@@ -228,3 +228,19 @@ export function calculateAttendancePayroll(input) {
     otherDeductions, net: roundMoney(gross - otherDeductions)
   };
 }
+
+
+/**
+ * Simple management P&L estimate. Inputs are normalized to paise before
+ * arithmetic; this is not a statutory financial statement.
+ */
+export function calculateProfitLoss(input) {
+  const revenue = roundMoney(parseNonNegative(input.revenue, "Revenue"));
+  const expenses = roundMoney(parseNonNegative(input.expenses, "Operating expenses"));
+  const otherIncome = roundMoney(parseNonNegative(input.otherIncome, "Other income"));
+  const profit = roundMoney(revenue + otherIncome - expenses);
+  return {
+    revenue, expenses, otherIncome, profit,
+    margin: revenue > 0 ? roundMoney((profit / revenue) * 100) : 0
+  };
+}
