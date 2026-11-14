@@ -410,7 +410,7 @@ router.post("/payroll-runs", async (req, res) => {
   const month = clean(req.body?.month, 7);
   const records = req.body?.records;
   if (!/^\d{4}-\d{2}$/.test(month) || Number(month.slice(5, 7)) < 1 || Number(month.slice(5, 7)) > 12) return res.status(400).json({ message: "Valid payroll month is required" });
-  if (!Array.isArray(records) || records.length > 2000) return res.status(400).json({ message: "Payroll records must be a valid list of up to 2000 employees" });
+  if (!Array.isArray(records) || records.length < 1 || records.length > 2000) return res.status(400).json({ message: "Payroll records must contain between 1 and 2000 employees" });
   const fields = ["gross", "pfWage", "employeePF", "employerPF", "employeeESIC", "employerESIC", "otherEarnings", "otherDeductions"];
   const snapshot = [];
   for (const row of records) {
@@ -422,7 +422,10 @@ router.post("/payroll-runs", async (req, res) => {
       if (!Number.isFinite(value) || value < 0 || value > 1000000000) return res.status(400).json({ message: "Invalid payroll amount: " + field });
       record[field] = value;
     }
-    record.netPay = record.gross + record.otherEarnings - record.employeePF - record.employeeESIC - record.otherDeductions;
+    record.netPay = Math.round((record.gross + record.otherEarnings - record.employeePF - record.employeeESIC - record.otherDeductions) * 100) / 100;
+    if (record.employeePF + record.employeeESIC + record.otherDeductions > record.gross + record.otherEarnings) {
+      return res.status(400).json({ message: "Payroll deductions cannot exceed gross pay plus other earnings" });
+    }
     snapshot.push(record);
   }
   if (snapshot.some(row => !validId(String(row.employeeId || "")))) return res.status(400).json({ message: "Every payroll row must reference an employee in the selected company" });
