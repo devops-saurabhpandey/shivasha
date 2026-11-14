@@ -159,3 +159,44 @@ export function calculateWorkingCapital(input) {
     currentRatio: currentLiabilities > 0 ? currentAssets / currentLiabilities : null
   };
 }
+
+function wholeDays(value, label, max = 31) {
+  const number = parseNonNegative(value, label, { max });
+  if (!Number.isInteger(number)) throw new RangeError(label + " must be a whole number");
+  return number;
+}
+
+/**
+ * Attendance-based fixed-salary proration. Day categories must account for
+ * every payroll day exactly once. Variable earnings and other deductions are
+ * supplied as already-approved monthly amounts; no statutory deductions are
+ * inferred or calculated here.
+ */
+export function calculateAttendancePayroll(input) {
+  const totalDays = wholeDays(input.totalDays, "Total payroll days", 31);
+  if (totalDays < 1) throw new RangeError("Total payroll days must be between 1 and 31");
+  const presentDays = wholeDays(input.presentDays, "Present days", totalDays);
+  const paidLeaveDays = wholeDays(input.paidLeaveDays, "Paid leave days", totalDays);
+  const weeklyOffDays = wholeDays(input.weeklyOffDays, "Weekly off days", totalDays);
+  const paidHolidayDays = wholeDays(input.paidHolidayDays, "Paid holiday days", totalDays);
+  const unpaidLeaveDays = wholeDays(input.unpaidLeaveDays, "Unpaid leave days", totalDays);
+  const accountedDays = presentDays + paidLeaveDays + weeklyOffDays + paidHolidayDays + unpaidLeaveDays;
+  if (accountedDays !== totalDays) {
+    throw new RangeError("Present, paid leave, weekly off, paid holiday and unpaid leave days must equal total payroll days");
+  }
+  const paidDays = presentDays + paidLeaveDays + weeklyOffDays + paidHolidayDays;
+  const factor = paidDays / totalDays;
+  const basic = roundMoney(parseNonNegative(input.basic, "Basic salary") * factor);
+  const hra = roundMoney(parseNonNegative(input.hra, "HRA") * factor);
+  const allowance = roundMoney(parseNonNegative(input.allowance, "Other allowances") * factor);
+  const variableEarnings = roundMoney(parseNonNegative(input.variableEarnings, "Variable earnings"));
+  const otherDeductions = roundMoney(parseNonNegative(input.otherDeductions, "Other deductions"));
+  const fixedGross = roundMoney(basic + hra + allowance);
+  const gross = roundMoney(fixedGross + variableEarnings);
+  if (otherDeductions > gross) throw new RangeError("Other deductions cannot exceed payable gross salary");
+  return {
+    totalDays, paidDays, unpaidLeaveDays, payableRatio: factor,
+    basic, hra, allowance, fixedGross, variableEarnings, gross,
+    otherDeductions, net: roundMoney(gross - otherDeductions)
+  };
+}
