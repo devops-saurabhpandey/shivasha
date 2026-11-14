@@ -246,6 +246,18 @@ test("real MongoDB HR routes enforce tenant isolation, maker-checker and durable
       month: "2026-10", records: [overDeductedRow]
     });
     assert.equal(overDeductedPayroll.status, 400, "deductions exceeding gross pay must be rejected");
+    const invalidMonthPayroll = await call(hrUser, companyAId, "/payroll-runs", "POST", {
+      month: "2026-13", records: [payrollRow(newEmployeeId)]
+    });
+    assert.equal(invalidMonthPayroll.status, 400, "invalid payroll months must be rejected");
+    const duplicateEmployeePayroll = await call(hrUser, companyAId, "/payroll-runs", "POST", {
+      month: "2026-10", records: [payrollRow(newEmployeeId), payrollRow(newEmployeeId)]
+    });
+    assert.equal(duplicateEmployeePayroll.status, 400, "duplicate employee rows must be rejected");
+    const negativeAmountPayroll = await call(hrUser, companyAId, "/payroll-runs", "POST", {
+      month: "2026-10", records: [{ ...payrollRow(newEmployeeId), otherDeductions: -1 }]
+    });
+    assert.equal(negativeAmountPayroll.status, 400, "negative payroll amounts must be rejected");
     const payrollId = payroll.body.run._id;
     assert.equal(payroll.body.run.records[0].employeeCode, "A-AUDIT-1", "payroll identity must be canonicalized from the employee master");
 
