@@ -70,8 +70,12 @@ export function buildMonthlyPayrollRegister({ month, employees }) {
       uan: employee.uan || "",
       attendance: {
         totalDays: payroll.totalDays,
-        paidDays: payroll.paidDays,
-        unpaidLeaveDays: payroll.unpaidLeaveDays
+        presentDays: employee.attendance.presentDays,
+        paidLeaveDays: employee.attendance.paidLeaveDays,
+        weeklyOffDays: employee.attendance.weeklyOffDays,
+        paidHolidayDays: employee.attendance.paidHolidayDays,
+        unpaidLeaveDays: payroll.unpaidLeaveDays,
+        paidDays: payroll.paidDays
       },
       salary: {
         basic: payroll.basic,
