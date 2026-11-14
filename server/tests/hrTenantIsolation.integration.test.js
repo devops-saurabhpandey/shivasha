@@ -251,7 +251,8 @@ test("real MongoDB HR routes enforce tenant isolation, maker-checker and durable
     assertRecorded(registerDraft);
     assert.equal(registerDraft.body.run.records[0].employeeCode, "A-AUDIT-1");
     assert.deepEqual(registerDraft.body.run.records[0].attendanceSnapshot, {
-      totalDays: 30, paidDays: 29, unpaidLeaveDays: 1
+      totalDays: 30, presentDays: 28, paidLeaveDays: 1, weeklyOffDays: 0,
+      paidHolidayDays: 0, unpaidLeaveDays: 1, paidDays: 29
     });
     assert.equal(registerDraft.body.run.records[0].salaryComponents.basic, 14500);
     assert.equal(registerDraft.body.run.records[0].salaryComponents.otherEarnings, 500);
