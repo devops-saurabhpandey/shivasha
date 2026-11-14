@@ -226,3 +226,56 @@ test("maximum-rate long-tenure loan keeps schedule and totals internally consist
     result.schedule.reduce((sum, row) => sum + row.interest, 0)),
     roundMoney(result.schedule.reduce((sum, row) => sum + row.emi, 0)));
 });
+
+test("GST splits odd paise without losing or creating tax", () => {
+  for (const amount of ["0.01", "0.05", "1.01", "118.01", "999.99"]) {
+    const result = calculateGST({ amount, rate: "18", mode: "exclusive" });
+    assert.equal(roundMoney(result.cgst + result.sgst), result.gst);
+    assert.equal(roundMoney(result.base + result.gst), result.total);
+  }
+  const zeroRate = calculateGST({ amount: "123.45", rate: "0", mode: "inclusive" });
+  assert.equal(zeroRate.base, 123.45);
+  assert.equal(zeroRate.gst, 0);
+  assert.equal(zeroRate.total, 123.45);
+});
+
+test("TDS boundary rates preserve exact zero and full deduction cases", () => {
+  assert.deepEqual(calculateTDS({ amount: "0", rate: "10" }), {
+    tds: 0, netPayable: 0
+  });
+  assert.deepEqual(calculateTDS({ amount: "123.45", rate: "100" }), {
+    tds: 123.45, netPayable: 0
+  });
+});
+
+test("depreciation never reduces book value below salvage value", () => {
+  const slm = calculateDepreciation({
+    cost: "1000", salvage: "125", usefulLife: "3", method: "slm"
+  });
+  assert.equal(slm.depreciation, 291.67);
+  assert.equal(slm.bookValue, 708.33);
+  const wdv = calculateDepreciation({
+    cost: "1000", salvage: "900", usefulLife: "5", method: "wdv", rate: "100"
+  });
+  assert.equal(wdv.depreciation, 100);
+  assert.equal(wdv.bookValue, 900);
+});
+
+test("working capital explicitly handles zero liabilities and cash overdraft", () => {
+  const noLiabilities = calculateWorkingCapital({
+    openingCash: "100.01", receipts: "0", payments: "0",
+    receivables: "0", inventory: "0", payables: "0", shortTermDebt: "0"
+  });
+  assert.equal(noLiabilities.currentRatio, null);
+  assert.equal(noLiabilities.workingCapital, 100.01);
+
+  const overdraft = calculateWorkingCapital({
+    openingCash: "0", receipts: "0", payments: "0.01",
+    receivables: "0", inventory: "0", payables: "0", shortTermDebt: "0"
+  });
+  assert.equal(overdraft.cash, -0.01);
+  assert.equal(overdraft.bankOverdraft, 0.01);
+  assert.equal(overdraft.currentAssets, 0);
+  assert.equal(overdraft.currentLiabilities, 0.01);
+  assert.equal(overdraft.workingCapital, -0.01);
+});
