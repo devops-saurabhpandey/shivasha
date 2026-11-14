@@ -108,6 +108,9 @@ export function calculateLoan(input) {
 }
 
 export function calculateGST(input) {
+  if (input.mode !== "inclusive" && input.mode !== "exclusive") {
+    throw new RangeError("GST mode must be inclusive or exclusive");
+  }
   const entered = roundMoney(parseNonNegative(input.amount, "GST amount"));
   const gstRate = rate(input.rate, "GST rate");
   const base = input.mode === "inclusive" ? roundMoney(entered / (1 + gstRate)) : entered;
