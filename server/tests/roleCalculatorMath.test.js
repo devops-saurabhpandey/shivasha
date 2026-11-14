@@ -142,3 +142,30 @@ test("attendance payroll prorates fixed earnings and validates complete day allo
     variableEarnings: 0, otherDeductions: 0
   }), /whole number/);
 });
+
+ 
+test("attendance payroll prorates fixed salary for unpaid leave while retaining approved variable items", () => {
+  const result = calculateAttendancePayroll({
+    totalDays: 30, presentDays: 20, paidLeaveDays: 2, weeklyOffDays: 4,
+    paidHolidayDays: 1, unpaidLeaveDays: 3,
+    basic: 30000, hra: 12000, allowance: 3000,
+    variableEarnings: 1000, otherDeductions: 500
+  });
+  assert.equal(result.paidDays, 27);
+  assert.equal(result.unpaidLeaveDays, 3);
+  assert.equal(result.payableRatio, 0.9);
+  assert.equal(result.basic, 27000);
+  assert.equal(result.hra, 10800);
+  assert.equal(result.allowance, 2700);
+  assert.equal(result.fixedGross, 40500);
+  assert.equal(result.variableEarnings, 1000);
+  assert.equal(result.gross, 41500);
+  assert.equal(result.net, 41000);
+ 
+  assert.throws(() => calculateAttendancePayroll({
+    totalDays: 30.5, presentDays: 20, paidLeaveDays: 2, weeklyOffDays: 4,
+    paidHolidayDays: 1, unpaidLeaveDays: 3.5,
+    basic: 30000, hra: 12000, allowance: 3000,
+    variableEarnings: 0, otherDeductions: 0
+  }), /whole number/);
+});
