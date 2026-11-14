@@ -10,10 +10,12 @@ const MAX_RATE_PERCENT = 100;
 const MAX_LOAN_MONTHS = 1200;
 
 export function parseNonNegative(value, label = "Amount", { max = MAX_AMOUNT_RUPEES } = {}) {
-  if (typeof value === "string" && value.trim() === "") {
-    throw new TypeError(label + " is required");
+  if (value === null || value === undefined ||
+      (typeof value !== "number" && typeof value !== "string") ||
+      (typeof value === "string" && value.trim() === "")) {
+    throw new TypeError(label + " must be a number");
   }
-  const number = typeof value === "number" ? value : Number(value);
+  const number = typeof value === "number" ? value : Number(value.trim());
   if (!Number.isFinite(number) || number < 0 || number > max) {
     throw new RangeError(label + " must be between 0 and " + max);
   }
@@ -60,6 +62,11 @@ export function calculateSalary(input) {
 export function calculateLoan(input) {
   const principalCents = cents(input.principal, "Loan principal");
   const annualRate = rate(input.annualRate, "Annual interest rate");
+  if (input.months === null || input.months === undefined ||
+      (typeof input.months !== "number" && typeof input.months !== "string") ||
+      (typeof input.months === "string" && input.months.trim() === "")) {
+    throw new TypeError("Loan tenure must be a whole number");
+  }
   const months = Number(input.months);
   if (!Number.isInteger(months) || months < 1 || months > MAX_LOAN_MONTHS) {
     throw new RangeError("Loan tenure must be a whole number between 1 and " + MAX_LOAN_MONTHS + " months");
