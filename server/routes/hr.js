@@ -490,7 +490,7 @@ router.post("/payroll-runs", async (req, res) => {
 router.post("/payroll-runs/register", async (req, res) => {
   const month = clean(req.body?.month, 7);
   const inputRows = req.body?.employees;
-  if (!/^\\d{4}-(0[1-9]|1[0-2])$/.test(month)) {
+  if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) {
     return res.status(400).json({ message: "Valid payroll month is required (YYYY-MM)" });
   }
   if (!Array.isArray(inputRows) || inputRows.length < 1 || inputRows.length > 2000) {
