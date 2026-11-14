@@ -63,10 +63,15 @@ test("small paise-rounded loans stop their schedule after the balance is cleared
   assert.equal(result.schedule[0].balance, 0);
 });
 
-test("loan calculation rejects totals that exceed safe paise precision", () => {
-  assert.throws(() => calculateLoan({
+test("maximum supported loan amount keeps long-tenure totals finite", () => {
+  const result = calculateLoan({
     principal: "1000000000000", annualRate: "100", months: "1200"
-  }), /safe paise precision/);
+  });
+  assert.equal(result.principal, 1_000_000_000_000);
+  assert.equal(result.finalBalance, 0);
+  assert.ok(Number.isFinite(result.emi));
+  assert.ok(Number.isFinite(result.total));
+  assert.ok(Number.isFinite(result.totalInterest));
 });
 
 test("loan input rejects fractional or unreasonable tenures and invalid rates", () => {
