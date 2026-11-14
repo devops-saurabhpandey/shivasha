@@ -204,3 +204,25 @@ test("attendance payroll with all unpaid days pays no fixed salary but preserves
   assert.equal(result.gross, 750);
   assert.equal(result.net, 750);
 });
+
+test("long zero-interest loan reconciles full-term totals while exposing only the first 12 rows", () => {
+  const result = calculateLoan({ principal: "1200", annualRate: "0", months: "1200" });
+  assert.equal(result.emi, 1);
+  assert.equal(result.total, 1200);
+  assert.equal(result.totalInterest, 0);
+  assert.equal(result.finalBalance, 0);
+  assert.equal(result.schedule.length, 12);
+  assert.equal(result.schedule[0].balance, 1199);
+  assert.equal(result.schedule[11].balance, 1188);
+});
+
+test("maximum-rate long-tenure loan keeps schedule and totals internally consistent", () => {
+  const result = calculateLoan({ principal: "250000", annualRate: "100", months: "1200" });
+  assert.equal(result.finalBalance, 0);
+  assert.equal(result.schedule.length, 12);
+  assert.ok(result.totalInterest > result.principal);
+  assert.equal(roundMoney(result.total - result.principal), result.totalInterest);
+  assert.equal(roundMoney(result.schedule.reduce((sum, row) => sum + row.principal, 0) +
+    result.schedule.reduce((sum, row) => sum + row.interest, 0)),
+    roundMoney(result.schedule.reduce((sum, row) => sum + row.emi, 0)));
+});
