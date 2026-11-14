@@ -1,5 +1,13 @@
 import React, { useMemo, useState } from "react";
+import {
+  calculateSalary, calculateLoan, calculateGST, calculateTDS,
+  calculateDepreciation, calculateWorkingCapital
+} from "./roleCalculatorMath.js";
 
+const safeCalculate = callback => {
+  try { return { value: callback(), error: "" }; }
+  catch (error) { return { value: null, error: error.message || "Invalid calculator input" }; }
+};
 const n = value => Math.max(0, Number(value) || 0);
 const money = value => new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 2 }).format(Number.isFinite(value) ? value : 0);
 const Field = ({ label, value, onChange, suffix = "", step = "1", min = "0" }) => <label className="role-field">{label}<div className="role-input-wrap"><input type="number" min={min} step={step} value={value} onChange={e => onChange(e.target.value)} /><span>{suffix}</span></div></label>;
@@ -18,44 +26,51 @@ export default function RoleCalculators() {
   const [openingCash, setOpeningCash] = useState("250000"), [cashReceipts, setCashReceipts] = useState("600000"), [cashPayments, setCashPayments] = useState("420000");
   const [receivables, setReceivables] = useState("180000"), [inventory, setInventory] = useState("120000"), [payables, setPayables] = useState("90000"), [shortTermDebt, setShortTermDebt] = useState("60000");
 
-  const hr = useMemo(() => {
-    const b=n(basic), h=n(hra), a=n(allowance), gross=b+h+a;
-    const epf=b*n(employeePf)/100, cpf=b*n(employerPf)/100;
-    const esiBase=esiEnabled ? gross : 0, ee=esiBase*n(esiEmployee)/100, er=esiBase*n(esiEmployer)/100;
-    const pt=n(professionalTax), deductions=epf+ee+pt;
-    return {gross, epf, cpf, ee, er, pt, deductions, net:gross-deductions, annualGross:gross*12, ctc:(gross+cpf+er)*12, annualNet:(gross-deductions)*12};
-  },[basic,hra,allowance,employeePf,employerPf,professionalTax,esiEnabled,esiEmployee,esiEmployer]);
+  const hrResult = useMemo(() => safeCalculate(() => calculateSalary({
+    basic, hra, allowance, employeePfRate: employeePf, employerPfRate: employerPf,
+    professionalTax, esiEnabled, esiEmployeeRate: esiEmployee, esiEmployerRate: esiEmployer
+  })), [basic,hra,allowance,employeePf,employerPf,professionalTax,esiEnabled,esiEmployee,esiEmployer]);
+  const hr = hrResult.value || {gross:0,net:0,annualGross:0,annualNet:0,employeePF:0,employerPF:0,deductions:0,employeeESI:0,employerESI:0};
 
-  const loan = useMemo(() => {
-    const p=n(principal), rate=n(interest)/1200, count=Math.max(0,Math.floor(n(months)));
-    if (!p || !count) return {emi:0,total:0,totalInterest:0,schedule:[]};
-    const emi=rate===0?p/count:p*rate*Math.pow(1+rate,count)/(Math.pow(1+rate,count)-1);
-    let balance=p; const schedule=[];
-    for(let month=1;month<=Math.min(count,12);month++){
-      const interestPart=balance*rate, principalPart=Math.min(balance,emi-interestPart);
-      balance=Math.max(0,balance-principalPart);
-      schedule.push({month,emi,principal:principalPart,interest:interestPart,balance});
+  const loanResult = useMemo(() => safeCalculate(() => calculateLoan({
+    principal, annualRate: interest, months
+  })), [principal,interest,months]);
+  const loan = loanResult.value || {emi:0,total:0,totalInterest:0,principal:0,schedule:[],finalBalance:0};
+
+  const gstResult = useMemo(() => safeCalculate(() => calculateGST({
+    amount: gstBase, rate: gstRate, mode: gstMode
+  })), [gstBase,gstRate,gstMode]);
+  const tdsResult = useMemo(() => safeCalculate(() => calculateTDS({
+    amount: tdsBase, rate: tdsRate
+  })), [tdsBase,tdsRate]);
+  const depreciationResult = useMemo(() => safeCalculate(() => calculateDepreciation({
+    cost: assetCost, salvage, usefulLife, method: depreciationMethod, rate: depreciationRate
+  })), [assetCost,salvage,usefulLife,depreciationMethod,depreciationRate]);
+  const profitResult = useMemo(() => safeCalculate(() => {
+    const income = Number(revenue), expense = Number(expenses), other = Number(otherIncome);
+    if (![income,expense,other].every(value => Number.isFinite(value) && value >= 0 && value <= 1000000000000)) {
+      throw new RangeError("Revenue, expenses and other income must be valid non-negative amounts");
     }
-    return {emi,total:emi*count,totalInterest:emi*count-p,schedule};
-  },[principal,interest,months]);
+    const profit = Math.round((income + other - expense + Number.EPSILON) * 100) / 100;
+    return {profit, margin: income > 0 ? profit / income * 100 : 0};
+  }), [revenue,expenses,otherIncome]);
+  const ca = {
+    base: gstResult.value?.base || 0, gst: gstResult.value?.gst || 0,
+    total: gstResult.value?.total || 0, cgst: gstResult.value?.cgst || 0,
+    sgst: gstResult.value?.sgst || 0, tds: tdsResult.value?.tds || 0,
+    netPayable: tdsResult.value?.netPayable || 0,
+    dep: depreciationResult.value?.depreciation || 0,
+    bookValue: depreciationResult.value?.bookValue || 0,
+    profit: profitResult.value?.profit || 0, margin: profitResult.value?.margin || 0
+  };
 
-  const ca = useMemo(() => {
-    const entered=n(gstBase), r=n(gstRate)/100, base=gstMode==="inclusive"?entered/(1+r):entered;
-    const gst=gstMode==="inclusive"?entered-base:base*r;
-    const tds=n(tdsBase)*n(tdsRate)/100;
-    const cost=n(assetCost), residual=Math.min(cost,n(salvage)), life=Math.max(1,n(usefulLife));
-    const dep=depreciationMethod==="slm"?(cost-residual)/life:cost*(n(depreciationRate)/100);
-    const bookValue=Math.max(residual,cost-dep);
-    const profit=n(revenue)+n(otherIncome)-n(expenses);
-    return {base,gst,total:gstMode==="inclusive"?entered:base+gst,cgst:gst/2,sgst:gst/2,tds,netPayable:n(tdsBase)-tds,dep,bookValue,profit,margin:n(revenue)>0?profit/n(revenue)*100:0};
-  },[gstBase,gstRate,gstMode,tdsBase,tdsRate,assetCost,salvage,usefulLife,depreciationMethod,depreciationRate,revenue,expenses,otherIncome]);
-
-  const finance = useMemo(() => {
-    const cash=n(openingCash)+n(cashReceipts)-n(cashPayments);
-    const currentAssets=cash+n(receivables)+n(inventory);
-    const currentLiabilities=n(payables)+n(shortTermDebt);
-    return {cash,netCashFlow:n(cashReceipts)-n(cashPayments),currentAssets,currentLiabilities,workingCapital:currentAssets-currentLiabilities,currentRatio:currentLiabilities>0?currentAssets/currentLiabilities:0};
-  },[openingCash,cashReceipts,cashPayments,receivables,inventory,payables,shortTermDebt]);
+  const financeResult = useMemo(() => safeCalculate(() => calculateWorkingCapital({
+    openingCash, receipts: cashReceipts, payments: cashPayments,
+    receivables, inventory, payables, shortTermDebt
+  })), [openingCash,cashReceipts,cashPayments,receivables,inventory,payables,shortTermDebt]);
+  const finance = financeResult.value || {
+    cash:0,netCashFlow:0,currentAssets:0,currentLiabilities:0,workingCapital:0,currentRatio:null
+  };
 
   const tabs=[["hr","🧑‍💼","HR Manager"],["loan","💼","Finance Manager"],["ca","📊","Chartered Accountant"]];
   return <section className="content role-calculators">
@@ -68,7 +83,7 @@ export default function RoleCalculators() {
       <div className="panel role-panel"><h3>HR Manager · Salary Calculator</h3><p className="muted">Enter monthly salary components and contribution rates.</p><div className="role-fields">
         <Field label="Basic salary" value={basic} onChange={setBasic} suffix="₹ / month"/><Field label="HRA" value={hra} onChange={setHra} suffix="₹ / month"/><Field label="Other allowances" value={allowance} onChange={setAllowance} suffix="₹ / month"/><Field label="Employee PF rate" value={employeePf} onChange={setEmployeePf} suffix="%"/><Field label="Employer PF rate" value={employerPf} onChange={setEmployerPf} suffix="%"/><Field label="Professional tax" value={professionalTax} onChange={setProfessionalTax} suffix="₹ / month"/>
       </div><label className="role-check"><input type="checkbox" checked={esiEnabled} onChange={e=>setEsiEnabled(e.target.checked)}/> Include ESI (enter applicable rates)</label>{esiEnabled&&<div className="role-fields"><Field label="Employee ESI rate" value={esiEmployee} onChange={setEsiEmployee} suffix="%"/><Field label="Employer ESI rate" value={esiEmployer} onChange={setEsiEmployer} suffix="%"/></div>}</div>
-      <div className="panel role-panel"><h3>Salary Summary</h3><div className="role-stats"><Stat label="Monthly gross salary" value={money(hr.gross)}/><Stat label="Monthly take-home" value={money(hr.net)}/><Stat label="Annual gross salary" value={money(hr.annualGross)}/><Stat label="Annual take-home" value={money(hr.annualNet)}/><Stat label="Employee PF deduction" value={money(hr.epf)}/><Stat label="Employer PF contribution" value={money(hr.cpf)}/><Stat label="Total monthly deductions" value={money(hr.deductions)}/><Stat label="Estimated annual CTC" value={money(hr.ctc)}/></div><p className="muted">ESI employee deduction: {money(hr.ee)} · Employer ESI: {money(hr.er)}</p><div className="role-note">PF/ESI eligibility, wage ceiling, basic-wage definition, professional tax and exemptions vary by law and employee circumstances. Confirm current statutory rules before payroll processing.</div></div>
+      <div className="panel role-panel"><h3>Salary Summary</h3>{hrResult.error&&<div className="role-note" role="alert">{hrResult.error}</div>}<div className="role-stats"><Stat label="Monthly gross salary" value={money(hr.gross)}/><Stat label="Monthly take-home" value={money(hr.net)}/><Stat label="Annual gross salary" value={money(hr.annualGross)}/><Stat label="Annual take-home" value={money(hr.annualNet)}/><Stat label="Employee PF deduction" value={money(hr.employeePF)}/><Stat label="Employer PF contribution" value={money(hr.employerPF)}/><Stat label="Total monthly deductions" value={money(hr.deductions)}/><Stat label="Estimated annual CTC" value={money(hr.ctc)}/></div><p className="muted">ESI employee deduction: {money(hr.employeeESI)} · Employer ESI: {money(hr.employerESI)}</p><div className="role-note">PF/ESI eligibility, wage ceiling, basic-wage definition, professional tax and exemptions vary by law and employee circumstances. Confirm current statutory rules before payroll processing.</div></div>
     </div>}
     {tab==="loan"&&<><div className="role-grid">
       <div className="panel role-panel"><h3>Finance Manager · Cash Flow & Working Capital</h3><p className="muted">Monitor cash position, operating cash flow, receivables, inventory and short-term obligations.</p><div className="role-fields">
@@ -80,22 +95,22 @@ export default function RoleCalculators() {
         <Field label="Trade payables" value={payables} onChange={setPayables} suffix="₹"/>
         <Field label="Short-term debt" value={shortTermDebt} onChange={setShortTermDebt} suffix="₹"/>
       </div><div className="role-note">Use reconciled figures for the same reporting period. This management estimate is not a substitute for a formal cash-flow statement.</div></div>
-      <div className="panel role-panel"><h3>Finance Dashboard</h3><div className="role-stats">
+      <div className="panel role-panel"><h3>Finance Dashboard</h3>{financeResult.error&&<div className="role-note" role="alert">{financeResult.error}</div>}<div className="role-stats">
         <Stat label="Closing cash balance" value={money(finance.cash)}/>
         <Stat label="Net cash flow" value={money(finance.netCashFlow)}/>
         <Stat label="Current assets" value={money(finance.currentAssets)}/>
         <Stat label="Current liabilities" value={money(finance.currentLiabilities)}/>
         <Stat label="Working capital" value={money(finance.workingCapital)}/>
-        <Stat label="Current ratio" value={finance.currentRatio.toFixed(2)+" : 1"}/>
+        <Stat label="Current ratio" value={(finance.currentRatio === null ? "N/A" : finance.currentRatio.toFixed(2)+" : 1")}/>
       </div><div className="role-note">Current ratio = current assets ÷ current liabilities. Review ageing, restricted cash, inventory valuation and due dates before funding decisions.</div></div>
     </div>
     <div className="role-grid" style={{marginTop:14}}>
       <div className="panel role-panel"><h3>Loan & EMI Planning</h3><p className="muted">A finance-management tool for assessing repayment commitments.</p><div className="role-fields"><Field label="Loan amount" value={principal} onChange={setPrincipal} suffix="₹"/><Field label="Annual interest rate" value={interest} onChange={setInterest} suffix="%" step="0.01"/><Field label="Loan tenure" value={months} onChange={setMonths} suffix="months"/></div><div className="role-note">EMI = P × r × (1+r)^n ÷ ((1+r)^n − 1). Processing fees, insurance, floating-rate changes and prepayments are excluded.</div></div>
-      <div className="panel role-panel"><h3>Debt Repayment Summary</h3><div className="role-stats"><Stat label="Monthly EMI" value={money(loan.emi)}/><Stat label="Total repayment" value={money(loan.total)}/><Stat label="Total interest" value={money(loan.totalInterest)}/><Stat label="Principal amount" value={money(n(principal))}/></div><h4>First 12 instalments</h4><div className="role-table-wrap"><table className="role-table"><thead><tr><th>Month</th><th>EMI</th><th>Principal</th><th>Interest</th><th>Balance</th></tr></thead><tbody>{loan.schedule.map(row=><tr key={row.month}><td>{row.month}</td><td>{money(row.emi)}</td><td>{money(row.principal)}</td><td>{money(row.interest)}</td><td>{money(row.balance)}</td></tr>)}</tbody></table></div></div>
+      <div className="panel role-panel"><h3>Debt Repayment Summary</h3>{loanResult.error&&<div className="role-note" role="alert">{loanResult.error}</div>}<div className="role-stats"><Stat label="Monthly EMI" value={money(loan.emi)}/><Stat label="Total repayment" value={money(loan.total)}/><Stat label="Total interest" value={money(loan.totalInterest)}/><Stat label="Principal amount" value={money(n(principal))}/></div><h4>First 12 instalments</h4><div className="role-table-wrap"><table className="role-table"><thead><tr><th>Month</th><th>EMI</th><th>Principal</th><th>Interest</th><th>Balance</th></tr></thead><tbody>{loan.schedule.map(row=><tr key={row.month}><td>{row.month}</td><td>{money(row.emi)}</td><td>{money(row.principal)}</td><td>{money(row.interest)}</td><td>{money(row.balance)}</td></tr>)}</tbody></table></div></div>
     </div></>}
     {tab==="ca"&&<div className="role-grid">
       <div className="panel role-panel"><h3>Chartered Accountant · Tax & Accounts</h3><p className="muted">GST, TDS, depreciation and profit calculations. Rates are editable.</p><h4>GST Calculator</h4><div className="role-fields"><Field label="Amount" value={gstBase} onChange={setGstBase} suffix="₹"/><Field label="GST rate" value={gstRate} onChange={setGstRate} suffix="%" step="0.01"/></div><label className="role-field">Price type<select className="role-select" value={gstMode} onChange={e=>setGstMode(e.target.value)}><option value="exclusive">Add GST (exclusive)</option><option value="inclusive">GST included (inclusive)</option></select></label><hr/><h4>TDS Calculator</h4><div className="role-fields"><Field label="Payment amount" value={tdsBase} onChange={setTdsBase} suffix="₹"/><Field label="TDS rate" value={tdsRate} onChange={setTdsRate} suffix="%" step="0.01"/></div><hr/><h4>Depreciation</h4><div className="role-fields"><Field label="Asset cost" value={assetCost} onChange={setAssetCost} suffix="₹"/><Field label="Salvage value" value={salvage} onChange={setSalvage} suffix="₹"/><Field label="Useful life" value={usefulLife} onChange={setUsefulLife} suffix="years"/></div><label className="role-field">Method<select className="role-select" value={depreciationMethod} onChange={e=>setDepreciationMethod(e.target.value)}><option value="slm">Straight line method (SLM)</option><option value="wdv">Written down value (WDV)</option></select></label>{depreciationMethod==="wdv"&&<Field label="WDV depreciation rate" value={depreciationRate} onChange={setDepreciationRate} suffix="%"/>}<hr/><h4>Profit & Loss</h4><div className="role-fields"><Field label="Revenue" value={revenue} onChange={setRevenue} suffix="₹"/><Field label="Operating expenses" value={expenses} onChange={setExpenses} suffix="₹"/><Field label="Other income" value={otherIncome} onChange={setOtherIncome} suffix="₹"/></div></div>
-      <div className="panel role-panel"><h3>Accounting Results</h3><h4>GST Summary</h4><div className="role-stats"><Stat label="Taxable value" value={money(ca.base)}/><Stat label="GST amount" value={money(ca.gst)}/><Stat label="Invoice total" value={money(ca.total)}/><Stat label="CGST / SGST" value={money(ca.cgst)+" each"}/></div><h4>TDS Summary</h4><div className="role-stats"><Stat label="TDS deducted" value={money(ca.tds)}/><Stat label="Net payable" value={money(ca.netPayable)}/></div><h4>Depreciation Summary</h4><div className="role-stats"><Stat label="Estimated depreciation" value={money(ca.dep)} note="Per year (SLM) or first-year WDV"/><Stat label="Estimated book value" value={money(ca.bookValue)}/></div><h4>Profit & Loss Summary</h4><div className="role-stats"><Stat label="Profit / (loss)" value={money(ca.profit)}/><Stat label="Profit margin" value={ca.margin.toFixed(2)+"%"}/></div><div className="role-note">TDS rates/sections, thresholds, GST classification and IT Act depreciation rates depend on transaction and current law. WDV here is a simplified first-year estimate using the entered rate; do not use these results as statutory returns or audit schedules.</div></div>
+      <div className="panel role-panel"><h3>Accounting Results</h3>{[gstResult,tdsResult,depreciationResult,profitResult].filter(result=>result.error).map((result,index)=><div className="role-note" role="alert" key={index}>{result.error}</div>)}<h4>GST Summary</h4><div className="role-stats"><Stat label="Taxable value" value={money(ca.base)}/><Stat label="GST amount" value={money(ca.gst)}/><Stat label="Invoice total" value={money(ca.total)}/><Stat label="CGST / SGST" value={money(ca.cgst)+" each"}/></div><h4>TDS Summary</h4><div className="role-stats"><Stat label="TDS deducted" value={money(ca.tds)}/><Stat label="Net payable" value={money(ca.netPayable)}/></div><h4>Depreciation Summary</h4><div className="role-stats"><Stat label="Estimated depreciation" value={money(ca.dep)} note="Per year (SLM) or first-year WDV"/><Stat label="Estimated book value" value={money(ca.bookValue)}/></div><h4>Profit & Loss Summary</h4><div className="role-stats"><Stat label="Profit / (loss)" value={money(ca.profit)}/><Stat label="Profit margin" value={ca.margin.toFixed(2)+"%"}/></div><div className="role-note">TDS rates/sections, thresholds, GST classification and IT Act depreciation rates depend on transaction and current law. WDV here is a simplified first-year estimate using the entered rate; do not use these results as statutory returns or audit schedules.</div></div>
     </div>}
     <p className="role-disclaimer">Planning and estimation tools only. These calculators do not file returns, create statutory payroll, or replace advice from a qualified HR/payroll professional, lender or Chartered Accountant. Verify current Indian tax and labour rules, loan terms and source documents before acting.</p>
   </section>;
