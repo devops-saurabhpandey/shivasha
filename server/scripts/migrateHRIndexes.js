@@ -21,6 +21,14 @@ function sameKeys(left, right) {
 
 async function main() {
   if (!process.env.MONGODB_URI) throw new Error("MONGODB_URI is required");
+  const migrationDatabase = decodeURIComponent(new URL(process.env.MONGODB_URI).pathname.replace(/^\\//, ""));
+  if (!migrationDatabase) throw new Error("MONGODB_URI must include an explicit database name");
+  if (!/_test$/i.test(migrationDatabase) && process.env.HR_MIGRATION_ALLOW_NON_TEST_DATABASE !== "1") {
+    throw new Error("Refusing non-test database. Set HR_MIGRATION_ALLOW_NON_TEST_DATABASE=1 only after an independently approved migration plan.");
+  }
+  if (APPLY && !process.env.HR_MIGRATION_ALLOW_APPLY) {
+    throw new Error("Refusing --apply without HR_MIGRATION_ALLOW_APPLY=1 and explicit operational approval.");
+  }
   await mongoose.connect(process.env.MONGODB_URI);
   const db = mongoose.connection.db;
   const missing = {};
