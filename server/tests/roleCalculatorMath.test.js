@@ -54,6 +54,15 @@ test("zero-interest loan is evenly amortized with a final paise adjustment", () 
   assert.equal(result.totalInterest, 0);
 });
 
+test("small paise-rounded loans stop their schedule after the balance is cleared", () => {
+  const result = calculateLoan({ principal: "0.01", annualRate: "100", months: "1200" });
+  assert.equal(result.finalBalance, 0);
+  assert.equal(result.total, 0.01);
+  assert.equal(result.schedule.length, 1);
+  assert.equal(result.schedule[0].emi, 0.01);
+  assert.equal(result.schedule[0].balance, 0);
+});
+
 test("loan input rejects fractional or unreasonable tenures and invalid rates", () => {
   assert.throws(() => calculateLoan({ principal: 1000, annualRate: 8, months: 0 }));
   assert.throws(() => calculateLoan({ principal: 1000, annualRate: 8, months: 1.5 }));
