@@ -59,3 +59,14 @@ The API verifies the current user's database role. Do not rely on frontend-only 
 - AI Prompt Generator: authenticated `POST /api/prompts/generate`. It requires `OPENAI_API_KEY` in the private server environment and is limited to five requests per user per minute. It returns a draft for review; it does not auto-publish.
 
 Premium detail remains restricted to admins until a verified membership entitlement is integrated server-side. No live payment gateway is activated by this module.
+
+## Seed the curated starter catalogue
+
+After the 16 categories are seeded and at least one SHIVASHA admin account exists, run:
+
+```bash
+cd server
+npm run seed:prompt-samples
+```
+
+This idempotently inserts 16 starter prompts (one for each top-level category) as published, free content. It uses the existing admin account as the seed author. Re-running does not overwrite edited prompt content. The larger 1,000+ prompt catalogue is a later content-curation/import phase; it is not included in this starter batch.
