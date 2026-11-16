@@ -50,3 +50,12 @@ The API verifies the current user's database role. Do not rely on frontend-only 
 - Prompt generator/provider integration and payment checkout are not enabled by this API release.
 - User-submitted prompts require admin moderation before public listing.
 - The category seed contains the initial 16 top-level categories; prompt content is a separate curated import.
+
+## Additional capabilities
+
+- Collections: `GET /api/prompts/collections/me`, `POST /api/prompts/collections`, `GET /api/prompts/collections/:id`, `PATCH /api/prompts/collections/:id`, and `DELETE /api/prompts/collections/:id`. Collections are private by default; only the owner can edit or delete them.
+- Reviews: `GET /api/prompts/:id/reviews` and authenticated `POST /api/prompts/:id/reviews` (one rating per user and prompt).
+- Reports: authenticated `POST /api/prompts/:id/reports`; admins use `GET /api/prompts/admin/reports` and `PATCH /api/prompts/admin/reports/:id` to resolve reports.
+- AI Prompt Generator: authenticated `POST /api/prompts/generate`. It requires `OPENAI_API_KEY` in the private server environment and is limited to five requests per user per minute. It returns a draft for review; it does not auto-publish.
+
+Premium detail remains restricted to admins until a verified membership entitlement is integrated server-side. No live payment gateway is activated by this module.
