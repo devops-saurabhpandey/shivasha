@@ -114,7 +114,7 @@ export default function PromptLibrary({ auth: initialAuth = null }) {
   return <main className="prompt-library">
     <header className="pl-hero">
       <div><span className="pl-eyebrow">SHIVASHA · KNOWLEDGE TO ACTION</span><h2>AI Prompt Library</h2><p>Discover practical prompts, save your favourites and create reusable AI workflows.</p></div>
-      <div className="pl-hero-actions">{auth?.token ? <><span className="pl-user">{auth.user?.name || auth.user?.email || "Member"}</span><button className="pl-btn pl-btn-light" onClick={signOut}>Sign out</button></> : <button className="pl-btn pl-btn-light" onClick={() => setLoginOpen(true)}>Log in / Join</button>}</div>
+      <div className="pl-hero-actions">{auth?.token ? <><span className="pl-user">{auth.user?.name || auth.user?.email || "Member"}</span>{!initialAuth && <button className="pl-btn pl-btn-light" onClick={signOut}>Sign out</button>}</> : <button className="pl-btn pl-btn-light" onClick={() => setLoginOpen(true)}>Log in / Join</button>}</div>
     </header>
     <nav className="pl-tabs" aria-label="Prompt Library sections">
       <button className={tab === "browse" ? "active" : ""} onClick={() => { setTab("browse"); setActivePrompt(null); }}>Explore prompts</button>
