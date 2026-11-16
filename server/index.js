@@ -27,6 +27,7 @@ import ayurvedaAIRoutes from "./routes/ayurvedaAI.js";
 import subscriptionRoutes from "./routes/subscriptions.js";
 import adsRoutes from "./routes/ads.js";
 import aiAssistantRoutes from "./routes/aiAssistant.js";
+import promptRoutes from "./routes/prompts.js";
 import uiuxDesignerAIRoutes from "./routes/uiuxDesignerAI.js";
 import hrRoutes from "./routes/hr.js";
 import { startHRAuditOutboxWorker } from "./enterprise/hrAuditOutbox.js";
@@ -179,6 +180,7 @@ app.get("/api/ready", (_req, res) => {
 
 app.use("/api/auth", authRoutes);
 app.use("/api/ai", aiAssistantRoutes);
+app.use("/api/prompts", promptRoutes);
 app.use("/api/uiux-ai", uiuxDesignerAIRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/posts", postRoutes);
