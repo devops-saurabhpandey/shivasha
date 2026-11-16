@@ -22,6 +22,10 @@ jobs:
         run: npm install
       - name: Build frontend
         run: npm run build
+      - name: Build standalone AI Prompt Library website
+        env:
+          VITE_API_URL: https://example.invalid
+        run: npm run prompt-library:build
 
   backend-syntax:
     name: Backend tests, MongoDB integration and syntax check
