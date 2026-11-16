@@ -135,7 +135,7 @@ const ProjectTrackerData = mongoose.models.ShivashaPersonalProjectTracker || mon
 router.get("/project-tracker", async (req, res, next) => {
   try {
     const record = await ProjectTrackerData.findOne({ owner: req.user.id }).lean();
-    res.json({ tasks: record?.tasks || [] });
+    res.json({ tasks: record?.tasks || [], initialized: Boolean(record) });
   } catch (error) { next(error); }
 });
 
