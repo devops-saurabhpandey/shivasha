@@ -49,7 +49,7 @@ export default function ProjectTracker({ auth }) {
       .then(async response => {
         const data = await response.json().catch(()=>({}));
         if (!response.ok) throw new Error(data.message || "Unable to load your project tracker");
-        if (!cancelled) setTasks(Array.isArray(data.tasks) && data.tasks.length ? data.tasks : starterTasks);
+        if (!cancelled) {\n          const initialTasks = data.initialized ? (Array.isArray(data.tasks) ? data.tasks : []) : starterTasks;\n          setTasks(initialTasks);\n          if (!data.initialized) {\n            const seedResponse = await fetch(API_BASE+"/api/admin/project-tracker", { method:"PUT", headers:{ "Content-Type":"application/json", Authorization:"Bearer "+(auth?.token || "") }, body:JSON.stringify({ tasks:initialTasks }) });\n            if (!seedResponse.ok) throw new Error("Unable to initialize your private project tracker");\n          }\n        }
       })
       .catch(e => { if (!cancelled) { setError(e.message); setTasks(starterTasks); } })
       .finally(() => { if (!cancelled) setLoading(false); });
