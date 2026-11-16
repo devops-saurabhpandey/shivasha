@@ -15,7 +15,7 @@ async function request(path, auth, options = {}) {
 }
 
 export default function PromptLibrary({ auth: initialAuth = null }) {
-  const [auth, setAuth] = useState(initialAuth);
+  const [auth, setAuth] = useState(() => { if (initialAuth) return initialAuth; try { return JSON.parse(localStorage.getItem("shivasha_prompt_auth")) || null; } catch { return null; } });
   const [categories, setCategories] = useState([]);
   const [prompts, setPrompts] = useState([]);
   const [favorites, setFavorites] = useState([]);
