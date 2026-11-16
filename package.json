@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "start": "npm run build && node server.js"
+    "start": "npm run build && node server.js",
+    "prompt-library:dev": "vite --config prompt-library-web/vite.config.js --host 0.0.0.0",
+    "prompt-library:build": "vite build --config prompt-library-web/vite.config.js"
   },
   "dependencies": {
     "react": "^19.1.1",
