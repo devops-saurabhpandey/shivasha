@@ -72,7 +72,7 @@ router.get("/", async (req, res, next) => {
       }
     }
     const [items, total] = await Promise.all([
-      Prompt.find(filter).select("-reviewNote -reviewedBy").sort({ featured: -1, copies: -1, createdAt: -1 }).skip((page - 1) * limit).limit(limit).lean(),
+      Prompt.find(filter).select("-body -instructions -exampleOutput -reviewNote -reviewedBy").sort({ featured: -1, copies: -1, createdAt: -1 }).skip((page - 1) * limit).limit(limit).lean(),
       Prompt.countDocuments(filter)
     ]);
     res.json({ items, page, limit, total, pages: Math.ceil(total / limit) });
@@ -120,7 +120,7 @@ router.post("/", requireAuth, async (req, res, next) => {
     if (parsed.error) return res.status(400).json({ message: parsed.error });
     const admin = await isAdmin(req.user.id);
     const requestedStatus = ["draft", "pending"].includes(req.body.status) ? req.body.status : "pending";
-    const item = await Prompt.create({ ...parsed.value, slug: slugify(parsed.value.title) + "-" + new mongoose.Types.ObjectId().toString().slice(-6), author: req.user.id, status: admin && req.body.status === "published" ? "published" : requestedStatus });
+    const item = await Prompt.create({ ...parsed.value, slug: slugify(parsed.value.title) + "-" + new mongoose.Types.ObjectId().toString().slice(-6), author: req.user.id, status: admin && req.body.status === "published" ? "published" : requestedStatus, accessTier: admin && req.body.accessTier === "premium" ? "premium" : "free", featured: admin && req.body.featured === true });
     res.status(201).json({ item, message: item.status === "published" ? "Prompt published." : "Prompt saved for review." });
   } catch (error) { next(error); }
 });
@@ -135,6 +135,8 @@ router.patch("/:id", requireAuth, async (req, res, next) => {
     const parsed = validatePrompt({ ...item.toObject(), ...req.body });
     if (parsed.error) return res.status(400).json({ message: parsed.error });
     Object.assign(item, parsed.value, { version: item.version + 1 });
+    if (admin && ["free", "premium"].includes(req.body.accessTier)) item.accessTier = req.body.accessTier;
+    if (admin && typeof req.body.featured === "boolean") item.featured = req.body.featured;
     if (!admin && item.status === "published") item.status = "pending";
     if (admin && ["draft", "pending", "published", "rejected", "archived"].includes(req.body.status)) item.status = req.body.status;
     await item.save();
