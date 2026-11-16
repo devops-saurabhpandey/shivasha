@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import AdminReportActions from "./AdminReportActions.jsx";
 import CreatorFinanceAdmin from "./CreatorFinanceAdmin.jsx";
+import ProjectTracker from "./ProjectTracker.jsx";
 
 const API_BASE = (import.meta.env.VITE_API_URL || "https://shivasha.onrender.com").replace(/\/$/, "");
 
@@ -54,6 +55,7 @@ export default function AdminDashboard({ auth }) {
   const money = value => new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(value || 0);
 
   return <>
+    <ProjectTracker auth={auth} />
     <section className="content">
       <div className="feed-head"><div><h2>SHIVASHA Admin MIS</h2><p>Platform overview and business-module totals.</p></div></div>
       {statsError && <div className="api-error">{statsError}</div>}
