@@ -31,6 +31,7 @@ export default function PromptLibrary({ auth: initialAuth = null }) {
   const [authMode, setAuthMode] = useState("login");
   const [promptForm, setPromptForm] = useState({ title: "", summary: "", body: "", category: "business", language: "English", tags: "" });
   const [reviewItems, setReviewItems] = useState([]);
+  const [reportItems, setReportItems] = useState([]);
   const [collections, setCollections] = useState([]);
   const [collectionName, setCollectionName] = useState("");
   const [reviews, setReviews] = useState([]);
@@ -69,7 +70,7 @@ export default function PromptLibrary({ auth: initialAuth = null }) {
   useEffect(() => { loadCategories(); }, []);
   useEffect(() => { loadPrompts(); }, [category, language]);
   useEffect(() => { if (auth?.token) { loadFavorites(); loadCollections(); } else { setFavorites([]); setCollections([]); } }, [auth?.token]);
-  useEffect(() => { if (tab === "review" && auth?.token) loadReview(); }, [tab, auth?.token]);
+  useEffect(() => { if (tab === "review" && auth?.token) loadReview(); if (tab === "reports" && auth?.token) loadReports(); }, [tab, auth?.token]);
 
   const visiblePrompts = useMemo(() => prompts, [prompts]);
   const signIn = async event => {
@@ -133,6 +134,10 @@ export default function PromptLibrary({ auth: initialAuth = null }) {
     try { await request("/api/prompts/" + activePrompt._id + "/reports", auth, { method: "POST", body: JSON.stringify({ reason: reason.toLowerCase() }) }); setNotice("Report sent to moderation."); }
     catch (error) { setNotice(error.message); }
   };
+  const resolveReport = async (item, status) => {
+    try { await request("/api/prompts/admin/reports/" + item._id, auth, { method: "PATCH", body: JSON.stringify({ status }) }); setReportItems(prev => prev.filter(x => x._id !== item._id)); setNotice("Report resolved."); }
+    catch (error) { setNotice(error.message); }
+  };
   const review = async (item, status) => {
     try {
       await request("/api/prompts/admin/" + item._id + "/review", auth, { method: "PATCH", body: JSON.stringify({ status }) });
@@ -151,7 +156,7 @@ export default function PromptLibrary({ auth: initialAuth = null }) {
       <button className={tab === "favorites" ? "active" : ""} onClick={() => { setTab("favorites"); setActivePrompt(null); }}>★ Favourites</button>
       <button className={tab === "submit" ? "active" : ""} onClick={() => { setTab("submit"); setActivePrompt(null); }}>＋ Submit prompt</button>
       <button className={tab === "generate" ? "active" : ""} onClick={() => { setTab("generate"); setActivePrompt(null); }}>✨ AI Generator</button>
-      {auth?.user?.role === "admin" && <button className={tab === "review" ? "active" : ""} onClick={() => { setTab("review"); setActivePrompt(null); }}>Admin review</button>}
+      {auth?.user?.role === "admin" && <><button className={tab === "review" ? "active" : ""} onClick={() => { setTab("review"); setActivePrompt(null); }}>Admin review</button><button className={tab === "reports" ? "active" : ""} onClick={() => { setTab("reports"); setActivePrompt(null); }}>Reports</button></>}
     </nav>
     {notice && <div className="pl-notice" role="status">{notice}<button onClick={() => setNotice("")} aria-label="Dismiss">×</button></div>}
     {tab === "browse" && <>
@@ -164,6 +169,7 @@ export default function PromptLibrary({ auth: initialAuth = null }) {
     {tab === "generate" && <form className="pl-form" onSubmit={generatePrompt}><h2>AI Prompt Generator</h2><p>Describe your goal. The server will create a reusable prompt for you to review before submission. AI provider setup is required.</p><label>What should the prompt help you do?<textarea required rows="5" maxLength="600" value={generatorForm.purpose} onChange={e => setGeneratorForm({...generatorForm,purpose:e.target.value})} placeholder="Example: Create a 30-day marketing plan for a small local retail business."/></label><label>Category<select value={generatorForm.category} onChange={e => setGeneratorForm({...generatorForm,category:e.target.value})}>{categories.map(c => <option key={c.slug} value={c.slug}>{c.name}</option>)}</select></label><label>Language<select value={generatorForm.language} onChange={e => setGeneratorForm({...generatorForm,language:e.target.value})}><option>English</option><option>Hindi</option><option>Bilingual</option></select></label><button className="pl-btn" type="submit" disabled={generating || !generatorForm.purpose.trim()}>{generating ? "Generating…" : "Generate prompt"}</button></form>}
     {tab === "submit" && <form className="pl-form" onSubmit={submitPrompt}><h2>Share a useful prompt</h2><p>New submissions are reviewed by a SHIVASHA admin before public publishing.</p><label>Prompt title<input required maxLength="140" value={promptForm.title} onChange={e => setPromptForm({...promptForm,title:e.target.value})}/></label><label>Short description<input required maxLength="320" value={promptForm.summary} onChange={e => setPromptForm({...promptForm,summary:e.target.value})}/></label><label>Category<select value={promptForm.category} onChange={e => setPromptForm({...promptForm,category:e.target.value})}>{categories.map(c => <option key={c.slug} value={c.slug}>{c.name}</option>)}</select></label><label>Language<select value={promptForm.language} onChange={e => setPromptForm({...promptForm,language:e.target.value})}><option>English</option><option>Hindi</option><option>Bilingual</option></select></label><label>Tags (comma separated)<input value={promptForm.tags} onChange={e => setPromptForm({...promptForm,tags:e.target.value})} placeholder="business, marketing, writing"/></label><label>Full prompt<textarea required rows="9" maxLength="12000" value={promptForm.body} onChange={e => setPromptForm({...promptForm,body:e.target.value})} placeholder="Act as… Your task is… Output format…"/></label><button className="pl-btn" type="submit">Submit for review</button></form>}
     {tab === "review" && <section><h2>Pending prompt review</h2>{reviewItems.length ? reviewItems.map(item => <article className="pl-review" key={item._id}><h3>{item.title}</h3><p>{item.summary}</p><pre>{item.body}</pre><button className="pl-btn" onClick={() => review(item,"published")}>Approve & publish</button> <button className="pl-btn pl-btn-danger" onClick={() => review(item,"rejected")}>Reject</button></article>) : <div className="pl-empty">No prompts are waiting for review.</div>}</section>}
+    {tab === "reports" && <section><h2>Prompt content reports</h2>{reportItems.length ? reportItems.map(item => <article className="pl-review" key={item._id}><h3>{item.prompt?.title || "Prompt report"}</h3><p><b>Reason:</b> {item.reason} · <b>Reported by:</b> {item.reporter?.name || "Member"}</p>{item.details && <p>{item.details}</p>}<button className="pl-btn" onClick={() => resolveReport(item,"reviewed")}>Mark reviewed</button> <button className="pl-btn pl-btn-outline" onClick={() => resolveReport(item,"dismissed")}>Dismiss report</button></article>) : <div className="pl-empty">No open reports.</div>}</section>}
     {loginOpen && <div className="pl-modal-backdrop" role="presentation" onClick={e => e.target === e.currentTarget && setLoginOpen(false)}><form className="pl-modal" onSubmit={signIn}><button type="button" className="pl-modal-close" onClick={() => setLoginOpen(false)}>×</button><h2>{authMode === "login" ? "Log in to SHIVASHA" : "Create your SHIVASHA account"}</h2>{authMode === "register" && <label>Name<input required value={loginForm.name} onChange={e => setLoginForm({...loginForm,name:e.target.value})}/></label>}<label>Email<input required type="email" value={loginForm.email} onChange={e => setLoginForm({...loginForm,email:e.target.value})}/></label><label>Password<input required type="password" minLength="8" value={loginForm.password} onChange={e => setLoginForm({...loginForm,password:e.target.value})}/></label><button className="pl-btn" type="submit">{authMode === "login" ? "Log in" : "Create account"}</button><button type="button" className="pl-link" onClick={() => setAuthMode(authMode === "login" ? "register" : "login")}>{authMode === "login" ? "New here? Create an account" : "Already have an account? Log in"}</button></form></div>}
   </main>;
 }
