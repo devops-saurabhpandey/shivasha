@@ -125,4 +125,41 @@ router.patch("/users/:id/block", async (req, res) => {
   res.json({ user, moderationBlocked: blocked });
 });
 
+
+const ProjectTrackerDataSchema = new mongoose.Schema({
+  owner: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true, unique: true, index: true },
+  tasks: { type: [mongoose.Schema.Types.Mixed], default: [] }
+}, { timestamps: true, minimize: false });
+const ProjectTrackerData = mongoose.models.ShivashaPersonalProjectTracker || mongoose.model("ShivashaPersonalProjectTracker", ProjectTrackerDataSchema);
+
+router.get("/project-tracker", async (req, res, next) => {
+  try {
+    const record = await ProjectTrackerData.findOne({ owner: req.user.id }).lean();
+    res.json({ tasks: record?.tasks || [] });
+  } catch (error) { next(error); }
+});
+
+router.put("/project-tracker", async (req, res, next) => {
+  try {
+    if (!Array.isArray(req.body?.tasks) || req.body.tasks.length > 300) {
+      return res.status(400).json({ message: "Tasks must be an array with no more than 300 items." });
+    }
+    const allowedStatuses = new Set(["pending", "in-progress", "completed"]);
+    const allowedPriorities = new Set(["low", "medium", "high"]);
+    const tasks = req.body.tasks.map((task, index) => ({
+      id: String(task?.id || "task-" + index).slice(0, 100),
+      project: String(task?.project || "Shivasha").trim().slice(0, 100),
+      title: String(task?.title || "").trim().slice(0, 300),
+      status: allowedStatuses.has(task?.status) ? task.status : "pending",
+      priority: allowedPriorities.has(task?.priority) ? task.priority : "medium"
+    })).filter(task => task.title);
+    const record = await ProjectTrackerData.findOneAndUpdate(
+      { owner: req.user.id },
+      { $set: { tasks } },
+      { new: true, upsert: true, setDefaultsOnInsert: true }
+    ).lean();
+    res.json({ tasks: record.tasks });
+  } catch (error) { next(error); }
+});
+
 export default router;
