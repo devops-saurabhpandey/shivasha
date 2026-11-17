@@ -162,4 +162,20 @@ router.put("/project-tracker", async (req, res, next) => {
   } catch (error) { next(error); }
 });
 
+
+router.get("/github-projects", async (req, res) => {
+  try {
+    const { getGitHubProjectSnapshot } = await import("../services/githubProjectSync.js");
+    const snapshot = await getGitHubProjectSnapshot({ force: req.query.refresh === "1" });
+    res.set("Cache-Control", "no-store");
+    res.json(snapshot);
+  } catch (error) {
+    const status = Number.isInteger(error.status) ? error.status : 502;
+    res.status(status).json({
+      message: status === 503 ? error.message : "Unable to sync GitHub project status.",
+      detail: process.env.NODE_ENV === "production" ? undefined : error.detail
+    });
+  }
+});
+
 export default router;
