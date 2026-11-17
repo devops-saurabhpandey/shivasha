@@ -30,6 +30,22 @@ export default function ProjectTracker({ auth }) {
   const [error,setError] = useState("");
   const [filter,setFilter] = useState("all");
   const [draft,setDraft] = useState({ project:"Shivasha", title:"", priority:"medium" });
+  const [github,setGithub] = useState(null);
+  const [githubLoading,setGithubLoading] = useState(false);
+  const [githubError,setGithubError] = useState("");
+
+  const loadGitHub = async (refresh = false) => {
+    setGithubLoading(true); setGithubError("");
+    try {
+      const response = await fetch(API_BASE+"/api/admin/github-projects"+(refresh?"?refresh=1":""), { headers:{ Authorization:"Bearer "+(auth?.token || "") } });
+      const data = await response.json().catch(()=>({}));
+      if (!response.ok) throw new Error(data.message || "Unable to sync GitHub projects");
+      setGithub(data);
+    } catch (e) { setGithubError(e.message); }
+    finally { setGithubLoading(false); }
+  };
+
+  useEffect(() => { if (auth?.token) loadGitHub(); }, [auth?.token]);
 
   const headers = { "Content-Type":"application/json", Authorization:"Bearer "+(auth?.token || "") };
   const persist = async next => {
@@ -85,6 +101,37 @@ export default function ProjectTracker({ auth }) {
     {error && <div className="api-error" role="alert">{error}</div>}
     <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(135px,1fr))",gap:12,marginBottom:18}}>
       {[["Total Tasks",counts.total],["Completed",counts.completed],["In Progress",counts.progress],["Pending",counts.pending]].map(([label,value])=><div key={label} style={card}><small style={{color:"#64748b"}}>{label}</small><div style={{fontSize:27,fontWeight:800,marginTop:5}}>{value}</div></div>)}
+    </div>
+    <div style={{...card,marginBottom:18}}>
+      <div className="feed-head" style={{alignItems:"center"}}>
+        <div><h3 style={{margin:"0 0 4px"}}>GitHub Projects Sync</h3><p style={{margin:0,color:"#64748b",fontSize:13}}>Repositories, open Issues, Pull Requests and latest Actions status.</p></div>
+        <button onClick={()=>loadGitHub(true)} disabled={githubLoading} style={{...button,background:"#111827",color:"#fff"}}>{githubLoading?"Syncing…":"↻ Sync GitHub"}</button>
+      </div>
+      {githubError && <div className="api-error" role="alert">{githubError}</div>}
+      {githubLoading && !github && <p>Loading GitHub repository status…</p>}
+      {github && <>
+        <div style={{display:"flex",gap:12,flexWrap:"wrap",margin:"14px 0"}}>
+          {[["Repositories",github.repositoryCount],["Open Issues",github.totals.openIssues],["Open PRs",github.totals.openPullRequests],["Workflow failures",github.totals.workflowFailures],["Running workflows",github.totals.workflowsRunning]].map(([label,value])=><div key={label} style={{background:"#f8fafc",borderRadius:10,padding:10,minWidth:105}}><small style={{color:"#64748b"}}>{label}</small><div style={{fontSize:22,fontWeight:800}}>{value}</div></div>)}
+        </div>
+        <small style={{color:"#64748b"}}>Last synced: {new Date(github.syncedAt).toLocaleString()}</small>
+        <div style={{display:"grid",gap:10,marginTop:12}}>
+          {github.projects.map(project=><article key={project.id} style={{border:"1px solid #e5eaf1",borderRadius:11,padding:12}}>
+            <div style={{display:"flex",justifyContent:"space-between",gap:10,flexWrap:"wrap"}}>
+              <a href={project.url} target="_blank" rel="noreferrer" style={{fontWeight:800,color:"#3730a3"}}>{project.fullName}</a>
+              <small style={{color:"#64748b"}}>{project.visibility} · Updated {new Date(project.updatedAt).toLocaleDateString()}</small>
+            </div>
+            <div style={{display:"flex",gap:12,flexWrap:"wrap",fontSize:13,marginTop:7}}>
+              <span>Issues: {project.issues.length}{project.issues.length===10?" (latest 10)":""}</span>
+              <span>Open PRs: {project.pullRequests.length}</span>
+              <span>Actions: {project.workflow ? (project.workflow.status==="completed" ? (project.workflow.conclusion||"completed") : project.workflow.status) : "No recent run"}</span>
+            </div>
+            {project.issues.length>0 && <div style={{marginTop:8,fontSize:13}}><b>Issues:</b> {project.issues.slice(0,3).map((item,index)=><React.Fragment key={item.number}>{index>0?" · ":""}<a href={item.url} target="_blank" rel="noreferrer">#{item.number} {item.title}</a></React.Fragment>)}</div>}
+            {project.pullRequests.length>0 && <div style={{marginTop:6,fontSize:13}}><b>Pull Requests:</b> {project.pullRequests.slice(0,3).map((item,index)=><React.Fragment key={item.number}>{index>0?" · ":""}<a href={item.url} target="_blank" rel="noreferrer">#{item.number} {item.title}</a></React.Fragment>)}</div>}
+            {project.workflow?.url && <div style={{marginTop:6,fontSize:13}}><a href={project.workflow.url} target="_blank" rel="noreferrer">Open latest GitHub Actions run</a></div>}
+            {project.syncWarning && <small style={{display:"block",color:"#b45309",marginTop:5}}>{project.syncWarning}</small>}
+          </article>)}
+        </div>
+      </>}
     </div>
     <div style={{...card,marginBottom:18}}>
       <h3 style={{marginTop:0}}>Add a task</h3>
