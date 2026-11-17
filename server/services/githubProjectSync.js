@@ -22,6 +22,20 @@ async function githubGet(path, token) {
   return response.json();
 }
 
+async function fetchAllOwnedRepositories(owner, token) {
+  const all = [];
+  for (let page = 1; ; page += 1) {
+    const batch = await githubGet(
+      "/user/repos?per_page=100&page=" + page + "&sort=updated&affiliation=owner",
+      token
+    );
+    const owned = batch.filter(repo => repo.owner?.login?.toLowerCase() === owner.toLowerCase());
+    all.push(...owned);
+    if (batch.length < 100) break;
+  }
+  return all;
+}
+
 async function mapLimit(items, limit, worker) {
   const output = new Array(items.length);
   let cursor = 0;
@@ -44,9 +58,8 @@ export async function getGitHubProjectSnapshot({ force = false } = {}) {
   if (!force && cache.value && Date.now() - cache.at < CACHE_MS) return cache.value;
 
   const owner = String(process.env.GITHUB_OWNER || "devops-saurabhpandey").trim();
-  const repositories = await githubGet("/user/repos?per_page=100&sort=updated&affiliation=owner", token);
-  const owned = repositories.filter(repo => repo.owner?.login?.toLowerCase() === owner.toLowerCase());
-  const projects = await mapLimit(owned, 5, async repo => {
+  const repositories = await fetchAllOwnedRepositories(owner, token);
+  const projects = await mapLimit(repositories, 5, async repo => {
     const base = "/repos/" + encodeURIComponent(owner) + "/" + encodeURIComponent(repo.name);
     const results = await Promise.allSettled([
       githubGet(base + "/issues?state=open&per_page=10&sort=updated", token),
@@ -70,8 +83,12 @@ export async function getGitHubProjectSnapshot({ force = false } = {}) {
     const errors = results.filter(result => result.status === "rejected").length;
     return {
       id: repo.id, name: repo.name, fullName: repo.full_name,
+      description: repo.description || "",
       url: repo.html_url, visibility: repo.visibility || (repo.private ? "private" : "public"),
-      defaultBranch: repo.default_branch, updatedAt: repo.updated_at,
+      archived: Boolean(repo.archived), fork: Boolean(repo.fork),
+      language: repo.language || null,
+      defaultBranch: repo.default_branch, createdAt: repo.created_at,
+      pushedAt: repo.pushed_at, updatedAt: repo.updated_at,
       openIssues: repo.open_issues_count ?? issues.length,
       issues, pullRequests,
       workflow: run ? {
