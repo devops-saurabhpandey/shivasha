@@ -111,7 +111,7 @@ export default function ProjectTracker({ auth }) {
       {githubLoading && !github && <p>Loading GitHub repository status…</p>}
       {github && <>
         <div style={{display:"flex",gap:12,flexWrap:"wrap",margin:"14px 0"}}>
-          {[["Repositories",github.repositoryCount],["Open Issues",github.totals.openIssues],["Open PRs",github.totals.openPullRequests],["Workflow failures",github.totals.workflowFailures],["Running workflows",github.totals.workflowsRunning]].map(([label,value])=><div key={label} style={{background:"#f8fafc",borderRadius:10,padding:10,minWidth:105}}><small style={{color:"#64748b"}}>{label}</small><div style={{fontSize:22,fontWeight:800}}>{value}</div></div>)}
+          {[["Repositories",github.repositoryCount],["Recent Issues",github.totals.openIssues],["Open PRs",github.totals.openPullRequests],["Workflow failures",github.totals.workflowFailures],["Running workflows",github.totals.workflowsRunning]].map(([label,value])=><div key={label} style={{background:"#f8fafc",borderRadius:10,padding:10,minWidth:105}}><small style={{color:"#64748b"}}>{label}</small><div style={{fontSize:22,fontWeight:800}}>{value}</div></div>)}
         </div>
         <small style={{color:"#64748b"}}>Last synced: {new Date(github.syncedAt).toLocaleString()}</small>
         <div style={{display:"grid",gap:10,marginTop:12}}>
@@ -121,7 +121,7 @@ export default function ProjectTracker({ auth }) {
               <small style={{color:"#64748b"}}>{project.visibility} · Updated {new Date(project.updatedAt).toLocaleDateString()}</small>
             </div>
             <div style={{display:"flex",gap:12,flexWrap:"wrap",fontSize:13,marginTop:7}}>
-              <span>Issues: {project.issues.length}{project.issues.length===10?" (latest 10)":""}</span>
+              <span>Recent Issues: {project.issues.length}{project.issues.length===10?" (latest 10)":""}</span>
               <span>Open PRs: {project.pullRequests.length}</span>
               <span>Actions: {project.workflow ? (project.workflow.status==="completed" ? (project.workflow.conclusion||"completed") : project.workflow.status) : "No recent run"}</span>
             </div>
