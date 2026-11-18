@@ -1,11 +1,40 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 
-function renderInlineMarkdown(text) {
-  return text.split(/(\*\*[^*]+\*\*|\*[^*]+\*)/g).map((part, index) => {
-    if (part.startsWith("**") && part.endsWith("**")) return <strong key={index}>{part.slice(2, -2)}</strong>;
-    if (part.startsWith("*") && part.endsWith("*")) return <em key={index}>{part.slice(1, -1)}</em>;
-    return part;
-  });
+const ALLOWED_EDITOR_TAGS = new Set(["P", "BR", "STRONG", "B", "EM", "I", "U", "H1", "H2", "H3", "BLOCKQUOTE", "UL", "OL", "LI", "PRE", "CODE", "A", "HR"]);
+const DROP_EDITOR_TAGS = new Set(["SCRIPT", "STYLE", "IFRAME", "OBJECT", "EMBED", "SVG", "MATH", "TEMPLATE"]);
+
+function escapeEditorText(value) {
+  return String(value).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
+
+function sanitizeEditorHtml(input) {
+  const parsed = new DOMParser().parseFromString(String(input || ""), "text/html");
+  const cleanNode = node => {
+    if (node.nodeType === Node.TEXT_NODE) return escapeEditorText(node.nodeValue || "");
+    if (node.nodeType !== Node.ELEMENT_NODE) return "";
+    const tag = node.tagName;
+    if (DROP_EDITOR_TAGS.has(tag)) return "";
+    const children = Array.from(node.childNodes).map(cleanNode).join("");
+    if (!ALLOWED_EDITOR_TAGS.has(tag)) return children;
+    if (tag === "A") {
+      const href = (node.getAttribute("href") || "").trim();
+      if (/^(https?:\\/\\/|mailto:)/i.test(href)) return '<a href="' + escapeEditorText(href) + '" target="_blank" rel="noopener noreferrer">' + children + "</a>";
+      return children;
+    }
+    return "<" + tag.toLowerCase() + ">" + children + "</" + tag.toLowerCase() + ">";
+  };
+  return Array.from(parsed.body.childNodes).map(cleanNode).join("");
+}
+
+function toEditorHtml(value) {
+  const raw = String(value || "");
+  if (/<(?:p|br|strong|b|em|i|u|h[1-3]|blockquote|ul|ol|li|pre|code|a|hr)\\b/i.test(raw)) return sanitizeEditorHtml(raw);
+  return escapeEditorText(raw).replace(/\\r?\\n/g, "<br>");
+}
+
+function editorWordCount(html) {
+  const parsed = new DOMParser().parseFromString(String(html || ""), "text/html");
+  return (parsed.body.textContent || "").trim().split(/\\s+/).filter(Boolean).length;
 }
 
 export default function ShivashaDocs({ auth, apiFetch }) {
@@ -17,6 +46,7 @@ export default function ShivashaDocs({ auth, apiFetch }) {
   const [totalPages, setTotalPages] = useState(1);
   const [totalDocuments, setTotalDocuments] = useState(0);
   const [preview, setPreview] = useState(false);
+  const [editorLoadKey, setEditorLoadKey] = useState(0);
   const [showVersions, setShowVersions] = useState(false);
   const [versions, setVersions] = useState([]);
   const [versionsLoading, setVersionsLoading] = useState(false);
@@ -55,6 +85,10 @@ export default function ShivashaDocs({ auth, apiFetch }) {
   }, [loadDocuments]);
   useEffect(() => () => clearTimeout(saveTimer.current), []);
 
+  useEffect(() => {
+    if (!preview && editorRef.current) editorRef.current.innerHTML = toEditorHtml(content);
+  }, [editorLoadKey, preview]);
+
   const openDocument = async (id) => {
     clearTimeout(saveTimer.current);
     setError("");
@@ -64,8 +98,10 @@ export default function ShivashaDocs({ auth, apiFetch }) {
       const doc = data.document;
       setCurrent(doc);
       setTitle(doc.title);
-      setContent(doc.content || "");
-      latestRef.current = { title: doc.title, content: doc.content || "" };
+      const editorContent = toEditorHtml(doc.content || "");
+      setContent(editorContent);
+      setEditorLoadKey(key => key + 1);
+      latestRef.current = { title: doc.title, content: editorContent };
       savedRef.current = latestRef.current;
       revisionRef.current = doc.revision;
     } catch (e) { setError(e.message); }
@@ -139,8 +175,10 @@ export default function ShivashaDocs({ auth, apiFetch }) {
       revisionRef.current = doc.revision;
       setCurrent(doc);
       setTitle(doc.title);
-      setContent(doc.content || "");
-      latestRef.current = { title: doc.title, content: doc.content || "" };
+      const editorContent = toEditorHtml(doc.content || "");
+      setContent(editorContent);
+      setEditorLoadKey(key => key + 1);
+      latestRef.current = { title: doc.title, content: editorContent };
       savedRef.current = latestRef.current;
       setStatus("saved");
       await loadDocuments();
@@ -171,14 +209,23 @@ export default function ShivashaDocs({ auth, apiFetch }) {
 
   const setSavedSnapshotForMove = () => { savedRef.current = latestRef.current; };
 
-  const applyFormat = (prefix, suffix = prefix) => {
-    const field = editorRef.current;
-    if (!field) return;
-    const start = field.selectionStart, end = field.selectionEnd;
-    const selected = content.slice(start, end);
-    const next = content.slice(0, start) + prefix + (selected || "text") + suffix + content.slice(end);
-    setContent(next);
-    requestAnimationFrame(() => { field.focus(); field.setSelectionRange(start + prefix.length, start + prefix.length + (selected || "text").length); });
+  const syncRichEditor = () => {
+    if (!editorRef.current) return;
+    setContent(sanitizeEditorHtml(editorRef.current.innerHTML));
+  };
+
+  const applyFormat = (command, value = null) => {
+    const editor = editorRef.current;
+    if (!editor) return;
+    editor.focus();
+    if (command === "createLink") {
+      const url = window.prompt("Enter a link (https:// or mailto:)");
+      if (!url || !/^(https?:\\/\\/|mailto:)/i.test(url.trim())) return;
+      document.execCommand(command, false, url.trim());
+    } else {
+      document.execCommand(command, false, value);
+    }
+    syncRichEditor();
   };
 
   const deleteDocument = async () => {
@@ -219,10 +266,12 @@ export default function ShivashaDocs({ auth, apiFetch }) {
           {status === "saving" ? "Saving…" : status === "saved" ? "Saved" : status === "error" ? "Save failed" : status === "pending" ? "Changes pending…" : "Ready"}
         </span>
       </div>
-      <div className="shivasha-doc-tools"><button type="button" onClick={() => applyFormat("**")}>Bold</button><button type="button" onClick={() => applyFormat("*")}>Italic</button><button type="button" onClick={() => applyFormat("# ", "")}>Heading 1</button><button type="button" onClick={() => applyFormat("## ", "")}>Heading 2</button><button type="button" onClick={() => applyFormat("> ", "")}>Quote</button><button type="button" onClick={() => applyFormat("- ", "")}>• List</button><button type="button" onClick={() => applyFormat("1. ", "")}>Numbered</button><button type="button" onClick={() => applyFormat("`")}>Code</button><button type="button" onClick={() => applyFormat("\n---\n", "")}>Divider</button><button type="button" onClick={() => setPreview(v => !v)}>{preview ? "Edit" : "Preview"}</button><button type="button" onClick={loadVersions}>Version history</button></div>
+      <div className="shivasha-doc-tools" role="toolbar" aria-label="Text formatting"><button type="button" onClick={() => applyFormat("bold")}><b>B</b></button><button type="button" onClick={() => applyFormat("italic")}><i>I</i></button><button type="button" onClick={() => applyFormat("underline")}><u>U</u></button><button type="button" onClick={() => applyFormat("formatBlock", "H1")}>H1</button><button type="button" onClick={() => applyFormat("formatBlock", "H2")}>H2</button><button type="button" onClick={() => applyFormat("formatBlock", "P")}>Normal</button><button type="button" onClick={() => applyFormat("formatBlock", "BLOCKQUOTE")}>Quote</button><button type="button" onClick={() => applyFormat("insertUnorderedList")}>• List</button><button type="button" onClick={() => applyFormat("insertOrderedList")}>1. List</button><button type="button" onClick={() => applyFormat("formatBlock", "PRE")}>Code</button><button type="button" onClick={() => applyFormat("createLink")}>Link</button><button type="button" onClick={() => applyFormat("insertHorizontalRule")}>Divider</button><button type="button" onClick={() => applyFormat("removeFormat")}>Clear format</button><button type="button" onClick={loadVersions}>Version history</button></div>
       <label className="shivasha-doc-move">Move to folder <select value={current.folder || ""} onChange={e => moveToFolder(e.target.value)}><option value="">Unfiled</option>{folders.map(folder => <option key={folder._id} value={folder._id}>{folder.name}</option>)}</select></label>
       {showVersions && <div className="shivasha-doc-history"><div className="shivasha-doc-history-head"><b>Version history</b><button type="button" className="secondary" onClick={() => setShowVersions(false)}>Close</button></div>{versionsLoading ? <p>Loading versions…</p> : versions.length ? versions.map(version => <div className="shivasha-doc-version" key={version._id}><span><b>Revision {version.revision}</b><small>{new Date(version.createdAt).toLocaleString()} · {version.title}</small></span><button type="button" className="secondary" onClick={() => restoreVersion(version._id)}>Restore</button></div>) : <p>No saved versions yet. Versions are created when you edit the title or content.</p>}</div>}
-      {preview ? <div className="shivasha-doc-preview" aria-label="Document preview">{content.split("\n").map((line, index) => line.startsWith("## ") ? <h4 key={index}>{renderInlineMarkdown(line.slice(3))}</h4> : line.startsWith("# ") ? <h3 key={index}>{renderInlineMarkdown(line.slice(2))}</h3> : line.startsWith("> ") ? <blockquote key={index}>{renderInlineMarkdown(line.slice(2))}</blockquote> : line === "---" ? <hr key={index}/> : line.startsWith("- ") ? <p key={index}>• {renderInlineMarkdown(line.slice(2))}</p> : line.trim() ? <p key={index}>{renderInlineMarkdown(line)}</p> : <br key={index}/>)}</div> : <textarea ref={editorRef} className="shivasha-doc-content" aria-label="Document content" value={content} maxLength={100000} onChange={e => setContent(e.target.value)} onBlur={() => { clearTimeout(saveTimer.current); saveNow(latestRef.current); }} placeholder="Start writing your document…"/>}
+      {preview
+        ? <div className="shivasha-doc-preview" aria-label="Document preview" dangerouslySetInnerHTML={{ __html: sanitizeEditorHtml(content) }}/>
+        : <div ref={editorRef} className="shivasha-doc-content shivasha-doc-rich-editor" role="textbox" aria-label="Document content" aria-multiline="true" contentEditable suppressContentEditableWarning onInput={syncRichEditor} onBlur={() => { clearTimeout(saveTimer.current); syncRichEditor(); saveNow(latestRef.current); }} data-placeholder="Start writing your document…"/>}
       <div className="shivasha-doc-footer"><small>{content.trim() ? content.trim().split(/\s+/).length : 0} words · {content.length.toLocaleString()} / 100,000 characters · Markdown editor · Private to your account</small><button type="button" className="secondary" onClick={deleteDocument}>Delete document</button></div>
     </div>}
   </section>;
