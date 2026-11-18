@@ -991,3 +991,11 @@ a, .hashtag-link, .switch-auth { color: #287d79; }
 .shivasha-doc-preview{min-height:55vh;padding:18px;border:1px solid #e3e7ee;border-radius:10px;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.75;color:#172033;background:#fff}
 .shivasha-doc-preview p{margin:0 0 10px}
 @media(max-width:650px){.shivasha-doc-actions{width:100%}.shivasha-doc-actions button{flex:1}.shivasha-doc-folderbar{align-items:flex-start}.shivasha-doc-tools button{padding:8px 10px}}
+
+/* Shivasha Doc version history */
+.shivasha-doc-history{margin:12px 0;padding:14px;border:1px solid var(--border-color,#ddd);border-radius:12px;background:var(--panel-bg,#fff)}
+.shivasha-doc-history-head,.shivasha-doc-version{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.shivasha-doc-history-head{margin-bottom:10px}
+.shivasha-doc-version{padding:10px 0;border-top:1px solid var(--border-color,#ddd)}
+.shivasha-doc-version span{display:flex;flex-direction:column;gap:4px;min-width:0}
+.shivasha-doc-version small{opacity:.7;overflow-wrap:anywhere}
