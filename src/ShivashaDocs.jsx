@@ -13,6 +13,9 @@ export default function ShivashaDocs({ auth, apiFetch }) {
   const [folders, setFolders] = useState([]);
   const [selectedFolder, setSelectedFolder] = useState("all");
   const [preview, setPreview] = useState(false);
+  const [showVersions, setShowVersions] = useState(false);
+  const [versions, setVersions] = useState([]);
+  const [versionsLoading, setVersionsLoading] = useState(false);
   const editorRef = useRef(null);
   const [current, setCurrent] = useState(null);
   const [title, setTitle] = useState("");
@@ -102,6 +105,39 @@ export default function ShivashaDocs({ auth, apiFetch }) {
     return () => clearTimeout(saveTimer.current);
   }, [title, content, current?._id, saveNow]);
 
+
+  const loadVersions = async () => {
+    if (!current?._id) return;
+    setVersionsLoading(true);
+    setError("");
+    try {
+      const data = await apiFetch("/api/docs/" + current._id + "/versions", auth);
+      setVersions(data.versions || []);
+      setShowVersions(true);
+    } catch (e) { setError(e.message); }
+    finally { setVersionsLoading(false); }
+  };
+
+  const restoreVersion = async (versionId) => {
+    if (!current?._id || !window.confirm("Restore this older version? Your current content will also be saved in history.")) return;
+    try {
+      const data = await apiFetch("/api/docs/" + current._id + "/restore/" + versionId, auth, {
+        method: "POST",
+        body: JSON.stringify({ revision: revisionRef.current })
+      });
+      const doc = data.document;
+      revisionRef.current = doc.revision;
+      setCurrent(doc);
+      setTitle(doc.title);
+      setContent(doc.content || "");
+      latestRef.current = { title: doc.title, content: doc.content || "" };
+      savedRef.current = latestRef.current;
+      setStatus("saved");
+      await loadDocuments();
+      await loadVersions();
+    } catch (e) { setError(e.message); }
+  };
+
   const createFolder = async () => {
     const name = window.prompt("New folder name");
     if (!name?.trim()) return;
@@ -172,8 +208,9 @@ export default function ShivashaDocs({ auth, apiFetch }) {
           {status === "saving" ? "Saving…" : status === "saved" ? "Saved" : status === "error" ? "Save failed" : status === "pending" ? "Changes pending…" : "Ready"}
         </span>
       </div>
-      <div className="shivasha-doc-tools"><button type="button" onClick={() => applyFormat("**")}>Bold</button><button type="button" onClick={() => applyFormat("*")}>Italic</button><button type="button" onClick={() => applyFormat("# ", "")}>Heading</button><button type="button" onClick={() => applyFormat("- ", "")}>• List</button><button type="button" onClick={() => applyFormat("1. ", "")}>Numbered</button><button type="button" onClick={() => setPreview(v => !v)}>{preview ? "Edit" : "Preview"}</button></div>
+      <div className="shivasha-doc-tools"><button type="button" onClick={() => applyFormat("**")}>Bold</button><button type="button" onClick={() => applyFormat("*")}>Italic</button><button type="button" onClick={() => applyFormat("# ", "")}>Heading</button><button type="button" onClick={() => applyFormat("- ", "")}>• List</button><button type="button" onClick={() => applyFormat("1. ", "")}>Numbered</button><button type="button" onClick={() => setPreview(v => !v)}>{preview ? "Edit" : "Preview"}</button><button type="button" onClick={loadVersions}>Version history</button></div>
       <label className="shivasha-doc-move">Move to folder <select value={current.folder || ""} onChange={e => moveToFolder(e.target.value)}><option value="">Unfiled</option>{folders.map(folder => <option key={folder._id} value={folder._id}>{folder.name}</option>)}</select></label>
+      {showVersions && <div className="shivasha-doc-history"><div className="shivasha-doc-history-head"><b>Version history</b><button type="button" className="secondary" onClick={() => setShowVersions(false)}>Close</button></div>{versionsLoading ? <p>Loading versions…</p> : versions.length ? versions.map(version => <div className="shivasha-doc-version" key={version._id}><span><b>Revision {version.revision}</b><small>{new Date(version.createdAt).toLocaleString()} · {version.title}</small></span><button type="button" className="secondary" onClick={() => restoreVersion(version._id)}>Restore</button></div>) : <p>No saved versions yet. Versions are created when you edit the title or content.</p>}</div>}
       {preview ? <div className="shivasha-doc-preview" aria-label="Document preview">{content.split("\n").map((line, index) => line.startsWith("## ") ? <h4 key={index}>{renderInlineMarkdown(line.slice(3))}</h4> : line.startsWith("# ") ? <h3 key={index}>{renderInlineMarkdown(line.slice(2))}</h3> : line.startsWith("- ") ? <p key={index}>• {renderInlineMarkdown(line.slice(2))}</p> : line.trim() ? <p key={index}>{renderInlineMarkdown(line)}</p> : <br key={index}/>)}</div> : <textarea ref={editorRef} className="shivasha-doc-content" aria-label="Document content" value={content} maxLength={100000} onChange={e => setContent(e.target.value)} onBlur={() => { clearTimeout(saveTimer.current); saveNow(latestRef.current); }} placeholder="Start writing your document…"/>
       <div className="shivasha-doc-footer"><small>Markdown formatting · Up to 100,000 characters · Private to your account</small><button type="button" className="secondary" onClick={deleteDocument}>Delete document</button></div>
     </div>}
