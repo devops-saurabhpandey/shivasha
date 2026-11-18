@@ -37,6 +37,11 @@ function editorWordCount(html) {
   return (parsed.body.textContent || "").trim().split(/\s+/).filter(Boolean).length;
 }
 
+function editorCharacterCount(html) {
+  const parsed = new DOMParser().parseFromString(String(html || ""), "text/html");
+  return (parsed.body.textContent || "").length;
+}
+
 export default function ShivashaDocs({ auth, apiFetch }) {
   const [documents, setDocuments] = useState([]);
   const [folders, setFolders] = useState([]);
@@ -211,7 +216,7 @@ export default function ShivashaDocs({ auth, apiFetch }) {
 
   const syncRichEditor = () => {
     if (!editorRef.current) return;
-    setContent(sanitizeEditorHtml(editorRef.current.innerHTML));
+    const nextContent = sanitizeEditorHtml(editorRef.current.innerHTML);\n    latestRef.current = { ...latestRef.current, content: nextContent };\n    setContent(nextContent);
   };
 
   const applyFormat = (command, value = null) => {
@@ -266,13 +271,13 @@ export default function ShivashaDocs({ auth, apiFetch }) {
           {status === "saving" ? "Saving…" : status === "saved" ? "Saved" : status === "error" ? "Save failed" : status === "pending" ? "Changes pending…" : "Ready"}
         </span>
       </div>
-      <div className="shivasha-doc-tools" role="toolbar" aria-label="Text formatting"><button type="button" onClick={() => applyFormat("bold")}><b>B</b></button><button type="button" onClick={() => applyFormat("italic")}><i>I</i></button><button type="button" onClick={() => applyFormat("underline")}><u>U</u></button><button type="button" onClick={() => applyFormat("formatBlock", "H1")}>H1</button><button type="button" onClick={() => applyFormat("formatBlock", "H2")}>H2</button><button type="button" onClick={() => applyFormat("formatBlock", "P")}>Normal</button><button type="button" onClick={() => applyFormat("formatBlock", "BLOCKQUOTE")}>Quote</button><button type="button" onClick={() => applyFormat("insertUnorderedList")}>• List</button><button type="button" onClick={() => applyFormat("insertOrderedList")}>1. List</button><button type="button" onClick={() => applyFormat("formatBlock", "PRE")}>Code</button><button type="button" onClick={() => applyFormat("createLink")}>Link</button><button type="button" onClick={() => applyFormat("insertHorizontalRule")}>Divider</button><button type="button" onClick={() => applyFormat("removeFormat")}>Clear format</button><button type="button" onClick={loadVersions}>Version history</button></div>
+      <div className="shivasha-doc-tools" role="toolbar" aria-label="Text formatting"><button type="button" onClick={() => applyFormat("bold")}><b>B</b></button><button type="button" onClick={() => applyFormat("italic")}><i>I</i></button><button type="button" onClick={() => applyFormat("underline")}><u>U</u></button><button type="button" onClick={() => applyFormat("formatBlock", "H1")}>H1</button><button type="button" onClick={() => applyFormat("formatBlock", "H2")}>H2</button><button type="button" onClick={() => applyFormat("formatBlock", "P")}>Normal</button><button type="button" onClick={() => applyFormat("formatBlock", "BLOCKQUOTE")}>Quote</button><button type="button" onClick={() => applyFormat("insertUnorderedList")}>• List</button><button type="button" onClick={() => applyFormat("insertOrderedList")}>1. List</button><button type="button" onClick={() => applyFormat("formatBlock", "PRE")}>Code</button><button type="button" onClick={() => applyFormat("createLink")}>Link</button><button type="button" onClick={() => applyFormat("insertHorizontalRule")}>Divider</button><button type="button" onClick={() => applyFormat("removeFormat")}>Clear format</button><button type="button" onClick={() => setPreview(value => !value)}>{preview ? "Edit" : "Preview"}</button><button type="button" onClick={loadVersions}>Version history</button></div>
       <label className="shivasha-doc-move">Move to folder <select value={current.folder || ""} onChange={e => moveToFolder(e.target.value)}><option value="">Unfiled</option>{folders.map(folder => <option key={folder._id} value={folder._id}>{folder.name}</option>)}</select></label>
       {showVersions && <div className="shivasha-doc-history"><div className="shivasha-doc-history-head"><b>Version history</b><button type="button" className="secondary" onClick={() => setShowVersions(false)}>Close</button></div>{versionsLoading ? <p>Loading versions…</p> : versions.length ? versions.map(version => <div className="shivasha-doc-version" key={version._id}><span><b>Revision {version.revision}</b><small>{new Date(version.createdAt).toLocaleString()} · {version.title}</small></span><button type="button" className="secondary" onClick={() => restoreVersion(version._id)}>Restore</button></div>) : <p>No saved versions yet. Versions are created when you edit the title or content.</p>}</div>}
       {preview
         ? <div className="shivasha-doc-preview" aria-label="Document preview" dangerouslySetInnerHTML={{ __html: sanitizeEditorHtml(content) }}/>
         : <div ref={editorRef} className="shivasha-doc-content shivasha-doc-rich-editor" role="textbox" aria-label="Document content" aria-multiline="true" contentEditable suppressContentEditableWarning onInput={syncRichEditor} onBlur={() => { clearTimeout(saveTimer.current); syncRichEditor(); saveNow(latestRef.current); }} data-placeholder="Start writing your document…"/>}
-      <div className="shivasha-doc-footer"><small>{editorWordCount(content)} words · {content.length.toLocaleString()} / 100,000 characters · Rich text editor · Private to your account</small><button type="button" className="secondary" onClick={deleteDocument}>Delete document</button></div>
+      <div className="shivasha-doc-footer"><small>{editorWordCount(content)} words · {editorCharacterCount(content).toLocaleString()} characters · Rich text editor · Private to your account</small><button type="button" className="secondary" onClick={deleteDocument}>Delete document</button></div>
     </div>}
   </section>;
 }
