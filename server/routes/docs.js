@@ -70,7 +70,7 @@ router.get("/", async (req, res, next) => {
     const limit = Math.min(100, Math.max(1, Number.parseInt(req.query.limit, 10) || 25));
     const search = typeof req.query.q === "string" ? req.query.q.trim().slice(0, 100) : "";
     if (search) {
-      const escaped = search.replace(/[.*+?^${}()|[\\]\\]/g, "\\router.get("/", async (req, res, next) => {
+      const escaped = search.split("").map(char => "\\^$.*+?()[]{}|".includes(char) ? "\\" + char : char).join("");
   try {
     const filter = { owner: req.user.id, deletedAt: null };
     if (req.query.folder && req.query.folder !== "all") {
