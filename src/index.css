@@ -959,3 +959,60 @@ a, .hashtag-link, .switch-auth { color: #287d79; }
 .yt-draft-badge{font-size:10px;font-weight:800;background:#f3f4f6;padding:5px 8px;border-radius:999px;white-space:nowrap}.yt-remove{border:0;background:transparent;color:#9ca3af;font-size:20px;cursor:pointer}
 @media(max-width:800px){.yt-workspace-grid{grid-template-columns:1fr}.yt-hero{align-items:flex-start}.yt-fields-row{grid-template-columns:1fr}}
 @media(max-width:480px){.yt-format-grid{grid-template-columns:1fr}.yt-project{gap:8px}.yt-project-info{max-width:calc(100% - 100px)}.yt-status{display:none}}
+
+
+/* Shivasha Doc: responsive private document workspace */
+.shivasha-docs .shivasha-doc-row{width:100%;display:flex;align-items:center;gap:13px;padding:15px 8px;border:0;border-bottom:1px solid #edf0f4;background:transparent;text-align:left;color:#172033;cursor:pointer}
+.shivasha-docs .shivasha-doc-row:last-child{border-bottom:0}
+.shivasha-docs .shivasha-doc-row:hover{background:#f7f8fb}
+.shivasha-doc-row-copy{display:flex;flex:1;min-width:0;flex-direction:column;gap:4px}
+.shivasha-doc-row-copy b{overflow-wrap:anywhere}
+.shivasha-doc-row-copy small,.shivasha-doc-footer small{color:#7b8494;font-size:11px}
+.shivasha-doc-editor{padding:16px}
+.shivasha-doc-toolbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+.shivasha-doc-toolbar input{flex:1;min-width:180px;font-size:18px;font-weight:700}
+.shivasha-doc-status{font-size:12px;color:#667085;white-space:nowrap}
+.shivasha-doc-status.status-saved{color:#18733c}
+.shivasha-doc-status.status-error{color:#b42318}
+.shivasha-doc-content{display:block;width:100%;min-height:58vh;resize:vertical;border:1px solid #e3e7ee;border-radius:10px;padding:18px;font:16px/1.75 system-ui,sans-serif;color:#172033;background:#fff;outline-color:#7c6ee6}
+.shivasha-doc-footer{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-top:14px}
+@media(max-width:650px){.shivasha-doc-editor{padding:12px}.shivasha-doc-content{min-height:55vh;padding:13px;font-size:16px}.shivasha-doc-toolbar{align-items:flex-start}.shivasha-doc-footer{align-items:flex-start}}
+
+
+/* Shivasha Drive folders and document formatting controls */
+.shivasha-doc-actions,.shivasha-doc-folderbar,.shivasha-doc-tools{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.shivasha-doc-folderbar{justify-content:space-between;margin:0 0 12px}
+.shivasha-doc-folderbar label,.shivasha-doc-move{display:flex;align-items:center;gap:8px;color:#596273;font-size:13px}
+.shivasha-doc-folderbar select,.shivasha-doc-move select{max-width:220px;border:1px solid #dce1e9;border-radius:8px;padding:8px;background:#fff;color:#172033}
+.shivasha-doc-tools{margin:12px 0}
+.shivasha-doc-tools button{border:1px solid #dce1e9;border-radius:8px;padding:8px 12px;background:#fff;color:#283044;font-weight:650;cursor:pointer}
+.shivasha-doc-tools button:hover{background:#f3f4fa}
+.shivasha-doc-move{margin:10px 0 14px}
+.shivasha-doc-preview{min-height:55vh;padding:18px;border:1px solid #e3e7ee;border-radius:10px;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.75;color:#172033;background:#fff}
+.shivasha-doc-preview p{margin:0 0 10px}
+@media(max-width:650px){.shivasha-doc-actions{width:100%}.shivasha-doc-actions button{flex:1}.shivasha-doc-folderbar{align-items:flex-start}.shivasha-doc-tools button{padding:8px 10px}}
+
+/* Shivasha Doc version history */
+.shivasha-doc-history{margin:12px 0;padding:14px;border:1px solid var(--border-color,#ddd);border-radius:12px;background:var(--panel-bg,#fff)}
+.shivasha-doc-history-head,.shivasha-doc-version{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.shivasha-doc-history-head{margin-bottom:10px}
+.shivasha-doc-version{padding:10px 0;border-top:1px solid var(--border-color,#ddd)}
+.shivasha-doc-version span{display:flex;flex-direction:column;gap:4px;min-width:0}
+.shivasha-doc-version small{opacity:.7;overflow-wrap:anywhere}
+
+
+/* Shivasha Doc rich text editor */
+.shivasha-doc-rich-editor{white-space:normal;overflow-wrap:anywhere;outline:none;cursor:text}
+.shivasha-doc-rich-editor:empty:before{content:attr(data-placeholder);color:#98a2b3;pointer-events:none}
+.shivasha-doc-rich-editor p{margin:0 0 12px}
+.shivasha-doc-rich-editor h1{font-size:1.8em;margin:18px 0 10px}
+.shivasha-doc-rich-editor h2{font-size:1.45em;margin:16px 0 8px}
+.shivasha-doc-rich-editor blockquote{margin:12px 0;padding:8px 14px;border-left:4px solid #9aa5b5;background:#f7f8fa;color:#536174}
+.shivasha-doc-rich-editor ul,.shivasha-doc-rich-editor ol{padding-left:28px}
+.shivasha-doc-rich-editor pre{padding:12px;border-radius:8px;background:#f2f4f7;white-space:pre-wrap}
+.shivasha-doc-rich-editor a,.shivasha-doc-preview a{color:#315fbd;text-decoration:underline}
+.shivasha-doc-rich-editor hr,.shivasha-doc-preview hr{border:0;border-top:1px solid #dce2ea;margin:18px 0}
+.shivasha-doc-preview{white-space:normal}
+.shivasha-doc-preview h1,.shivasha-doc-preview h2,.shivasha-doc-preview h3{margin:18px 0 10px}
+.shivasha-doc-preview blockquote{margin:12px 0;padding:8px 14px;border-left:4px solid #9aa5b5;background:#f7f8fa}
+.shivasha-doc-preview ul,.shivasha-doc-preview ol{padding-left:28px}
