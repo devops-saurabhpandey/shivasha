@@ -959,3 +959,21 @@ a, .hashtag-link, .switch-auth { color: #287d79; }
 .yt-draft-badge{font-size:10px;font-weight:800;background:#f3f4f6;padding:5px 8px;border-radius:999px;white-space:nowrap}.yt-remove{border:0;background:transparent;color:#9ca3af;font-size:20px;cursor:pointer}
 @media(max-width:800px){.yt-workspace-grid{grid-template-columns:1fr}.yt-hero{align-items:flex-start}.yt-fields-row{grid-template-columns:1fr}}
 @media(max-width:480px){.yt-format-grid{grid-template-columns:1fr}.yt-project{gap:8px}.yt-project-info{max-width:calc(100% - 100px)}.yt-status{display:none}}
+
+
+/* Shivasha Doc: responsive private document workspace */
+.shivasha-docs .shivasha-doc-row{width:100%;display:flex;align-items:center;gap:13px;padding:15px 8px;border:0;border-bottom:1px solid #edf0f4;background:transparent;text-align:left;color:#172033;cursor:pointer}
+.shivasha-docs .shivasha-doc-row:last-child{border-bottom:0}
+.shivasha-docs .shivasha-doc-row:hover{background:#f7f8fb}
+.shivasha-doc-row-copy{display:flex;flex:1;min-width:0;flex-direction:column;gap:4px}
+.shivasha-doc-row-copy b{overflow-wrap:anywhere}
+.shivasha-doc-row-copy small,.shivasha-doc-footer small{color:#7b8494;font-size:11px}
+.shivasha-doc-editor{padding:16px}
+.shivasha-doc-toolbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+.shivasha-doc-toolbar input{flex:1;min-width:180px;font-size:18px;font-weight:700}
+.shivasha-doc-status{font-size:12px;color:#667085;white-space:nowrap}
+.shivasha-doc-status.status-saved{color:#18733c}
+.shivasha-doc-status.status-error{color:#b42318}
+.shivasha-doc-content{display:block;width:100%;min-height:58vh;resize:vertical;border:1px solid #e3e7ee;border-radius:10px;padding:18px;font:16px/1.75 system-ui,sans-serif;color:#172033;background:#fff;outline-color:#7c6ee6}
+.shivasha-doc-footer{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-top:14px}
+@media(max-width:650px){.shivasha-doc-editor{padding:12px}.shivasha-doc-content{min-height:55vh;padding:13px;font-size:16px}.shivasha-doc-toolbar{align-items:flex-start}.shivasha-doc-footer{align-items:flex-start}}
