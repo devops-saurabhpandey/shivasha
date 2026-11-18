@@ -71,20 +71,6 @@ router.get("/", async (req, res, next) => {
     const search = typeof req.query.q === "string" ? req.query.q.trim().slice(0, 100) : "";
     if (search) {
       const escaped = search.split("").map(char => "\\^$.*+?()[]{}|".includes(char) ? "\\" + char : char).join("");
-  try {
-    const filter = { owner: req.user.id, deletedAt: null };
-    if (req.query.folder && req.query.folder !== "all") {
-      if (req.query.folder === "none") filter.folder = null;
-      else if (validId(req.query.folder)) filter.folder = req.query.folder;
-      else return res.status(400).json({ message: "Invalid folder ID." });
-    }
-    const documents = await Document.find(filter)
-      .select("title revision updatedAt createdAt")
-      .sort({ updatedAt: -1 })
-      .lean();
-    res.json({ documents });
-  } catch (error) { next(error); }
-});");
       filter.title = { $regex: escaped, $options: "i" };
     }
     const [documents, total] = await Promise.all([
