@@ -150,6 +150,7 @@ export default function ShivashaDocs({ auth, apiFetch }) {
     if (!current?._id) return;
     const snapshot = { title: title.trim() || "Untitled document", content };
     latestRef.current = snapshot;
+    if (snapshot.title === savedRef.current.title && snapshot.content === savedRef.current.content) return;
     clearTimeout(saveTimer.current);
     setStatus("pending");
     saveTimer.current = setTimeout(() => saveNow(snapshot), 900);
