@@ -272,7 +272,7 @@ export default function ShivashaDocs({ auth, apiFetch }) {
       {preview
         ? <div className="shivasha-doc-preview" aria-label="Document preview" dangerouslySetInnerHTML={{ __html: sanitizeEditorHtml(content) }}/>
         : <div ref={editorRef} className="shivasha-doc-content shivasha-doc-rich-editor" role="textbox" aria-label="Document content" aria-multiline="true" contentEditable suppressContentEditableWarning onInput={syncRichEditor} onBlur={() => { clearTimeout(saveTimer.current); syncRichEditor(); saveNow(latestRef.current); }} data-placeholder="Start writing your document…"/>}
-      <div className="shivasha-doc-footer"><small>{content.trim() ? content.trim().split(/\s+/).length : 0} words · {content.length.toLocaleString()} / 100,000 characters · Markdown editor · Private to your account</small><button type="button" className="secondary" onClick={deleteDocument}>Delete document</button></div>
+      <div className="shivasha-doc-footer"><small>{editorWordCount(content)} words · {content.length.toLocaleString()} / 100,000 characters · Rich text editor · Private to your account</small><button type="button" className="secondary" onClick={deleteDocument}>Delete document</button></div>
     </div>}
   </section>;
 }
