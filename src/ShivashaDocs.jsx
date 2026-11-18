@@ -1,5 +1,13 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 
+function renderInlineMarkdown(text) {
+  return text.split(/(\\*\\*[^*]+\\*\\*|\\*[^*]+\\*)/g).map((part, index) => {
+    if (part.startsWith("**") && part.endsWith("**")) return <strong key={index}>{part.slice(2, -2)}</strong>;
+    if (part.startsWith("*") && part.endsWith("*")) return <em key={index}>{part.slice(1, -1)}</em>;
+    return part;
+  });
+}
+
 export default function ShivashaDocs({ auth, apiFetch }) {
   const [documents, setDocuments] = useState([]);
   const [folders, setFolders] = useState([]);
@@ -166,7 +174,7 @@ export default function ShivashaDocs({ auth, apiFetch }) {
       </div>
       <div className="shivasha-doc-tools"><button type="button" onClick={() => applyFormat("**")}>Bold</button><button type="button" onClick={() => applyFormat("*")}>Italic</button><button type="button" onClick={() => applyFormat("# ", "")}>Heading</button><button type="button" onClick={() => applyFormat("- ", "")}>• List</button><button type="button" onClick={() => applyFormat("1. ", "")}>Numbered</button><button type="button" onClick={() => setPreview(v => !v)}>{preview ? "Edit" : "Preview"}</button></div>
       <label className="shivasha-doc-move">Move to folder <select value={current.folder || ""} onChange={e => moveToFolder(e.target.value)}><option value="">Unfiled</option>{folders.map(folder => <option key={folder._id} value={folder._id}>{folder.name}</option>)}</select></label>
-      {preview ? <div className="shivasha-doc-preview" aria-label="Document preview">{content.split("\n").map((line, index) => line.startsWith("# ") ? <h3 key={index}>{line.slice(2)}</h3> : line.startsWith("## ") ? <h4 key={index}>{line.slice(3)}</h4> : line.startsWith("- ") ? <p key={index}>• {line.slice(2)}</p> : line.trim() ? <p key={index}>{line}</p> : <br key={index}/>)}</div> : <textarea ref={editorRef} className="shivasha-doc-content" aria-label="Document content" value={content} maxLength={100000} onChange={e => setContent(e.target.value)} onBlur={() => { clearTimeout(saveTimer.current); saveNow(latestRef.current); }} placeholder="Start writing your document…"/>
+      {preview ? <div className="shivasha-doc-preview" aria-label="Document preview">{content.split("\n").map((line, index) => line.startsWith("## ") ? <h4 key={index}>{renderInlineMarkdown(line.slice(3))}</h4> : line.startsWith("# ") ? <h3 key={index}>{renderInlineMarkdown(line.slice(2))}</h3> : line.startsWith("- ") ? <p key={index}>• {renderInlineMarkdown(line.slice(2))}</p> : line.trim() ? <p key={index}>{renderInlineMarkdown(line)}</p> : <br key={index}/>)}</div> : <textarea ref={editorRef} className="shivasha-doc-content" aria-label="Document content" value={content} maxLength={100000} onChange={e => setContent(e.target.value)} onBlur={() => { clearTimeout(saveTimer.current); saveNow(latestRef.current); }} placeholder="Start writing your document…"/>
       <div className="shivasha-doc-footer"><small>Markdown formatting · Up to 100,000 characters · Private to your account</small><button type="button" className="secondary" onClick={deleteDocument}>Delete document</button></div>
     </div>}
   </section>;
