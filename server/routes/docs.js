@@ -27,6 +27,16 @@ const documentSchema = new mongoose.Schema({
 const Document = mongoose.models.ShivashaDocument ||
   mongoose.model("ShivashaDocument", documentSchema);
 
+const versionSchema = new mongoose.Schema({
+  document: { type: mongoose.Schema.Types.ObjectId, ref: "ShivashaDocument", required: true, index: true },
+  owner: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true, index: true },
+  title: { type: String, required: true, maxlength: MAX_TITLE_LENGTH },
+  content: { type: String, default: "", maxlength: MAX_CONTENT_LENGTH },
+  revision: { type: Number, required: true }
+}, { timestamps: true });
+const Version = mongoose.models.ShivashaDocVersion ||
+  mongoose.model("ShivashaDocVersion", versionSchema);
+
 function validId(id) {
   return mongoose.isValidObjectId(id);
 }
@@ -79,6 +89,46 @@ router.post("/", async (req, res, next) => {
   } catch (error) { next(error); }
 });
 
+
+router.get("/:id/versions", async (req, res, next) => {
+  try {
+    if (!validId(req.params.id)) return res.status(400).json({ message: "Invalid document ID." });
+    const owned = await Document.exists({ _id: req.params.id, owner: req.user.id, deletedAt: null });
+    if (!owned) return res.status(404).json({ message: "Document not found." });
+    const versions = await Version.find({ document: req.params.id, owner: req.user.id })
+      .select("title revision createdAt")
+      .sort({ createdAt: -1 })
+      .limit(30)
+      .lean();
+    res.json({ versions });
+  } catch (error) { next(error); }
+});
+
+router.post("/:id/restore/:versionId", async (req, res, next) => {
+  try {
+    if (!validId(req.params.id) || !validId(req.params.versionId)) {
+      return res.status(400).json({ message: "Invalid document or version ID." });
+    }
+    const { revision } = req.body || {};
+    if (!Number.isInteger(revision) || revision < 1) {
+      return res.status(400).json({ message: "A valid current document revision is required." });
+    }
+    const document = await Document.findOne({ _id: req.params.id, owner: req.user.id, deletedAt: null, revision });
+    if (!document) {
+      const exists = await Document.exists({ _id: req.params.id, owner: req.user.id, deletedAt: null });
+      return res.status(exists ? 409 : 404).json({ message: exists ? "This document changed elsewhere. Reload it before restoring." : "Document not found." });
+    }
+    const version = await Version.findOne({ _id: req.params.versionId, document: document._id, owner: req.user.id }).lean();
+    if (!version) return res.status(404).json({ message: "Version not found." });
+    await Version.create({ document: document._id, owner: req.user.id, title: document.title, content: document.content, revision: document.revision });
+    document.title = version.title;
+    document.content = version.content;
+    document.revision += 1;
+    await document.save();
+    res.json({ document });
+  } catch (error) { next(error); }
+});
+
 router.get("/:id", async (req, res, next) => {
   try {
     if (!validId(req.params.id)) return res.status(400).json({ message: "Invalid document ID." });
@@ -118,6 +168,14 @@ router.patch("/:id", async (req, res, next) => {
       update.content = req.body.content;
     }
     if (!Object.keys(update).length) return res.status(400).json({ message: "No document changes were provided." });
+
+    const previous = await Document.findOne({ _id: req.params.id, owner: req.user.id, deletedAt: null, revision }).lean();
+    if (previous && (Object.prototype.hasOwnProperty.call(update, "title") || Object.prototype.hasOwnProperty.call(update, "content"))) {
+      await Version.create({ document: previous._id, owner: req.user.id, title: previous.title, content: previous.content, revision: previous.revision });
+      const oldVersions = await Version.find({ document: previous._id, owner: req.user.id })
+        .sort({ createdAt: -1 }).skip(30).select("_id").lean();
+      if (oldVersions.length) await Version.deleteMany({ _id: { $in: oldVersions.map(item => item._id) }, owner: req.user.id });
+    }
 
     const document = await Document.findOneAndUpdate(
       { _id: req.params.id, owner: req.user.id, deletedAt: null, revision },
