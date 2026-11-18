@@ -118,12 +118,12 @@ export default function ShivashaDocs({ auth, apiFetch }) {
         : <div className="empty"><div style={{fontSize:36}}>📄</div><h3>No documents yet</h3><p>Create your first document in Shivasha Drive.</p><button type="button" className="primary" onClick={createDocument}>Create document</button></div>}
     </div> : <div className="panel shivasha-doc-editor">
       <div className="shivasha-doc-toolbar">
-        <input aria-label="Document title" value={title} maxLength={160} onChange={e => setTitle(e.target.value)} placeholder="Document title"/>
+        <input aria-label="Document title" value={title} maxLength={160} onChange={e => setTitle(e.target.value)} onBlur={() => { clearTimeout(saveTimer.current); saveNow(latestRef.current); }} placeholder="Document title"/>
         <span className={"shivasha-doc-status status-" + status} role="status" aria-live="polite">
           {status === "saving" ? "Saving…" : status === "saved" ? "Saved" : status === "error" ? "Save failed" : status === "pending" ? "Changes pending…" : "Ready"}
         </span>
       </div>
-      <textarea className="shivasha-doc-content" aria-label="Document content" value={content} maxLength={100000} onChange={e => setContent(e.target.value)} placeholder="Start writing your document…"/>
+      <textarea className="shivasha-doc-content" aria-label="Document content" value={content} maxLength={100000} onChange={e => setContent(e.target.value)} onBlur={() => { clearTimeout(saveTimer.current); saveNow(latestRef.current); }} placeholder="Start writing your document…"/>
       <div className="shivasha-doc-footer"><small>Plain-text editor · Up to 100,000 characters · Private to your account</small><button type="button" className="secondary" onClick={deleteDocument}>Delete document</button></div>
     </div>}
   </section>;
