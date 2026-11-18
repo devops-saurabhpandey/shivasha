@@ -210,7 +210,8 @@ export default function ShivashaDocs({ auth, apiFetch }) {
         : documents.length ? documents.map(doc => <button type="button" className="shivasha-doc-row" key={doc._id} onClick={() => openDocument(doc._id)}>
           <span aria-hidden="true">📄</span><span className="shivasha-doc-row-copy"><b>{doc.title}</b><small>Edited {new Date(doc.updatedAt).toLocaleString()} · Revision {doc.revision}</small></span><span>›</span>
         </button>)
-        : <div className="empty"><div style={{fontSize:36}}>📄</div><h3>No documents yet</h3><p>Create your first document in Shivasha Drive.</p><button type="button" className="primary" onClick={createDocument}>Create document</button></div>}
+        : <div className="empty"><div style={{fontSize:36}}>📄</div><h3>{searchTerm ? "No matching documents" : "No documents yet"}</h3><p>{searchTerm ? "Try another title or clear your search." : "Create your first document in Shivasha Drive."}</p>{!searchTerm && <button type="button" className="primary" onClick={createDocument}>Create document</button>}</div>}
+      {totalDocuments > 0 && <div className="shivasha-doc-pagination"><small>{totalDocuments.toLocaleString()} documents · Page {page} of {totalPages}</small><div><button type="button" className="secondary" disabled={page <= 1 || loading} onClick={() => setPage(p => Math.max(1, p - 1))}>Previous</button><button type="button" className="secondary" disabled={page >= totalPages || loading} onClick={() => setPage(p => Math.min(totalPages, p + 1))}>Next</button></div></div>}
     </div></> : <div className="panel shivasha-doc-editor">
       <div className="shivasha-doc-toolbar">
         <input aria-label="Document title" value={title} maxLength={160} onChange={e => setTitle(e.target.value)} onBlur={() => { clearTimeout(saveTimer.current); if (latestRef.current.title !== savedRef.current.title || latestRef.current.content !== savedRef.current.content) saveNow(latestRef.current); }} placeholder="Document title"/>
