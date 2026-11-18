@@ -18,7 +18,7 @@ const documentSchema = new mongoose.Schema({
   owner: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true, index: true },
   title: { type: String, required: true, trim: true, maxlength: MAX_TITLE_LENGTH },
   folder: { type: mongoose.Schema.Types.ObjectId, ref: "ShivashaDocFolder", default: null, index: true },
-  // Plain text for the first release: avoids rendering untrusted HTML.
+  // Rich-text HTML is stored as content; the client sanitizes it before rendering.
   content: { type: String, default: "", maxlength: MAX_CONTENT_LENGTH },
   revision: { type: Number, default: 1, min: 1 },
   deletedAt: { type: Date, default: null, index: true }
@@ -171,7 +171,7 @@ router.patch("/:id", async (req, res, next) => {
     }
     if (Object.prototype.hasOwnProperty.call(req.body || {}, "content")) {
       if (typeof req.body.content !== "string" || req.body.content.length > MAX_CONTENT_LENGTH) {
-        return res.status(413).json({ message: "Document content must be text up to 100,000 characters." });
+        return res.status(413).json({ message: "Document content must be up to 100,000 characters." });
       }
       update.content = req.body.content;
     }
