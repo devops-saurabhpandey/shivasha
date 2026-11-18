@@ -151,7 +151,7 @@ export default function ShivashaDocs({ auth, apiFetch }) {
         : <div className="shivasha-doc-actions"><button type="button" className="secondary" onClick={createFolder}>＋ New folder</button><button type="button" className="primary" onClick={createDocument}>＋ New document</button></div>}
     </div>
     {error && <div className="login-message" role="alert">{error}</div>}
-    {!current ? <div className="panel">
+    {!current ? <><div className="shivasha-doc-folderbar"><label>Folder <select value={selectedFolder} onChange={e => setSelectedFolder(e.target.value)}><option value="all">All documents</option><option value="none">Unfiled</option>{folders.map(folder => <option key={folder._id} value={folder._id}>{folder.name}</option>)}</select></label><button type="button" className="secondary" onClick={createFolder}>＋ Folder</button></div><div className="panel">
       {loading ? <div className="empty">Loading your documents…</div>
         : documents.length ? documents.map(doc => <button type="button" className="shivasha-doc-row" key={doc._id} onClick={() => openDocument(doc._id)}>
           <span aria-hidden="true">📄</span><span className="shivasha-doc-row-copy"><b>{doc.title}</b><small>Edited {new Date(doc.updatedAt).toLocaleString()} · Revision {doc.revision}</small></span><span>›</span>
