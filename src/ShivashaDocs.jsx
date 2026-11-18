@@ -18,7 +18,7 @@ function sanitizeEditorHtml(input) {
     if (!ALLOWED_EDITOR_TAGS.has(tag)) return children;
     if (tag === "A") {
       const href = (node.getAttribute("href") || "").trim();
-      if (/^(https?:\\/\\/|mailto:)/i.test(href)) return '<a href="' + escapeEditorText(href) + '" target="_blank" rel="noopener noreferrer">' + children + "</a>";
+      if (/^(https?:\/\/|mailto:)/i.test(href)) return '<a href="' + escapeEditorText(href) + '" target="_blank" rel="noopener noreferrer">' + children + "</a>";
       return children;
     }
     return "<" + tag.toLowerCase() + ">" + children + "</" + tag.toLowerCase() + ">";
@@ -28,13 +28,13 @@ function sanitizeEditorHtml(input) {
 
 function toEditorHtml(value) {
   const raw = String(value || "");
-  if (/<(?:p|br|strong|b|em|i|u|h[1-3]|blockquote|ul|ol|li|pre|code|a|hr)\\b/i.test(raw)) return sanitizeEditorHtml(raw);
-  return escapeEditorText(raw).replace(/\\r?\\n/g, "<br>");
+  if (/<(?:p|br|strong|b|em|i|u|h[1-3]|blockquote|ul|ol|li|pre|code|a|hr)\b/i.test(raw)) return sanitizeEditorHtml(raw);
+  return escapeEditorText(raw).replace(/\r?\n/g, "<br>");
 }
 
 function editorWordCount(html) {
   const parsed = new DOMParser().parseFromString(String(html || ""), "text/html");
-  return (parsed.body.textContent || "").trim().split(/\\s+/).filter(Boolean).length;
+  return (parsed.body.textContent || "").trim().split(/\s+/).filter(Boolean).length;
 }
 
 export default function ShivashaDocs({ auth, apiFetch }) {
@@ -220,7 +220,7 @@ export default function ShivashaDocs({ auth, apiFetch }) {
     editor.focus();
     if (command === "createLink") {
       const url = window.prompt("Enter a link (https:// or mailto:)");
-      if (!url || !/^(https?:\\/\\/|mailto:)/i.test(url.trim())) return;
+      if (!url || !/^(https?:\/\/|mailto:)/i.test(url.trim())) return;
       document.execCommand(command, false, url.trim());
     } else {
       document.execCommand(command, false, value);
