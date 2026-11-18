@@ -12,6 +12,10 @@ export default function ShivashaDocs({ auth, apiFetch }) {
   const [documents, setDocuments] = useState([]);
   const [folders, setFolders] = useState([]);
   const [selectedFolder, setSelectedFolder] = useState("all");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalDocuments, setTotalDocuments] = useState(0);
   const [preview, setPreview] = useState(false);
   const [showVersions, setShowVersions] = useState(false);
   const [versions, setVersions] = useState([]);
@@ -32,17 +36,23 @@ export default function ShivashaDocs({ auth, apiFetch }) {
     setLoading(true);
     setError("");
     try {
-      const [data, folderData] = await Promise.all([apiFetch("/api/docs?folder=" + encodeURIComponent(selectedFolder), auth), apiFetch("/api/docs/folders", auth)]);
+      const params = new URLSearchParams({ folder: selectedFolder, page: String(page), limit: "25", q: searchTerm.trim() });
+      const [data, folderData] = await Promise.all([apiFetch("/api/docs?" + params.toString(), auth), apiFetch("/api/docs/folders", auth)]);
       setFolders(folderData.folders || []);
       setDocuments(data.documents || []);
+      setTotalPages(Math.max(1, data.totalPages || 1));
+      setTotalDocuments(data.total || 0);
     } catch (e) {
       setError(e.message);
     } finally {
       setLoading(false);
     }
-  }, [auth, selectedFolder]);
+  }, [auth, selectedFolder, page, searchTerm]);
 
-  useEffect(() => { loadDocuments(); }, [loadDocuments]);
+  useEffect(() => {
+    const timer = setTimeout(loadDocuments, 250);
+    return () => clearTimeout(timer);
+  }, [loadDocuments]);
   useEffect(() => () => clearTimeout(saveTimer.current), []);
 
   const openDocument = async (id) => {
@@ -195,7 +205,7 @@ export default function ShivashaDocs({ auth, apiFetch }) {
         : <div className="shivasha-doc-actions"><button type="button" className="secondary" onClick={createFolder}>＋ New folder</button><button type="button" className="primary" onClick={createDocument}>＋ New document</button></div>}
     </div>
     {error && <div className="login-message" role="alert">{error}</div>}
-    {!current ? <><div className="shivasha-doc-folderbar"><label>Folder <select value={selectedFolder} onChange={e => setSelectedFolder(e.target.value)}><option value="all">All documents</option><option value="none">Unfiled</option>{folders.map(folder => <option key={folder._id} value={folder._id}>{folder.name}</option>)}</select></label><button type="button" className="secondary" onClick={createFolder}>＋ Folder</button></div><div className="panel">
+    {!current ? <><div className="shivasha-doc-folderbar"><label>Folder <select value={selectedFolder} onChange={e => { setSelectedFolder(e.target.value); setPage(1); }}><option value="all">All documents</option><option value="none">Unfiled</option>{folders.map(folder => <option key={folder._id} value={folder._id}>{folder.name}</option>)}</select></label><label>Search documents <input type="search" value={searchTerm} maxLength={100} placeholder="Search by title…" onChange={e => { setSearchTerm(e.target.value); setPage(1); }}/></label><button type="button" className="secondary" onClick={createFolder}>＋ Folder</button></div><div className="panel">
       {loading ? <div className="empty">Loading your documents…</div>
         : documents.length ? documents.map(doc => <button type="button" className="shivasha-doc-row" key={doc._id} onClick={() => openDocument(doc._id)}>
           <span aria-hidden="true">📄</span><span className="shivasha-doc-row-copy"><b>{doc.title}</b><small>Edited {new Date(doc.updatedAt).toLocaleString()} · Revision {doc.revision}</small></span><span>›</span>
