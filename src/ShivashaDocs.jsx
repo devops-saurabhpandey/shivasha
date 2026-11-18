@@ -216,7 +216,9 @@ export default function ShivashaDocs({ auth, apiFetch }) {
 
   const syncRichEditor = () => {
     if (!editorRef.current) return;
-    const nextContent = sanitizeEditorHtml(editorRef.current.innerHTML);\n    latestRef.current = { ...latestRef.current, content: nextContent };\n    setContent(nextContent);
+    const nextContent = sanitizeEditorHtml(editorRef.current.innerHTML);
+    latestRef.current = { ...latestRef.current, content: nextContent };
+    setContent(nextContent);
   };
 
   const applyFormat = (command, value = null) => {
