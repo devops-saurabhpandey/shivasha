@@ -11,6 +11,7 @@ export default function ShivashaDocs({ auth, apiFetch }) {
   const revisionRef = useRef(0);
   const saveTimer = useRef(null);
   const latestRef = useRef({ title: "", content: "" });
+  const savedRef = useRef({ title: "", content: "" });
 
   const loadDocuments = useCallback(async () => {
     setLoading(true);
@@ -39,6 +40,7 @@ export default function ShivashaDocs({ auth, apiFetch }) {
       setTitle(doc.title);
       setContent(doc.content || "");
       latestRef.current = { title: doc.title, content: doc.content || "" };
+      savedRef.current = latestRef.current;
       revisionRef.current = doc.revision;
     } catch (e) { setError(e.message); }
   };
@@ -65,6 +67,7 @@ export default function ShivashaDocs({ auth, apiFetch }) {
         body: JSON.stringify({ ...snapshot, revision: revisionRef.current })
       });
       revisionRef.current = data.document.revision;
+      savedRef.current = snapshot;
       setCurrent(data.document);
       setDocuments(prev => prev.map(doc => doc._id === data.document._id
         ? { ...doc, title: data.document.title, revision: data.document.revision, updatedAt: data.document.updatedAt }
@@ -118,7 +121,7 @@ export default function ShivashaDocs({ auth, apiFetch }) {
         : <div className="empty"><div style={{fontSize:36}}>📄</div><h3>No documents yet</h3><p>Create your first document in Shivasha Drive.</p><button type="button" className="primary" onClick={createDocument}>Create document</button></div>}
     </div> : <div className="panel shivasha-doc-editor">
       <div className="shivasha-doc-toolbar">
-        <input aria-label="Document title" value={title} maxLength={160} onChange={e => setTitle(e.target.value)} onBlur={() => { clearTimeout(saveTimer.current); saveNow(latestRef.current); }} placeholder="Document title"/>
+        <input aria-label="Document title" value={title} maxLength={160} onChange={e => setTitle(e.target.value)} onBlur={() => { clearTimeout(saveTimer.current); if (latestRef.current.title !== savedRef.current.title || latestRef.current.content !== savedRef.current.content) saveNow(latestRef.current); }} placeholder="Document title"/>
         <span className={"shivasha-doc-status status-" + status} role="status" aria-live="polite">
           {status === "saving" ? "Saving…" : status === "saved" ? "Saved" : status === "error" ? "Save failed" : status === "pending" ? "Changes pending…" : "Ready"}
         </span>
