@@ -37,6 +37,7 @@ import youtubeAutomationRoutes from "./routes/youtubeAutomation.js";
 import youtubeRenderWorkerRoutes from "./routes/youtubeRenderWorker.js";
 import youtubeRenderWorkerResultRoutes from "./routes/youtubeRenderWorkerResult.js";
 import cinematicVideoRoutes from "./routes/cinematicVideo.js";
+import docsRoutes from "./routes/docs.js";
 
 dotenv.config();
 
@@ -208,6 +209,7 @@ app.use("/api/youtube-automation", youtubeAutomationRoutes);
 app.use("/api/youtube/projects", youtubeRenderWorkerRoutes);
 app.use("/api/youtube/projects", youtubeRenderWorkerResultRoutes);
 app.use("/api/cinematic-video", cinematicVideoRoutes);
+app.use("/api/docs", docsRoutes);
 
 app.get("/api", (_req, res) => res.json({ message: "SHIVASHA API is running" }));
 
