@@ -999,3 +999,20 @@ a, .hashtag-link, .switch-auth { color: #287d79; }
 .shivasha-doc-version{padding:10px 0;border-top:1px solid var(--border-color,#ddd)}
 .shivasha-doc-version span{display:flex;flex-direction:column;gap:4px;min-width:0}
 .shivasha-doc-version small{opacity:.7;overflow-wrap:anywhere}
+
+
+/* Shivasha Doc rich text editor */
+.shivasha-doc-rich-editor{white-space:normal;overflow-wrap:anywhere;outline:none;cursor:text}
+.shivasha-doc-rich-editor:empty:before{content:attr(data-placeholder);color:#98a2b3;pointer-events:none}
+.shivasha-doc-rich-editor p{margin:0 0 12px}
+.shivasha-doc-rich-editor h1{font-size:1.8em;margin:18px 0 10px}
+.shivasha-doc-rich-editor h2{font-size:1.45em;margin:16px 0 8px}
+.shivasha-doc-rich-editor blockquote{margin:12px 0;padding:8px 14px;border-left:4px solid #9aa5b5;background:#f7f8fa;color:#536174}
+.shivasha-doc-rich-editor ul,.shivasha-doc-rich-editor ol{padding-left:28px}
+.shivasha-doc-rich-editor pre{padding:12px;border-radius:8px;background:#f2f4f7;white-space:pre-wrap}
+.shivasha-doc-rich-editor a,.shivasha-doc-preview a{color:#315fbd;text-decoration:underline}
+.shivasha-doc-rich-editor hr,.shivasha-doc-preview hr{border:0;border-top:1px solid #dce2ea;margin:18px 0}
+.shivasha-doc-preview{white-space:normal}
+.shivasha-doc-preview h1,.shivasha-doc-preview h2,.shivasha-doc-preview h3{margin:18px 0 10px}
+.shivasha-doc-preview blockquote{margin:12px 0;padding:8px 14px;border-left:4px solid #9aa5b5;background:#f7f8fa}
+.shivasha-doc-preview ul,.shivasha-doc-preview ol{padding-left:28px}
