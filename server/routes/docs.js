@@ -8,9 +8,16 @@ router.use(requireAuth);
 const MAX_CONTENT_LENGTH = 100000;
 const MAX_TITLE_LENGTH = 160;
 
+const folderSchema = new mongoose.Schema({
+  owner: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true, index: true },
+  name: { type: String, required: true, trim: true, maxlength: 80 }
+}, { timestamps: true });
+const Folder = mongoose.models.ShivashaDocFolder || mongoose.model("ShivashaDocFolder", folderSchema);
+
 const documentSchema = new mongoose.Schema({
   owner: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true, index: true },
   title: { type: String, required: true, trim: true, maxlength: MAX_TITLE_LENGTH },
+  folder: { type: mongoose.Schema.Types.ObjectId, ref: "ShivashaDocFolder", default: null, index: true },
   // Plain text for the first release: avoids rendering untrusted HTML.
   content: { type: String, default: "", maxlength: MAX_CONTENT_LENGTH },
   revision: { type: Number, default: 1, min: 1 },
@@ -24,9 +31,32 @@ function validId(id) {
   return mongoose.isValidObjectId(id);
 }
 
+router.get("/folders", async (req, res, next) => {
+  try {
+    const folders = await Folder.find({ owner: req.user.id }).sort({ name: 1 }).lean();
+    res.json({ folders });
+  } catch (error) { next(error); }
+});
+
+router.post("/folders", async (req, res, next) => {
+  try {
+    const name = typeof req.body?.name === "string" ? req.body.name.trim() : "";
+    if (!name) return res.status(400).json({ message: "Folder name is required." });
+    if (name.length > 80) return res.status(400).json({ message: "Folder name must be 80 characters or fewer." });
+    const folder = await Folder.create({ owner: req.user.id, name });
+    res.status(201).json({ folder });
+  } catch (error) { next(error); }
+});
+
 router.get("/", async (req, res, next) => {
   try {
-    const documents = await Document.find({ owner: req.user.id, deletedAt: null })
+    const filter = { owner: req.user.id, deletedAt: null };
+    if (req.query.folder && req.query.folder !== "all") {
+      if (req.query.folder === "none") filter.folder = null;
+      else if (validId(req.query.folder)) filter.folder = req.query.folder;
+      else return res.status(400).json({ message: "Invalid folder ID." });
+    }
+    const documents = await Document.find(filter)
       .select("title revision updatedAt createdAt")
       .sort({ updatedAt: -1 })
       .lean();
@@ -38,7 +68,13 @@ router.post("/", async (req, res, next) => {
   try {
     const title = typeof req.body?.title === "string" ? req.body.title.trim().slice(0, MAX_TITLE_LENGTH) : "";
     if (!title) return res.status(400).json({ message: "Document title is required." });
-    const document = await Document.create({ owner: req.user.id, title, content: "" });
+    let folder = null;
+    if (req.body?.folderId) {
+      if (!validId(req.body.folderId)) return res.status(400).json({ message: "Invalid folder ID." });
+      folder = await Folder.findOne({ _id: req.body.folderId, owner: req.user.id }).select("_id").lean();
+      if (!folder) return res.status(404).json({ message: "Folder not found." });
+    }
+    const document = await Document.create({ owner: req.user.id, title, content: "", folder: folder?._id || null });
     res.status(201).json({ document });
   } catch (error) { next(error); }
 });
@@ -65,6 +101,15 @@ router.patch("/:id", async (req, res, next) => {
         return res.status(400).json({ message: "Document title cannot be empty." });
       }
       update.title = req.body.title.trim().slice(0, MAX_TITLE_LENGTH);
+    }
+    if (Object.prototype.hasOwnProperty.call(req.body || {}, "folderId")) {
+      if (req.body.folderId === null || req.body.folderId === "") update.folder = null;
+      else {
+        if (!validId(req.body.folderId)) return res.status(400).json({ message: "Invalid folder ID." });
+        const folder = await Folder.findOne({ _id: req.body.folderId, owner: req.user.id }).select("_id").lean();
+        if (!folder) return res.status(404).json({ message: "Folder not found." });
+        update.folder = folder._id;
+      }
     }
     if (Object.prototype.hasOwnProperty.call(req.body || {}, "content")) {
       if (typeof req.body.content !== "string" || req.body.content.length > MAX_CONTENT_LENGTH) {
