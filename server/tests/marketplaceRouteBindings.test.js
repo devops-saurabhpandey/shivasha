@@ -63,3 +63,20 @@ test("admin dashboard exposes manual provider verification review actions", () =
   assert.ok(adminUi.includes("Marketplace Provider Verification"));
   assert.ok(adminUi.includes('["Verified","Needs information","Rejected"]'));
 });
+
+test("marketplace revenue foundation tracks affiliate attribution and defers payment confirmation to admin", () => {
+  assert.ok(source.includes('router.get("/marketplace/revenue"'));
+  assert.ok(source.includes('router.post("/marketplace/orders"'));
+  assert.ok(source.includes('router.get("/marketplace/orders"'));
+  assert.ok(source.includes('router.patch("/marketplace/orders/:id"'));
+  assert.ok(source.includes("affiliateCommission"));
+  assert.ok(source.includes("paymentStatus: \"Unpaid\""));
+  assert.ok(source.includes("You cannot order your own service."));
+  assert.ok(source.includes("referral code is invalid or inactive"));
+  assert.ok(adminSource.includes('router.get("/marketplace-payments"'));
+  assert.ok(adminSource.includes('router.post("/marketplace-payments/:id/confirm"'));
+  assert.ok(adminSource.includes("MARKETPLACE_PLATFORM_FEE_PERCENT"));
+  assert.ok(adminSource.includes("MARKETPLACE_AFFILIATE_SHARE_PERCENT"));
+  assert.ok(adminSource.includes("This endpoint does not collect or process money."));
+  assert.ok(adminUi.includes("Marketplace Payment Reconciliation"));
+});
