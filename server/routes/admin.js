@@ -46,6 +46,48 @@ router.patch("/marketplace-verifications/:id", async (req, res, next) => {
   } catch (error) { next(error); }
 });
 
+
+router.get("/marketplace-payments", async (_req, res, next) => {
+  try {
+    const Order = mongoose.models.ShivashaMarketplaceOrder;
+    if (!Order) return res.json({ orders: [] });
+    const orders = await Order.find({ status: "Completed", paymentStatus: "Unpaid" })
+      .populate("buyer", "name email").populate("provider", "name email")
+      .populate("listing", "title").sort({ updatedAt: 1 }).limit(200).lean();
+    res.json({ orders, note: "Confirm only after reconciling payment against your actual payment provider/bank statement." });
+  } catch (error) { next(error); }
+});
+
+router.post("/marketplace-payments/:id/confirm", async (req, res, next) => {
+  try {
+    if (!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({ message: "Invalid order ID." });
+    const paymentReference = String(req.body?.paymentReference || "").trim().slice(0, 120);
+    const platformFeePercent = Number(process.env.MARKETPLACE_PLATFORM_FEE_PERCENT);
+    const affiliateSharePercent = Number(process.env.MARKETPLACE_AFFILIATE_SHARE_PERCENT);
+    if (paymentReference.length < 5) return res.status(400).json({ message: "Enter the verified external payment reference." });
+    if (!Number.isFinite(platformFeePercent) || platformFeePercent < 0 || platformFeePercent > 30 ||
+        !Number.isFinite(affiliateSharePercent) || affiliateSharePercent < 0 || affiliateSharePercent > 100) {
+      return res.status(503).json({ message: "Revenue rates are not configured. Set MARKETPLACE_PLATFORM_FEE_PERCENT (0-30) and MARKETPLACE_AFFILIATE_SHARE_PERCENT (0-100) after legal and tax review." });
+    }
+    const Order = mongoose.models.ShivashaMarketplaceOrder;
+    if (!Order) return res.status(404).json({ message: "Marketplace order model is not initialized." });
+    const order = await Order.findOne({ _id: req.params.id, status: "Completed", paymentStatus: "Unpaid" });
+    if (!order) return res.status(404).json({ message: "Completed unpaid order not found." });
+    const fee = Number((order.amount * platformFeePercent / 100).toFixed(2));
+    const affiliateCommission = order.affiliate ? Number((fee * affiliateSharePercent / 100).toFixed(2)) : 0;
+    order.paymentStatus = "Paid";
+    order.paymentReference = paymentReference;
+    order.paidAt = new Date();
+    order.platformFeePercent = platformFeePercent;
+    order.platformFeeAmount = fee;
+    order.affiliateSharePercent = order.affiliate ? affiliateSharePercent : 0;
+    order.affiliateCommission = affiliateCommission;
+    order.commissionStatus = order.affiliate ? "Accrued" : "Not accrued";
+    await order.save();
+    res.json({ order, message: "External payment marked as reconciled by admin. This endpoint does not collect or process money." });
+  } catch (error) { next(error); }
+});
+
 router.get("/ads", async (_req, res, next) => {
   try {
     const Campaign = mongoose.models.ShivashaAdCampaign;
