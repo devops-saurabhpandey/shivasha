@@ -1,5 +1,6 @@
 import express from "express";
 import mongoose from "mongoose";
+import { randomBytes } from "node:crypto";
 import { requireAuth } from "../middleware/auth.js";
 
 const router = express.Router();
@@ -114,6 +115,354 @@ router.put("/data", async (req, res, next) => {
       { new: true, upsert: true, runValidators: true }
     ).lean();
     res.json({ data: record.data, saved: true, updatedAt: record.updatedAt });
+  } catch (error) { next(error); }
+});
+
+
+const marketplaceDepartments = [
+  "AI Services", "Web & Software", "Global Projects", "Business Directory",
+  "Freelancers & Experts", "Education & Skill Development", "Finance & Insurance",
+  "E-commerce & Suppliers"
+];
+const serviceListingSchema = new mongoose.Schema({
+  owner: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true, index: true },
+  title: { type: String, required: true, trim: true, maxlength: 120 },
+  department: { type: String, required: true, enum: marketplaceDepartments },
+  category: { type: String, trim: true, maxlength: 80, default: "" },
+  description: { type: String, required: true, trim: true, maxlength: 2000 },
+  country: { type: String, trim: true, maxlength: 80, default: "Remote" },
+  priceFrom: { type: Number, min: 0, default: 0 },
+  currency: { type: String, enum: ["USD", "INR", "EUR", "GBP", "AED", "CAD", "AUD"], default: "USD" },
+  status: { type: String, enum: ["active", "paused", "removed"], default: "active", index: true }
+}, { timestamps: true });
+serviceListingSchema.index({ status: 1, department: 1, createdAt: -1 });
+serviceListingSchema.index({ title: "text", description: "text", category: "text" });
+const ServiceListing = mongoose.models.ShivashaServiceListing || mongoose.model("ShivashaServiceListing", serviceListingSchema);
+
+const marketplaceInquirySchema = new mongoose.Schema({
+  listing: { type: mongoose.Schema.Types.ObjectId, ref: "ShivashaServiceListing", required: true, index: true },
+  provider: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true, index: true },
+  requester: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true, index: true },
+  message: { type: String, required: true, trim: true, maxlength: 2000 },
+  consentToShare: { type: Boolean, required: true, default: false },
+  status: { type: String, enum: ["New", "Contacted", "Qualified", "Closed"], default: "New" }
+}, { timestamps: true });
+marketplaceInquirySchema.index({ provider: 1, createdAt: -1 });
+marketplaceInquirySchema.index({ requester: 1, createdAt: -1 });
+const MarketplaceInquiry = mongoose.models.ShivashaMarketplaceInquiry || mongoose.model("ShivashaMarketplaceInquiry", marketplaceInquirySchema);
+
+// All marketplace routes inherit requireAuth above. Search results expose no private contact details.
+router.get("/marketplace/listings", async (req, res, next) => {
+  try {
+    const filter = { status: "active" };
+    const department = cleanText(req.query.department, 80);
+    const q = cleanText(req.query.q, 100);
+    if (marketplaceDepartments.includes(department)) filter.department = department;
+    if (q) filter.$text = { $search: q };
+    const listings = await ServiceListing.find(filter)
+      .select("owner title department category description country priceFrom currency status createdAt")
+      .populate("owner", "name")
+      .sort({ createdAt: -1 }).limit(100).lean();
+    const ownerIds = [...new Set(listings.map(item => String(item.owner?._id || item.owner)).filter(Boolean))];
+    const verifiedOwners = await ProviderVerification.find({ owner: { $in: ownerIds }, status: "Verified" }).select("owner").lean();
+    const verifiedSet = new Set(verifiedOwners.map(item => String(item.owner)));
+    res.json({ listings: listings.map(item => ({
+      ...item, ownerName: item.owner?.name || "Shivasha provider",
+      providerVerified: verifiedSet.has(String(item.owner?._id || item.owner)),
+      owner: undefined
+    })) });
+  } catch (error) { next(error); }
+});
+
+router.get("/marketplace/my-listings", async (req, res, next) => {
+  try {
+    const listings = await ServiceListing.find({ owner: req.user.id, status: { $ne: "removed" } })
+      .sort({ createdAt: -1 }).limit(100).lean();
+    res.json({ listings });
+  } catch (error) { next(error); }
+});
+
+router.post("/marketplace/listings", async (req, res, next) => {
+  try {
+    const title = cleanText(req.body?.title, 120);
+    const department = cleanText(req.body?.department, 80);
+    const description = cleanText(req.body?.description, 2000);
+    const category = cleanText(req.body?.category, 80);
+    const country = cleanText(req.body?.country, 80) || "Remote";
+    const currency = cleanText(req.body?.currency, 3);
+    const priceFrom = cleanNumber(req.body?.priceFrom);
+    if (!title || !description || description.length < 20 || !marketplaceDepartments.includes(department)) {
+      return res.status(400).json({ message: "Add a title, at least 20 characters of description, and a valid department." });
+    }
+    if (!["USD", "INR", "EUR", "GBP", "AED", "CAD", "AUD"].includes(currency) || priceFrom < 0 || priceFrom > 100000000) {
+      return res.status(400).json({ message: "Invalid starting price or currency." });
+    }
+    const listing = await ServiceListing.create({
+      owner: req.user.id, title, department, description, category, country, currency, priceFrom, status: "active"
+    });
+    res.status(201).json({ listing });
+  } catch (error) { next(error); }
+});
+
+router.get("/marketplace/inquiries", async (req, res, next) => {
+  try {
+    const records = await MarketplaceInquiry.find({
+      $or: [{ provider: req.user.id }, { requester: req.user.id }]
+    }).sort({ createdAt: -1 }).limit(200).populate("listing", "title department").lean();
+    const inquiries = records.map(item => ({
+      _id: item._id, listingId: item.listing?._id,
+      listingTitle: item.listing?.title || "Service inquiry",
+      department: item.listing?.department || "", message: item.message,
+      status: item.status, createdAt: item.createdAt,
+      direction: String(item.provider) === String(req.user.id) ? "received" : "sent"
+    }));
+    res.json({ inquiries });
+  } catch (error) { next(error); }
+});
+
+router.post("/marketplace/inquiries", async (req, res, next) => {
+  try {
+    const listingId = req.body?.listingId;
+    const message = cleanText(req.body?.message, 2000);
+    if (!mongoose.isValidObjectId(listingId) || message.length < 10 || req.body?.consentToShare !== true) {
+      return res.status(400).json({ message: "A valid listing, requirement of at least 10 characters, and explicit sharing consent are required." });
+    }
+    const listing = await ServiceListing.findOne({ _id: listingId, status: "active" }).select("owner");
+    if (!listing) return res.status(404).json({ message: "This service listing is no longer available." });
+    if (String(listing.owner) === String(req.user.id)) return res.status(400).json({ message: "You cannot send an inquiry to your own listing." });
+    const inquiry = await MarketplaceInquiry.create({
+      listing: listing._id, provider: listing.owner, requester: req.user.id, message, consentToShare: true
+    });
+    res.status(201).json({ inquiry: { _id: inquiry._id, status: inquiry.status, createdAt: inquiry.createdAt } });
+  } catch (error) { next(error); }
+});
+
+router.patch("/marketplace/inquiries/:id", async (req, res, next) => {
+  try {
+    const status = cleanText(req.body?.status, 20);
+    if (!["New", "Contacted", "Qualified", "Closed"].includes(status)) {
+      return res.status(400).json({ message: "Invalid inquiry status." });
+    }
+    const inquiry = await MarketplaceInquiry.findOneAndUpdate(
+      { _id: req.params.id, provider: req.user.id },
+      { $set: { status } }, { new: true, runValidators: true }
+    ).lean();
+    if (!inquiry) return res.status(404).json({ message: "Inquiry not found for this provider account." });
+    res.json({ inquiry: { _id: inquiry._id, status: inquiry.status } });
+  } catch (error) { next(error); }
+});
+
+
+
+
+// Revenue foundation. No card/bank credentials are collected or stored here.
+const marketplaceOrderSchema = new mongoose.Schema({
+  listing: { type: mongoose.Schema.Types.ObjectId, ref: "ShivashaServiceListing", required: true, index: true },
+  buyer: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true, index: true },
+  provider: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true, index: true },
+  affiliate: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null, index: true },
+  referralCode: { type: String, default: "" },
+  description: { type: String, required: true, trim: true, maxlength: 1000 },
+  amount: { type: Number, required: true, min: 0.01 },
+  currency: { type: String, enum: ["USD", "INR", "EUR", "GBP", "AED", "CAD", "AUD"], required: true },
+  status: { type: String, enum: ["Requested", "Accepted", "Declined", "Completed", "Cancelled"], default: "Requested", index: true },
+  paymentStatus: { type: String, enum: ["Unpaid", "Paid", "Refunded"], default: "Unpaid", index: true },
+  paymentReference: { type: String, default: "", maxlength: 120 },
+  paidAt: { type: Date, default: null },
+  platformFeePercent: { type: Number, default: 0, min: 0, max: 30 },
+  platformFeeAmount: { type: Number, default: 0, min: 0 },
+  affiliateSharePercent: { type: Number, default: 0, min: 0, max: 100 },
+  affiliateCommission: { type: Number, default: 0, min: 0 },
+  commissionStatus: { type: String, enum: ["Not accrued", "Accrued", "Paid out", "Reversed"], default: "Not accrued" }
+}, { timestamps: true });
+marketplaceOrderSchema.index({ buyer: 1, createdAt: -1 });
+marketplaceOrderSchema.index({ provider: 1, createdAt: -1 });
+const MarketplaceOrder = mongoose.models.ShivashaMarketplaceOrder || mongoose.model("ShivashaMarketplaceOrder", marketplaceOrderSchema);
+
+const affiliateProfileSchema = new mongoose.Schema({
+  owner: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true, unique: true, index: true },
+  referralCode: { type: String, required: true, unique: true, uppercase: true, index: true },
+  active: { type: Boolean, default: true }
+}, { timestamps: true });
+const AffiliateProfile = mongoose.models.ShivashaAffiliateProfile || mongoose.model("ShivashaAffiliateProfile", affiliateProfileSchema);
+const newReferralCode = () => "SHV-" + randomBytes(5).toString("hex").toUpperCase();
+
+router.get("/marketplace/revenue", async (req, res, next) => {
+  try {
+    let profile = await AffiliateProfile.findOne({ owner: req.user.id });
+    if (!profile) {
+      for (let attempt = 0; attempt < 3 && !profile; attempt++) {
+        try { profile = await AffiliateProfile.create({ owner: req.user.id, referralCode: newReferralCode() }); }
+        catch (error) { if (error?.code !== 11000 || attempt === 2) throw error; }
+      }
+    }
+    const [orders, aggregate] = await Promise.all([
+      MarketplaceOrder.find({ $or: [{ buyer: req.user.id }, { provider: req.user.id }, { affiliate: req.user.id }] })
+        .populate("listing", "title").sort({ createdAt: -1 }).limit(100).lean(),
+      MarketplaceOrder.aggregate([
+        { $match: { affiliate: new mongoose.Types.ObjectId(req.user.id), paymentStatus: "Paid", commissionStatus: { $in: ["Accrued", "Paid out"] } } },
+        { $group: { _id: "$currency", total: { $sum: "$affiliateCommission" }, orders: { $sum: 1 } } }
+      ])
+    ]);
+    res.json({ referralCode: profile.referralCode, orders, affiliateEarnings: aggregate, note: "Earnings are accrued only after an administrator confirms a real payment. No payment gateway is connected." });
+  } catch (error) { next(error); }
+});
+
+router.post("/marketplace/orders", async (req, res, next) => {
+  try {
+    const listingId = cleanText(req.body?.listingId, 80);
+    const description = cleanText(req.body?.description, 1000);
+    const amount = Number(req.body?.amount);
+    const referralCode = cleanText(req.body?.referralCode, 40).toUpperCase();
+    if (!mongoose.isValidObjectId(listingId) || description.length < 10 || !Number.isFinite(amount) || amount <= 0) {
+      return res.status(400).json({ message: "Provide a valid listing, requirement (10+ characters), and agreed amount." });
+    }
+    const listing = await ServiceListing.findOne({ _id: listingId, status: "active" }).lean();
+    if (!listing) return res.status(404).json({ message: "Active service listing not found." });
+    if (String(listing.owner) === String(req.user.id)) return res.status(400).json({ message: "You cannot order your own service." });
+    if (listing.priceFrom > 0 && amount < listing.priceFrom) return res.status(400).json({ message: "Agreed amount cannot be below the provider's listed starting price." });
+    let affiliate = null;
+    if (referralCode) {
+      const profile = await AffiliateProfile.findOne({ referralCode, active: true }).select("owner").lean();
+      if (!profile) return res.status(400).json({ message: "Referral code is invalid or inactive." });
+      if (String(profile.owner) !== String(req.user.id) && String(profile.owner) !== String(listing.owner)) affiliate = profile.owner;
+    }
+    const order = await MarketplaceOrder.create({
+      listing: listing._id, buyer: req.user.id, provider: listing.owner, affiliate,
+      referralCode: affiliate ? referralCode : "", description, amount, currency: listing.currency
+    });
+    res.status(201).json({ order, message: "Order request sent. Payment is not collected by Shivasha in this release." });
+  } catch (error) { next(error); }
+});
+
+router.get("/marketplace/orders", async (req, res, next) => {
+  try {
+    const orders = await MarketplaceOrder.find({ $or: [{ buyer: req.user.id }, { provider: req.user.id }] })
+      .populate("listing", "title").sort({ createdAt: -1 }).limit(100).lean();
+    res.json({ orders });
+  } catch (error) { next(error); }
+});
+
+router.patch("/marketplace/orders/:id", async (req, res, next) => {
+  try {
+    if (!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({ message: "Invalid order ID." });
+    const status = cleanText(req.body?.status, 20);
+    if (!["Accepted", "Declined", "Completed", "Cancelled"].includes(status)) return res.status(400).json({ message: "Invalid order status." });
+    const order = await MarketplaceOrder.findOne({ _id: req.params.id, $or: [{ buyer: req.user.id }, { provider: req.user.id }] });
+    if (!order) return res.status(404).json({ message: "Order not found." });
+    if (["Paid", "Refunded"].includes(order.paymentStatus) && status === "Cancelled") return res.status(409).json({ message: "Paid orders require an administrator refund review." });
+    if (status === "Accepted" || status === "Declined" || status === "Completed") {
+      if (String(order.provider) !== String(req.user.id)) return res.status(403).json({ message: "Only the provider can update this order status." });
+    }
+    if (status === "Cancelled" && String(order.buyer) !== String(req.user.id)) return res.status(403).json({ message: "Only the buyer can cancel this order." });
+    order.status = status;
+    await order.save();
+    res.json({ order });
+  } catch (error) { next(error); }
+});
+
+const verificationSchema = new mongoose.Schema({
+  owner: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true, unique: true, index: true },
+  businessName: { type: String, required: true, trim: true, maxlength: 120 },
+  country: { type: String, required: true, trim: true, maxlength: 80 },
+  website: { type: String, trim: true, maxlength: 200, default: "" },
+  businessEmail: { type: String, trim: true, lowercase: true, maxlength: 254, default: "" },
+  registrationType: { type: String, enum: ["Company", "Sole proprietor", "Partnership", "Non-profit", "Other"], required: true },
+  publicDescription: { type: String, trim: true, maxlength: 300, default: "" },
+  status: { type: String, enum: ["Not submitted", "Pending review", "Needs information", "Verified", "Rejected"], default: "Pending review", index: true },
+  reviewNote: { type: String, trim: true, maxlength: 500, default: "" },
+  reviewedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
+  reviewedAt: { type: Date, default: null }
+}, { timestamps: true });
+const ProviderVerification = mongoose.models.ShivashaProviderVerification || mongoose.model("ShivashaProviderVerification", verificationSchema);
+
+router.get("/marketplace/verification", async (req, res, next) => {
+  try {
+    const verification = await ProviderVerification.findOne({ owner: req.user.id })
+      .select("businessName country website businessEmail registrationType publicDescription status reviewNote createdAt updatedAt").lean();
+    res.json({ verification });
+  } catch (error) { next(error); }
+});
+
+router.post("/marketplace/verification", async (req, res, next) => {
+  try {
+    const businessName = cleanText(req.body?.businessName, 120);
+    const country = cleanText(req.body?.country, 80);
+    const website = cleanText(req.body?.website, 200);
+    const businessEmail = cleanText(req.body?.businessEmail, 254).toLowerCase();
+    const registrationType = cleanText(req.body?.registrationType, 30);
+    const publicDescription = cleanText(req.body?.publicDescription, 300);
+    const allowedTypes = ["Company", "Sole proprietor", "Partnership", "Non-profit", "Other"];
+    const validWebsite = !website || /^https:\/\/(?:[a-z0-9-]+\.)+[a-z]{2,}(?::\d{1,5})?(?:\/[^\s]*)?$/i.test(website);
+    const validEmail = !businessEmail || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(businessEmail);
+    if (!businessName || !country || !allowedTypes.includes(registrationType) || !validWebsite || !validEmail) {
+      return res.status(400).json({ message: "Provide a business name, country, valid registration type, and valid optional website/email." });
+    }
+    const current = await ProviderVerification.findOne({ owner: req.user.id }).lean();
+    if (current?.status === "Verified") return res.status(409).json({ message: "This provider is already verified. Contact support to update verified details." });
+    const verification = await ProviderVerification.findOneAndUpdate(
+      { owner: req.user.id },
+      { $set: { businessName, country, website, businessEmail, registrationType, publicDescription, status: "Pending review", reviewNote: "", reviewedBy: null, reviewedAt: null } },
+      { new: true, upsert: true, runValidators: true }
+    ).select("businessName country website businessEmail registrationType publicDescription status reviewNote createdAt updatedAt").lean();
+    res.status(201).json({ verification, message: "Verification request submitted for manual review." });
+  } catch (error) { next(error); }
+});
+
+// Transparent first-stage matching: relevance scoring, not an external AI model.
+const matchTokens = value => cleanText(value, 300)
+  .toLowerCase()
+  .normalize("NFKD")
+  .replace(/[^a-z0-9\s]/g, " ")
+  .split(/\s+/)
+  .filter(token => token.length > 2);
+router.get("/marketplace/recommendations", async (req, res, next) => {
+  try {
+    const requirement = cleanText(req.query.requirement, 300);
+    if (requirement.length < 3) {
+      return res.status(400).json({ message: "Describe your requirement in at least 3 characters." });
+    }
+    const requestedDepartment = cleanText(req.query.department, 80);
+    const tokens = [...new Set(matchTokens(requirement))];
+    if (!tokens.length) return res.json({ recommendations: [], method: "transparent-keyword-v1" });
+    const filter = { status: "active" };
+    if (marketplaceDepartments.includes(requestedDepartment)) filter.department = requestedDepartment;
+    const candidates = await ServiceListing.find(filter)
+      .select("title department category description country priceFrom currency createdAt")
+      .sort({ createdAt: -1 }).limit(1000).lean();
+    const recommendations = candidates.map(listing => {
+      const fields = {
+        title: matchTokens(listing.title),
+        category: matchTokens(listing.category),
+        department: matchTokens(listing.department),
+        description: matchTokens(listing.description)
+      };
+      const matched = tokens.filter(token =>
+        fields.title.includes(token) || fields.category.includes(token) ||
+        fields.department.includes(token) || fields.description.includes(token)
+      );
+      const titleHits = tokens.filter(token => fields.title.includes(token)).length;
+      const categoryHits = tokens.filter(token => fields.category.includes(token)).length;
+      const departmentHits = tokens.filter(token => fields.department.includes(token)).length;
+      const descriptionHits = tokens.filter(token => fields.description.includes(token)).length;
+      const score = Math.min(100, Math.round(
+        (titleHits * 28 + categoryHits * 22 + departmentHits * 18 + descriptionHits * 8) /
+        Math.max(1, tokens.length) + (matched.length === tokens.length ? 10 : 0)
+      ));
+      const reasons = [];
+      if (titleHits) reasons.push("Matches service title");
+      if (categoryHits) reasons.push("Matches speciality");
+      if (departmentHits) reasons.push("Matches department");
+      if (descriptionHits) reasons.push("Matches description");
+      return {
+        _id: listing._id, title: listing.title, department: listing.department,
+        category: listing.category, description: listing.description, country: listing.country,
+        priceFrom: listing.priceFrom, currency: listing.currency, matchScore: score, matchReasons: reasons
+      };
+    }).filter(item => item.matchScore > 0)
+      .sort((a, b) => b.matchScore - a.matchScore)
+      .slice(0, 20);
+    res.json({ recommendations, method: "transparent-keyword-v1", disclaimer: "Relevance estimate based on listing text; not a guarantee of quality or provider verification." });
   } catch (error) { next(error); }
 });
 
