@@ -1,5 +1,6 @@
 import express from "express";
 import mongoose from "mongoose";
+import { randomBytes } from "node:crypto";
 import { requireAuth } from "../middleware/auth.js";
 
 const router = express.Router();
@@ -252,6 +253,113 @@ router.patch("/marketplace/inquiries/:id", async (req, res, next) => {
 });
 
 
+
+
+// Revenue foundation. No card/bank credentials are collected or stored here.
+const marketplaceOrderSchema = new mongoose.Schema({
+  listing: { type: mongoose.Schema.Types.ObjectId, ref: "ShivashaServiceListing", required: true, index: true },
+  buyer: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true, index: true },
+  provider: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true, index: true },
+  affiliate: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null, index: true },
+  referralCode: { type: String, default: "" },
+  description: { type: String, required: true, trim: true, maxlength: 1000 },
+  amount: { type: Number, required: true, min: 0.01 },
+  currency: { type: String, enum: ["USD", "INR", "EUR", "GBP", "AED", "CAD", "AUD"], required: true },
+  status: { type: String, enum: ["Requested", "Accepted", "Declined", "Completed", "Cancelled"], default: "Requested", index: true },
+  paymentStatus: { type: String, enum: ["Unpaid", "Paid", "Refunded"], default: "Unpaid", index: true },
+  paymentReference: { type: String, default: "", maxlength: 120 },
+  paidAt: { type: Date, default: null },
+  platformFeePercent: { type: Number, default: 0, min: 0, max: 30 },
+  platformFeeAmount: { type: Number, default: 0, min: 0 },
+  affiliateSharePercent: { type: Number, default: 0, min: 0, max: 100 },
+  affiliateCommission: { type: Number, default: 0, min: 0 },
+  commissionStatus: { type: String, enum: ["Not accrued", "Accrued", "Paid out", "Reversed"], default: "Not accrued" }
+}, { timestamps: true });
+marketplaceOrderSchema.index({ buyer: 1, createdAt: -1 });
+marketplaceOrderSchema.index({ provider: 1, createdAt: -1 });
+const MarketplaceOrder = mongoose.models.ShivashaMarketplaceOrder || mongoose.model("ShivashaMarketplaceOrder", marketplaceOrderSchema);
+
+const affiliateProfileSchema = new mongoose.Schema({
+  owner: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true, unique: true, index: true },
+  referralCode: { type: String, required: true, unique: true, uppercase: true, index: true },
+  active: { type: Boolean, default: true }
+}, { timestamps: true });
+const AffiliateProfile = mongoose.models.ShivashaAffiliateProfile || mongoose.model("ShivashaAffiliateProfile", affiliateProfileSchema);
+const newReferralCode = () => "SHV-" + randomBytes(5).toString("hex").toUpperCase();
+
+router.get("/marketplace/revenue", async (req, res, next) => {
+  try {
+    let profile = await AffiliateProfile.findOne({ owner: req.user.id });
+    if (!profile) {
+      for (let attempt = 0; attempt < 3 && !profile; attempt++) {
+        try { profile = await AffiliateProfile.create({ owner: req.user.id, referralCode: newReferralCode() }); }
+        catch (error) { if (error?.code !== 11000 || attempt === 2) throw error; }
+      }
+    }
+    const [orders, aggregate] = await Promise.all([
+      MarketplaceOrder.find({ $or: [{ buyer: req.user.id }, { provider: req.user.id }, { affiliate: req.user.id }] })
+        .populate("listing", "title").sort({ createdAt: -1 }).limit(100).lean(),
+      MarketplaceOrder.aggregate([
+        { $match: { affiliate: new mongoose.Types.ObjectId(req.user.id), paymentStatus: "Paid", commissionStatus: { $in: ["Accrued", "Paid out"] } } },
+        { $group: { _id: "$currency", total: { $sum: "$affiliateCommission" }, orders: { $sum: 1 } } }
+      ])
+    ]);
+    res.json({ referralCode: profile.referralCode, orders, affiliateEarnings: aggregate, note: "Earnings are accrued only after an administrator confirms a real payment. No payment gateway is connected." });
+  } catch (error) { next(error); }
+});
+
+router.post("/marketplace/orders", async (req, res, next) => {
+  try {
+    const listingId = cleanText(req.body?.listingId, 80);
+    const description = cleanText(req.body?.description, 1000);
+    const amount = Number(req.body?.amount);
+    const referralCode = cleanText(req.body?.referralCode, 40).toUpperCase();
+    if (!mongoose.isValidObjectId(listingId) || description.length < 10 || !Number.isFinite(amount) || amount <= 0) {
+      return res.status(400).json({ message: "Provide a valid listing, requirement (10+ characters), and agreed amount." });
+    }
+    const listing = await ServiceListing.findOne({ _id: listingId, status: "active" }).lean();
+    if (!listing) return res.status(404).json({ message: "Active service listing not found." });
+    if (String(listing.owner) === String(req.user.id)) return res.status(400).json({ message: "You cannot order your own service." });
+    if (listing.priceFrom > 0 && amount < listing.priceFrom) return res.status(400).json({ message: "Agreed amount cannot be below the provider's listed starting price." });
+    let affiliate = null;
+    if (referralCode) {
+      const profile = await AffiliateProfile.findOne({ referralCode, active: true }).select("owner").lean();
+      if (!profile) return res.status(400).json({ message: "Referral code is invalid or inactive." });
+      if (String(profile.owner) !== String(req.user.id) && String(profile.owner) !== String(listing.owner)) affiliate = profile.owner;
+    }
+    const order = await MarketplaceOrder.create({
+      listing: listing._id, buyer: req.user.id, provider: listing.owner, affiliate,
+      referralCode: affiliate ? referralCode : "", description, amount, currency: listing.currency
+    });
+    res.status(201).json({ order, message: "Order request sent. Payment is not collected by Shivasha in this release." });
+  } catch (error) { next(error); }
+});
+
+router.get("/marketplace/orders", async (req, res, next) => {
+  try {
+    const orders = await MarketplaceOrder.find({ $or: [{ buyer: req.user.id }, { provider: req.user.id }] })
+      .populate("listing", "title").sort({ createdAt: -1 }).limit(100).lean();
+    res.json({ orders });
+  } catch (error) { next(error); }
+});
+
+router.patch("/marketplace/orders/:id", async (req, res, next) => {
+  try {
+    if (!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({ message: "Invalid order ID." });
+    const status = cleanText(req.body?.status, 20);
+    if (!["Accepted", "Declined", "Completed", "Cancelled"].includes(status)) return res.status(400).json({ message: "Invalid order status." });
+    const order = await MarketplaceOrder.findOne({ _id: req.params.id, $or: [{ buyer: req.user.id }, { provider: req.user.id }] });
+    if (!order) return res.status(404).json({ message: "Order not found." });
+    if (["Paid", "Refunded"].includes(order.paymentStatus) && status === "Cancelled") return res.status(409).json({ message: "Paid orders require an administrator refund review." });
+    if (status === "Accepted" || status === "Declined" || status === "Completed") {
+      if (String(order.provider) !== String(req.user.id)) return res.status(403).json({ message: "Only the provider can update this order status." });
+    }
+    if (status === "Cancelled" && String(order.buyer) !== String(req.user.id)) return res.status(403).json({ message: "Only the buyer can cancel this order." });
+    order.status = status;
+    await order.save();
+    res.json({ order });
+  } catch (error) { next(error); }
+});
 
 const verificationSchema = new mongoose.Schema({
   owner: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true, unique: true, index: true },
