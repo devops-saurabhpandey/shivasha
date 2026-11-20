@@ -23,7 +23,7 @@ export default function AdminDashboard({ auth }) {
   const [enquiryLoading, setEnquiryLoading] = useState(true);
   const [providerVerifications, setProviderVerifications] = useState([]);
   const [verificationError, setVerificationError] = useState("");
-  const [verificationLoading, setVerificationLoading] = useState(true);
+  const [verificationLoading, setVerificationLoading] = useState(true);\n  const [marketplacePayments, setMarketplacePayments] = useState([]);\n  const [paymentError, setPaymentError] = useState("");\n  const [paymentLoading, setPaymentLoading] = useState(true);
   const headers = { Authorization: "Bearer " + auth?.token };
 
 
@@ -44,6 +44,14 @@ export default function AdminDashboard({ auth }) {
         if (!cancelled) setSoftwareEnquiries(data.enquiries || []);
       }).catch(err => { if (!cancelled) setEnquiryError(err.message); })
       .finally(() => { if (!cancelled) setEnquiryLoading(false); });
+
+    fetch(API_BASE + "/api/admin/marketplace-payments", { headers })
+      .then(async response => {
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.message || "Unable to load marketplace payment queue");
+        if (!cancelled) setMarketplacePayments(data.orders || []);
+      }).catch(err => { if (!cancelled) setPaymentError(err.message); })
+      .finally(() => { if (!cancelled) setPaymentLoading(false); });
 
     fetch(API_BASE + "/api/admin/marketplace-verifications", { headers })
       .then(async response => {
@@ -159,6 +167,30 @@ export default function AdminDashboard({ auth }) {
             </div>
           </article>)}
         </div> : <div className="panel empty">No provider verification requests waiting for review.</div>}
+    </section>
+    <section className="content">
+      <div className="feed-head"><div><h2>Marketplace Payment Reconciliation</h2><p>Confirm only completed orders whose payment is independently verified in the actual payment provider or bank account.</p></div><b>{marketplacePayments.length} awaiting reconciliation</b></div>
+      {paymentError && <div className="api-error">{paymentError}</div>}
+      {paymentLoading ? <div className="panel empty">Loading payment reconciliation queue…</div> :
+        marketplacePayments.length ? <div className="panel">
+          {marketplacePayments.map(order => <article className="notification-item" key={order._id}>
+            <div className="notification-copy" style={{width:"100%"}}>
+              <b>{order.listing?.title || "Marketplace service"} · {order.currency} {Number(order.amount).toFixed(2)}</b>
+              <small>Buyer: {order.buyer?.name || "Unknown"} · Provider: {order.provider?.name || "Unknown"}</small>
+              <small>Order status: {order.status} · Payment status: {order.paymentStatus}</small>
+              <label style={{display:"grid",gap:6,marginTop:8}}>External payment reference<input id={"marketplace-payment-ref-"+order._id} maxLength={120} placeholder="Verified gateway/bank transaction reference" /></label>
+              <button type="button" className="primary" style={{marginTop:8}} onClick={async()=>{
+                const paymentReference=document.getElementById("marketplace-payment-ref-"+order._id)?.value||"";
+                try {
+                  const response=await fetch(API_BASE+"/api/admin/marketplace-payments/"+order._id+"/confirm",{method:"POST",headers:{...headers,"Content-Type":"application/json"},body:JSON.stringify({paymentReference})});
+                  const data=await response.json().catch(()=>({}));
+                  if(!response.ok)throw new Error(data.message||"Unable to reconcile payment");
+                  setMarketplacePayments(old=>old.filter(row=>row._id!==order._id));
+                } catch(error){setPaymentError(error.message);}
+              }}>Confirm reconciled payment</button>
+            </div>
+          </article>)}
+        </div> : <div className="panel empty">No completed orders waiting for payment reconciliation.</div>}
     </section>
     <CreatorFinanceAdmin auth={auth} />
   </>;
