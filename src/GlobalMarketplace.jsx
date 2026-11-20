@@ -27,6 +27,8 @@ export default function GlobalMarketplace({auth}) {
   const [messages,setMessages]=useState({});
   const [requirement,setRequirement]=useState("");
   const [recommendations,setRecommendations]=useState([]);
+  const [verification,setVerification]=useState(null);
+  const [verificationForm,setVerificationForm]=useState({businessName:"",country:"India",website:"",businessEmail:"",registrationType:"Company",publicDescription:""});
   const headers={"Content-Type":"application/json",...(auth?.token?{Authorization:"Bearer "+auth.token}:{})};
   const request=useCallback(async(path,options={})=>{
     const response=await fetch(API_BASE+path,{...options,headers:{...headers,...(options.headers||{})}});
@@ -37,14 +39,17 @@ export default function GlobalMarketplace({auth}) {
   const load=useCallback(async()=>{
     setBusy(true);
     try {
-      const [publicData,ownData,inquiryData]=await Promise.all([
+      const [publicData,ownData,inquiryData,verificationData]=await Promise.all([
         request("/api/business-platform/marketplace/listings"),
         request("/api/business-platform/marketplace/my-listings"),
-        request("/api/business-platform/marketplace/inquiries")
+        request("/api/business-platform/marketplace/inquiries"),
+        request("/api/business-platform/marketplace/verification")
       ]);
       setListings(publicData.listings||[]);
       setMine(ownData.listings||[]);
       setInquiries(inquiryData.inquiries||[]);
+      setVerification(verificationData.verification||null);
+      if(verificationData.verification) setVerificationForm({businessName:verificationData.verification.businessName||"",country:verificationData.verification.country||"India",website:verificationData.verification.website||"",businessEmail:verificationData.verification.businessEmail||"",registrationType:verificationData.verification.registrationType||"Company",publicDescription:verificationData.verification.publicDescription||""});
       setNotice("Marketplace connected. Listings and inquiries are stored on the Shivasha server.");
     } catch(error) { setNotice(error.message||"Could not load marketplace."); }
     finally { setBusy(false); }
@@ -75,6 +80,13 @@ export default function GlobalMarketplace({auth}) {
     } catch(error) { setNotice(error.message); }
     finally { setBusy(false); }
   };
+  const submitVerification=async e=>{
+    e.preventDefault();
+    setBusy(true);
+    try { const result=await request("/api/business-platform/marketplace/verification",{method:"POST",body:JSON.stringify(verificationForm)}); setVerification(result.verification); setNotice(result.message||"Verification request submitted."); }
+    catch(error){setNotice(error.message||"Could not submit verification request.");}
+    finally{setBusy(false);}
+  };
   const findMatches=async()=>{
     if(requirement.trim().length<3){setNotice("Please describe your requirement in at least 3 characters.");return;}
     setBusy(true);
@@ -97,7 +109,7 @@ export default function GlobalMarketplace({auth}) {
     (!department||item.department===department) &&
     (!query||[item.title,item.description,item.category,item.department,item.country].join(" ").toLowerCase().includes(query.toLowerCase()))
   );
-  const tabs=[["discover","🌐 Discover"],["publish","＋ Publish service"],["my-listings","▤ My listings"],["inquiries","✉ Inquiries"]];
+  const tabs=[["discover","🌐 Discover"],["publish","＋ Publish service"],["my-listings","▤ My listings"],["inquiries","✉ Inquiries"],["verification","✓ Provider verification"]];
   const statusOptions=["New","Contacted","Qualified","Closed"];
   return <section style={{padding:"clamp(12px,2vw,22px)",color:"#172033"}}>
     <div style={{background:"linear-gradient(125deg,#171044,#4338ca 60%,#0f766e)",borderRadius:20,padding:"24px clamp(18px,3vw,32px)",color:"#fff",marginBottom:18}}>
@@ -122,7 +134,7 @@ export default function GlobalMarketplace({auth}) {
           <div style={{display:"flex",justifyContent:"space-between",gap:8,alignItems:"start"}}><span style={{fontSize:11,fontWeight:800,color:"#4338ca",background:"#eef2ff",padding:"5px 8px",borderRadius:20}}>{item.department}</span><span style={{fontSize:11,color:"#64748b"}}>{item.country||"Remote"}</span></div>
           <h3 style={{margin:"12px 0 6px"}}>{item.title}</h3><p style={{margin:"0 0 10px",color:"#64748b",lineHeight:1.55,fontSize:14}}>{item.description}</p>
           {item.category&&<div style={{fontSize:12,color:"#475569"}}>Speciality: {item.category}</div>}
-          <div style={{fontSize:12,color:"#475569",marginTop:8}}>Provider: {item.ownerName||"Shivasha provider"}</div>
+          <div style={{fontSize:12,color:"#475569",marginTop:8}}>Provider: {item.ownerName||"Shivasha provider"} {item.providerVerified&&<span style={{color:"#15803d",fontWeight:800}}>✓ Verified</span>}</div>
           {item.priceFrom>0&&<div style={{fontWeight:800,marginTop:8}}>From {item.currency} {item.priceFrom}</div>}
           <label style={{display:"grid",gap:6,marginTop:14,fontSize:12,fontWeight:700,color:"#475569"}}>Your requirement<textarea value={messages[item._id]||""} onChange={e=>setMessages(prev=>({...prev,[item._id]:e.target.value}))} rows={3} maxLength={2000} placeholder="Describe what you need (min. 10 characters)..." style={{...styles.input,resize:"vertical"}}/></label>
           <p style={{fontSize:11,color:"#64748b",lineHeight:1.45}}>By sending, you consent to share this message and your Shivasha account identity with this provider.</p>
@@ -144,6 +156,7 @@ export default function GlobalMarketplace({auth}) {
     </form>}
     {tab==="my-listings"&&<div style={{display:"grid",gap:10}}>{mine.map(item=><div key={item._id} style={styles.card}><div style={{display:"flex",justifyContent:"space-between",gap:10,flexWrap:"wrap"}}><div><b>{item.title}</b><div style={{fontSize:12,color:"#64748b",marginTop:5}}>{item.department} · {item.country} · {item.status}</div></div><span style={{fontSize:11,color:item.status==="active"?"#15803d":"#b45309"}}>{item.status}</span></div><p style={{color:"#64748b",fontSize:14}}>{item.description}</p></div>)}{!mine.length&&<div style={styles.card}>You have not published a service yet.</div>}</div>}
     {tab==="inquiries"&&<div style={{display:"grid",gap:10}}>{inquiries.map(item=><div key={item._id} style={styles.card}><div style={{display:"flex",justifyContent:"space-between",gap:8,flexWrap:"wrap"}}><b>{item.listingTitle||"Service inquiry"}</b><span style={{fontSize:12,color:"#64748b"}}>{new Date(item.createdAt).toLocaleString()}</span></div><p style={{lineHeight:1.6}}>{item.message}</p><div style={{fontSize:12,color:"#64748b"}}>From account: {item.requesterName||"Shivasha member"} · {item.direction==="sent"?"Sent inquiry":"Received inquiry"}</div>{item.direction==="received"&&<label style={{display:"flex",alignItems:"center",gap:8,fontSize:13}}>Status<select value={item.status} onChange={e=>updateStatus(item,e.target.value)} style={{...styles.input,width:"auto"}}>{statusOptions.map(x=><option key={x}>{x}</option>)}</select></label>}</div>)}{!inquiries.length&&<div style={styles.card}>No inquiries yet.</div>}</div>}
+    {tab==="verification"&&<form onSubmit={submitVerification} style={{...styles.card,display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:12}}><div style={{gridColumn:"1/-1"}}><h3 style={{margin:"0 0 5px"}}>Provider verification</h3><p style={{fontSize:13,color:"#64748b",margin:0}}>Submit accurate business details for manual review. Do not enter passwords, bank details, Aadhaar/PAN numbers or upload identity documents here. Document verification will be handled through a secure process in a later release.</p></div>{verification&&<div style={{gridColumn:"1/-1",padding:12,borderRadius:10,background:"#f1f5f9"}}><b>Current status: {verification.status}</b>{verification.reviewNote&&<p style={{margin:"6px 0 0",fontSize:13}}>{verification.reviewNote}</p>}</div>}<Field label="Legal / business name" required maxLength={120} value={verificationForm.businessName} onChange={e=>setVerificationForm({...verificationForm,businessName:e.target.value})}/><Field label="Country" required maxLength={80} value={verificationForm.country} onChange={e=>setVerificationForm({...verificationForm,country:e.target.value})}/><Field label="Website (https://)" type="url" maxLength={200} value={verificationForm.website} onChange={e=>setVerificationForm({...verificationForm,website:e.target.value})}/><Field label="Business email (optional)" type="email" maxLength={254} value={verificationForm.businessEmail} onChange={e=>setVerificationForm({...verificationForm,businessEmail:e.target.value})}/><label style={{display:"grid",gap:6,fontSize:13,fontWeight:700,color:"#475569"}}>Registration type<select style={styles.input} value={verificationForm.registrationType} onChange={e=>setVerificationForm({...verificationForm,registrationType:e.target.value})}>{["Company","Sole proprietor","Partnership","Non-profit","Other"].map(x=><option key={x}>{x}</option>)}</select></label><label style={{gridColumn:"1/-1",display:"grid",gap:6,fontSize:13,fontWeight:700,color:"#475569"}}>Business summary<textarea rows={3} maxLength={300} style={{...styles.input,resize:"vertical"}} value={verificationForm.publicDescription} onChange={e=>setVerificationForm({...verificationForm,publicDescription:e.target.value})}/></label><button disabled={busy||verification?.status==="Verified"} style={{...styles.button,gridColumn:"1/-1",opacity:busy||verification?.status==="Verified"?0.6:1}}>{verification?.status==="Verified"?"Provider verified":"Submit for manual review"}</button></form>}
     <p style={{fontSize:11,color:"#64748b",lineHeight:1.5,marginTop:16}}>MVP notice: account login is required. Provider verification, payments, external messaging, affiliate links and AI ranking are not activated yet. Do not treat a listing as independently verified.</p>
   </section>;
 }
