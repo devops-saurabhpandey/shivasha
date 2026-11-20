@@ -16,6 +16,38 @@ router.use(async (req, res, next) => {
   } catch (error) { next(error); }
 });
 
+
+const ProviderVerification = mongoose.models.ShivashaProviderVerification;
+router.get("/marketplace-verifications", async (_req, res, next) => {
+  try {
+    const Model = mongoose.models.ShivashaProviderVerification;
+    if (!Model) return res.json({ verifications: [] });
+    const verifications = await Model.find({ status: { $in: ["Pending review", "Needs information"] } })
+      .populate("owner", "name email").sort({ createdAt: 1 }).limit(200).lean();
+    res.json({ verifications });
+  } catch (error) { next(error); }
+});
+
+router.patch("/marketplace-verifications/:id", async (req, res, next) => {
+  try {
+    if (!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({ message: "Invalid verification ID." });
+    const status = String(req.body?.status || "");
+    const reviewNote = String(req.body?.reviewNote || "").trim().slice(0, 500);
+    if (!["Verified", "Needs information", "Rejected"].includes(status)) {
+      return res.status(400).json({ message: "Choose Verified, Needs information, or Rejected." });
+    }
+    const Model = mongoose.models.ShivashaProviderVerification;
+    if (!Model) return res.status(404).json({ message: "Verification requests are not initialized." });
+    const verification = await Model.findOneAndUpdate(
+      { _id: req.params.id, status: { $in: ["Pending review", "Needs information"] } },
+      { $set: { status, reviewNote, reviewedBy: req.user.id, reviewedAt: new Date() } },
+      { new: true, runValidators: true }
+    ).populate("owner", "name email").lean();
+    if (!verification) return res.status(404).json({ message: "Pending verification request not found." });
+    res.json({ verification });
+  } catch (error) { next(error); }
+});
+
 router.get("/ads", async (_req, res, next) => {
   try {
     const Campaign = mongoose.models.ShivashaAdCampaign;
