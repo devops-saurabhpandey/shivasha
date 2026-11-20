@@ -28,7 +28,9 @@ export default function GlobalMarketplace({auth}) {
   const [requirement,setRequirement]=useState("");
   const [recommendations,setRecommendations]=useState([]);
   const [verification,setVerification]=useState(null);
-  const [verificationForm,setVerificationForm]=useState({businessName:"",country:"India",website:"",businessEmail:"",registrationType:"Company",publicDescription:""});\n  const [revenue,setRevenue]=useState({referralCode:"",orders:[],affiliateEarnings:[]});\n  const [orderDrafts,setOrderDrafts]=useState({});
+  const [verificationForm,setVerificationForm]=useState({businessName:"",country:"India",website:"",businessEmail:"",registrationType:"Company",publicDescription:""});
+  const [revenue,setRevenue]=useState({referralCode:"",orders:[],affiliateEarnings:[]});
+  const [orderDrafts,setOrderDrafts]=useState({});
   const headers={"Content-Type":"application/json",...(auth?.token?{Authorization:"Bearer "+auth.token}:{})};
   const request=useCallback(async(path,options={})=>{
     const response=await fetch(API_BASE+path,{...options,headers:{...headers,...(options.headers||{})}});
@@ -48,7 +50,8 @@ export default function GlobalMarketplace({auth}) {
       setListings(publicData.listings||[]);
       setMine(ownData.listings||[]);
       setInquiries(inquiryData.inquiries||[]);
-      setVerification(verificationData.verification||null);\n      setRevenue({referralCode:revenueData.referralCode||"",orders:revenueData.orders||[],affiliateEarnings:revenueData.affiliateEarnings||[]});
+      setVerification(verificationData.verification||null);
+      setRevenue({referralCode:revenueData.referralCode||"",orders:revenueData.orders||[],affiliateEarnings:revenueData.affiliateEarnings||[]});
       if(verificationData.verification) setVerificationForm({businessName:verificationData.verification.businessName||"",country:verificationData.verification.country||"India",website:verificationData.verification.website||"",businessEmail:verificationData.verification.businessEmail||"",registrationType:verificationData.verification.registrationType||"Company",publicDescription:verificationData.verification.publicDescription||""});
       setNotice("Marketplace connected. Listings and inquiries are stored on the Shivasha server.");
     } catch(error) { setNotice(error.message||"Could not load marketplace."); }
@@ -80,7 +83,17 @@ export default function GlobalMarketplace({auth}) {
     } catch(error) { setNotice(error.message); }
     finally { setBusy(false); }
   };
-  const placeOrder=async listing=>{\n    const draft=orderDrafts[listing._id]||{};\n    const amount=Number(draft.amount);\n    if(!Number.isFinite(amount)||amount<=0||String(draft.description||"").trim().length<10){setNotice("Enter an agreed amount and order details (at least 10 characters).");return;}\n    setBusy(true);\n    try {await request("/api/business-platform/marketplace/orders",{method:"POST",body:JSON.stringify({listingId:listing._id,amount,description:draft.description,referralCode:draft.referralCode||""})});setNotice("Order request sent. Payment is not collected by Shivasha.");setOrderDrafts(old=>({...old,[listing._id]:{}}));await load();}\n    catch(error){setNotice(error.message||"Could not place order.");}\n    finally{setBusy(false);}\n  };\n  const updateOrder=async(order,status)=>{setBusy(true);try{await request("/api/business-platform/marketplace/orders/"+order._id,{method:"PATCH",body:JSON.stringify({status})});await load();}catch(error){setNotice(error.message);}finally{setBusy(false);}};\n  const submitVerification=async e=>{
+  const placeOrder=async listing=>{
+    const draft=orderDrafts[listing._id]||{};
+    const amount=Number(draft.amount);
+    if(!Number.isFinite(amount)||amount<=0||String(draft.description||"").trim().length<10){setNotice("Enter an agreed amount and order details (at least 10 characters).");return;}
+    setBusy(true);
+    try {await request("/api/business-platform/marketplace/orders",{method:"POST",body:JSON.stringify({listingId:listing._id,amount,description:draft.description,referralCode:draft.referralCode||""})});setNotice("Order request sent. Payment is not collected by Shivasha.");setOrderDrafts(old=>({...old,[listing._id]:{}}));await load();}
+    catch(error){setNotice(error.message||"Could not place order.");}
+    finally{setBusy(false);}
+  };
+  const updateOrder=async(order,status)=>{setBusy(true);try{await request("/api/business-platform/marketplace/orders/"+order._id,{method:"PATCH",body:JSON.stringify({status})});await load();}catch(error){setNotice(error.message);}finally{setBusy(false);}};
+  const submitVerification=async e=>{
     e.preventDefault();
     setBusy(true);
     try { const result=await request("/api/business-platform/marketplace/verification",{method:"POST",body:JSON.stringify(verificationForm)}); setVerification(result.verification); setNotice(result.message||"Verification request submitted."); }
