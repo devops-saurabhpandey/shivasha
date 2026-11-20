@@ -24,11 +24,11 @@ export default function AdminDashboard({ auth }) {
   const [providerVerifications, setProviderVerifications] = useState([]);
   const [verificationError, setVerificationError] = useState("");
   const [verificationLoading, setVerificationLoading] = useState(true);
+  const headers = { Authorization: "Bearer " + auth?.token };
 
 
   useEffect(() => {
     let cancelled = false;
-    const headers = { Authorization: "Bearer " + auth?.token };
     fetch(API_BASE + "/api/admin/stats", { headers })
       .then(async response => {
         const data = await response.json().catch(() => ({}));
