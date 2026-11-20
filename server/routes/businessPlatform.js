@@ -285,7 +285,7 @@ router.post("/marketplace/verification", async (req, res, next) => {
     const registrationType = cleanText(req.body?.registrationType, 30);
     const publicDescription = cleanText(req.body?.publicDescription, 300);
     const allowedTypes = ["Company", "Sole proprietor", "Partnership", "Non-profit", "Other"];
-    const validWebsite = !website || /^https:\/\/(?:[a-z0-9-]+\.)+[a-z]{2,}(?::\\d{1,5})?(?:\/[^\s]*)?$/i.test(website);
+    const validWebsite = !website || /^https:\/\/(?:[a-z0-9-]+\.)+[a-z]{2,}(?::\d{1,5})?(?:\/[^\s]*)?$/i.test(website);
     const validEmail = !businessEmail || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(businessEmail);
     if (!businessName || !country || !allowedTypes.includes(registrationType) || !validWebsite || !validEmail) {
       return res.status(400).json({ message: "Provide a business name, country, valid registration type, and valid optional website/email." });
