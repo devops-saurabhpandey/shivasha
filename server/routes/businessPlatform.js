@@ -160,8 +160,16 @@ router.get("/marketplace/listings", async (req, res, next) => {
     if (q) filter.$text = { $search: q };
     const listings = await ServiceListing.find(filter)
       .select("owner title department category description country priceFrom currency status createdAt")
+      .populate("owner", "name")
       .sort({ createdAt: -1 }).limit(100).lean();
-    res.json({ listings });
+    const ownerIds = [...new Set(listings.map(item => String(item.owner?._id || item.owner)).filter(Boolean))];
+    const verifiedOwners = await ProviderVerification.find({ owner: { $in: ownerIds }, status: "Verified" }).select("owner").lean();
+    const verifiedSet = new Set(verifiedOwners.map(item => String(item.owner)));
+    res.json({ listings: listings.map(item => ({
+      ...item, ownerName: item.owner?.name || "Shivasha provider",
+      providerVerified: verifiedSet.has(String(item.owner?._id || item.owner)),
+      owner: undefined
+    })) });
   } catch (error) { next(error); }
 });
 
@@ -243,6 +251,55 @@ router.patch("/marketplace/inquiries/:id", async (req, res, next) => {
   } catch (error) { next(error); }
 });
 
+
+
+const verificationSchema = new mongoose.Schema({
+  owner: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true, unique: true, index: true },
+  businessName: { type: String, required: true, trim: true, maxlength: 120 },
+  country: { type: String, required: true, trim: true, maxlength: 80 },
+  website: { type: String, trim: true, maxlength: 200, default: "" },
+  businessEmail: { type: String, trim: true, lowercase: true, maxlength: 254, default: "" },
+  registrationType: { type: String, enum: ["Company", "Sole proprietor", "Partnership", "Non-profit", "Other"], required: true },
+  publicDescription: { type: String, trim: true, maxlength: 300, default: "" },
+  status: { type: String, enum: ["Not submitted", "Pending review", "Needs information", "Verified", "Rejected"], default: "Pending review", index: true },
+  reviewNote: { type: String, trim: true, maxlength: 500, default: "" },
+  reviewedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
+  reviewedAt: { type: Date, default: null }
+}, { timestamps: true });
+const ProviderVerification = mongoose.models.ShivashaProviderVerification || mongoose.model("ShivashaProviderVerification", verificationSchema);
+
+router.get("/marketplace/verification", async (req, res, next) => {
+  try {
+    const verification = await ProviderVerification.findOne({ owner: req.user.id })
+      .select("businessName country website businessEmail registrationType publicDescription status reviewNote createdAt updatedAt").lean();
+    res.json({ verification });
+  } catch (error) { next(error); }
+});
+
+router.post("/marketplace/verification", async (req, res, next) => {
+  try {
+    const businessName = cleanText(req.body?.businessName, 120);
+    const country = cleanText(req.body?.country, 80);
+    const website = cleanText(req.body?.website, 200);
+    const businessEmail = cleanText(req.body?.businessEmail, 254).toLowerCase();
+    const registrationType = cleanText(req.body?.registrationType, 30);
+    const publicDescription = cleanText(req.body?.publicDescription, 300);
+    const allowedTypes = ["Company", "Sole proprietor", "Partnership", "Non-profit", "Other"];
+    const validWebsite = !website || /^https:\/\/(?:[a-z0-9-]+\\.)+[a-z]{2,}(?::\\d{1,5})?(?:\/[^\\s]*)?$/i.test(website);
+    const validEmail = !businessEmail || /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(businessEmail);
+    if (!businessName || !country || !allowedTypes.includes(registrationType) || !validWebsite || !validEmail) {
+      return res.status(400).json({ message: "Provide a business name, country, valid registration type, and valid optional website/email." });
+    }
+    const current = await ProviderVerification.findOne({ owner: req.user.id }).lean();
+    if (current?.status === "Verified") return res.status(409).json({ message: "This provider is already verified. Contact support to update verified details." });
+    const verification = await ProviderVerification.findOneAndUpdate(
+      { owner: req.user.id },
+      { $set: { businessName, country, website, businessEmail, registrationType, publicDescription, status: "Pending review", reviewNote: "", reviewedBy: null, reviewedAt: null } },
+      { new: true, upsert: true, runValidators: true }
+    ).select("businessName country website businessEmail registrationType publicDescription status reviewNote createdAt updatedAt").lean();
+    res.status(201).json({ verification, message: "Verification request submitted for manual review." });
+  } catch (error) { next(error); }
+});
 
 // Transparent first-stage matching: relevance scoring, not an external AI model.
 const matchTokens = value => cleanText(value, 300)
