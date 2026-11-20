@@ -16,8 +16,6 @@ router.use(async (req, res, next) => {
   } catch (error) { next(error); }
 });
 
-
-const ProviderVerification = mongoose.models.ShivashaProviderVerification;
 router.get("/marketplace-verifications", async (_req, res, next) => {
   try {
     const Model = mongoose.models.ShivashaProviderVerification;
