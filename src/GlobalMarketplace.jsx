@@ -45,7 +45,8 @@ export default function GlobalMarketplace({auth}) {
         request("/api/business-platform/marketplace/listings"),
         request("/api/business-platform/marketplace/my-listings"),
         request("/api/business-platform/marketplace/inquiries"),
-        request("/api/business-platform/marketplace/verification")
+        request("/api/business-platform/marketplace/verification"),
+        request("/api/business-platform/marketplace/revenue")
       ]);
       setListings(publicData.listings||[]);
       setMine(ownData.listings||[]);
