@@ -55,3 +55,11 @@ test("provider verification is owner-scoped and requires admin review before a v
   assert.ok(adminSource.includes('router.get("/marketplace-verifications"'));
   assert.ok(adminSource.includes('router.patch("/marketplace-verifications/:id"'));
 });
+
+const adminUiFile = fileURLToPath(new URL("../../src/AdminDashboard.jsx", import.meta.url));
+const adminUi = readFileSync(adminUiFile, "utf8");
+test("admin dashboard exposes manual provider verification review actions", () => {
+  assert.ok(adminUi.includes("/api/admin/marketplace-verifications"));
+  assert.ok(adminUi.includes("Marketplace Provider Verification"));
+  assert.ok(adminUi.includes('["Verified","Needs information","Rejected"]'));
+});
