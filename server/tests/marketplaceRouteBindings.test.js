@@ -39,3 +39,19 @@ test("marketplace recommendation endpoint uses transparent relevance matching an
   assert.ok(source.includes("matchReasons: reasons"));
   assert.ok(source.includes("Relevance estimate based on listing text"));
 });
+
+const adminFile = fileURLToPath(new URL("../routes/admin.js", import.meta.url));
+const adminSource = readFileSync(adminFile, "utf8");
+
+test("provider verification is owner-scoped and requires admin review before a verified badge", () => {
+  assert.ok(source.includes('router.get("/marketplace/verification"'));
+  assert.ok(source.includes('router.post("/marketplace/verification"'));
+  assert.ok(source.includes('status: "Pending review"'));
+  assert.ok(source.includes('current?.status === "Verified"'));
+  assert.ok(source.includes('status: "Verified"'));
+  assert.ok(source.includes("ProviderVerification.find({ owner: { $in: ownerIds }, status: \"Verified\" })"));
+  assert.ok(adminSource.includes('router.use(requireAuth)'));
+  assert.ok(adminSource.includes('user.role !== "admin"'));
+  assert.ok(adminSource.includes('router.get("/marketplace-verifications"'));
+  assert.ok(adminSource.includes('router.patch("/marketplace-verifications/:id"'));
+});
