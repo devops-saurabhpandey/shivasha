@@ -23,7 +23,10 @@ export default function AdminDashboard({ auth }) {
   const [enquiryLoading, setEnquiryLoading] = useState(true);
   const [providerVerifications, setProviderVerifications] = useState([]);
   const [verificationError, setVerificationError] = useState("");
-  const [verificationLoading, setVerificationLoading] = useState(true);\n  const [marketplacePayments, setMarketplacePayments] = useState([]);\n  const [paymentError, setPaymentError] = useState("");\n  const [paymentLoading, setPaymentLoading] = useState(true);
+  const [verificationLoading, setVerificationLoading] = useState(true);
+  const [marketplacePayments, setMarketplacePayments] = useState([]);
+  const [paymentError, setPaymentError] = useState("");
+  const [paymentLoading, setPaymentLoading] = useState(true);
   const headers = { Authorization: "Bearer " + auth?.token };
 
 
