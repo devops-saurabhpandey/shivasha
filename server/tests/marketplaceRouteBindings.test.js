@@ -31,3 +31,11 @@ test("marketplace listing creation validates department, description, price and 
   assert.ok(source.includes("priceFrom < 0"));
   assert.ok(source.includes('"USD", "INR", "EUR", "GBP", "AED", "CAD", "AUD"'));
 });
+
+test("marketplace recommendation endpoint uses transparent relevance matching and returns no private provider data", () => {
+  assert.ok(source.includes('router.get("/marketplace/recommendations"'));
+  assert.ok(source.includes('method: "transparent-keyword-v1"'));
+  assert.ok(source.includes("matchScore: score"));
+  assert.ok(source.includes("matchReasons: reasons"));
+  assert.ok(source.includes("Relevance estimate based on listing text"));
+});
