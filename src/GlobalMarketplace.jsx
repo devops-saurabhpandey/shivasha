@@ -25,6 +25,8 @@ export default function GlobalMarketplace({auth}) {
   const [busy,setBusy]=useState(false);
   const [form,setForm]=useState({title:"",department:"AI Services",description:"",category:"",country:"India",priceFrom:"",currency:"USD"});
   const [messages,setMessages]=useState({});
+  const [requirement,setRequirement]=useState("");
+  const [recommendations,setRecommendations]=useState([]);
   const headers={"Content-Type":"application/json",...(auth?.token?{Authorization:"Bearer "+auth.token}:{})};
   const request=useCallback(async(path,options={})=>{
     const response=await fetch(API_BASE+path,{...options,headers:{...headers,...(options.headers||{})}});
@@ -73,6 +75,18 @@ export default function GlobalMarketplace({auth}) {
     } catch(error) { setNotice(error.message); }
     finally { setBusy(false); }
   };
+  const findMatches=async()=>{
+    if(requirement.trim().length<3){setNotice("Please describe your requirement in at least 3 characters.");return;}
+    setBusy(true);
+    try {
+      const params=new URLSearchParams({requirement:requirement.trim()});
+      if(department) params.set("department",department);
+      const result=await request("/api/business-platform/marketplace/recommendations?"+params.toString());
+      setRecommendations(result.recommendations||[]);
+      setNotice((result.recommendations||[]).length ? "Smart matching found relevant services. Scores are relevance estimates, not provider ratings." : "No matching service found yet. Try different words or publish a service.");
+    } catch(error){setNotice(error.message||"Could not find matches.");}
+    finally{setBusy(false);}
+  };
   const updateStatus=async(inquiry,status)=>{
     setBusy(true);
     try { await request("/api/business-platform/marketplace/inquiries/"+inquiry._id,{method:"PATCH",body:JSON.stringify({status})}); await load(); }
@@ -101,6 +115,8 @@ export default function GlobalMarketplace({auth}) {
         <Field label="Search services" value={query} onChange={e=>setQuery(e.target.value)} placeholder="e.g. AI chatbot, website, SEO"/>
         <label style={{display:"grid",gap:6,fontSize:13,fontWeight:700,color:"#475569"}}>Department<select style={styles.input} value={department} onChange={e=>setDepartment(e.target.value)}><option value="">All departments</option>{DEPARTMENTS.map(x=><option key={x}>{x}</option>)}</select></label>
       </div>
+      <div style={{...styles.card,marginBottom:14}}><h3 style={{margin:"0 0 6px"}}>Smart service matching</h3><p style={{margin:"0 0 10px",fontSize:13,color:"#64748b"}}>Describe what you need. Shivasha will rank matching listings using their title, speciality, department and description.</p><textarea value={requirement} onChange={e=>setRequirement(e.target.value)} maxLength={300} rows={2} placeholder="e.g. I need an online store with payment integration" style={{...styles.input,resize:"vertical",marginBottom:10}}/><button type="button" disabled={busy} onClick={findMatches} style={{...styles.button,opacity:busy?0.6:1}}>Find best matches</button>
+      {recommendations.length>0&&<div style={{display:"grid",gap:9,marginTop:12}}>{recommendations.map(item=><div key={item._id} style={{border:"1px solid #e5eaf1",borderRadius:12,padding:12}}><div style={{display:"flex",justifyContent:"space-between",gap:8,flexWrap:"wrap"}}><b>{item.title}</b><span style={{fontSize:12,fontWeight:800,color:"#4338ca"}}>{item.matchScore}% relevance</span></div><div style={{fontSize:12,color:"#64748b",marginTop:4}}>{item.department} · {item.country||"Remote"}{item.category?" · "+item.category:""}</div><p style={{fontSize:13,color:"#64748b",margin:"7px 0"}}>{item.description}</p><div style={{fontSize:11,color:"#0f766e"}}>{item.matchReasons.join(" · ")}</div></div>)}</div>}</div>
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(min(100%,300px),1fr))",gap:12}}>
         {filtered.map(item=><article key={item._id} style={styles.card}>
           <div style={{display:"flex",justifyContent:"space-between",gap:8,alignItems:"start"}}><span style={{fontSize:11,fontWeight:800,color:"#4338ca",background:"#eef2ff",padding:"5px 8px",borderRadius:20}}>{item.department}</span><span style={{fontSize:11,color:"#64748b"}}>{item.country||"Remote"}</span></div>
