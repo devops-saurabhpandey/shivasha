@@ -7,29 +7,27 @@ const routeFile = fileURLToPath(new URL("../routes/businessPlatform.js", import.
 const source = readFileSync(routeFile, "utf8");
 
 test("global marketplace endpoints are protected by the authenticated business platform router", () => {
-  assert.match(source, /router\.use\(requireAuth\)/);
-  for (const [method, route] of [
-    ["get", "/marketplace/listings"],
-    ["get", "/marketplace/my-listings"],
-    ["post", "/marketplace/listings"],
-    ["get", "/marketplace/inquiries"],
-    ["post", "/marketplace/inquiries"],
-    ["patch", "/marketplace/inquiries/:id"]
-  ]) {
-    assert.match(source, new RegExp('router\\.' + method + '\\("' + route.replace(/[.*+?^${}()|[\\]\\]/g, "\\$&") + '"'));
-  }
+  assert.ok(source.includes("router.use(requireAuth)"));
+  for (const route of [
+    'router.get("/marketplace/listings"',
+    'router.get("/marketplace/my-listings"',
+    'router.post("/marketplace/listings"',
+    'router.get("/marketplace/inquiries"',
+    'router.post("/marketplace/inquiries"',
+    'router.patch("/marketplace/inquiries/:id"'
+  ]) assert.ok(source.includes(route), "missing route: " + route);
 });
 
 test("marketplace inquiries require explicit consent and prevent self-inquiries", () => {
-  assert.match(source, /req\.body\?\.consentToShare !== true/);
-  assert.match(source, /You cannot send an inquiry to your own listing/);
-  assert.match(source, /provider: req\.user\.id/);
-  assert.match(source, /requester: req\.user\.id/);
+  assert.ok(source.includes("req.body?.consentToShare !== true"));
+  assert.ok(source.includes("You cannot send an inquiry to your own listing"));
+  assert.ok(source.includes("provider: req.user.id"));
+  assert.ok(source.includes("requester: req.user.id"));
 });
 
 test("marketplace listing creation validates department, description, price and currency", () => {
-  assert.match(source, /marketplaceDepartments\.includes\(department\)/);
-  assert.match(source, /description\.length < 20/);
-  assert.match(source, /priceFrom < 0/);
-  assert.match(source, /USD.*INR.*EUR.*GBP.*AED.*CAD.*AUD/);
+  assert.ok(source.includes("marketplaceDepartments.includes(department)"));
+  assert.ok(source.includes("description.length < 20"));
+  assert.ok(source.includes("priceFrom < 0"));
+  assert.ok(source.includes('"USD", "INR", "EUR", "GBP", "AED", "CAD", "AUD"'));
 });
