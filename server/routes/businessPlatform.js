@@ -117,4 +117,130 @@ router.put("/data", async (req, res, next) => {
   } catch (error) { next(error); }
 });
 
+
+const marketplaceDepartments = [
+  "AI Services", "Web & Software", "Global Projects", "Business Directory",
+  "Freelancers & Experts", "Education & Skill Development", "Finance & Insurance",
+  "E-commerce & Suppliers"
+];
+const serviceListingSchema = new mongoose.Schema({
+  owner: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true, index: true },
+  title: { type: String, required: true, trim: true, maxlength: 120 },
+  department: { type: String, required: true, enum: marketplaceDepartments },
+  category: { type: String, trim: true, maxlength: 80, default: "" },
+  description: { type: String, required: true, trim: true, maxlength: 2000 },
+  country: { type: String, trim: true, maxlength: 80, default: "Remote" },
+  priceFrom: { type: Number, min: 0, default: 0 },
+  currency: { type: String, enum: ["USD", "INR", "EUR", "GBP", "AED", "CAD", "AUD"], default: "USD" },
+  status: { type: String, enum: ["active", "paused", "removed"], default: "active", index: true }
+}, { timestamps: true });
+serviceListingSchema.index({ status: 1, department: 1, createdAt: -1 });
+serviceListingSchema.index({ title: "text", description: "text", category: "text" });
+const ServiceListing = mongoose.models.ShivashaServiceListing || mongoose.model("ShivashaServiceListing", serviceListingSchema);
+
+const marketplaceInquirySchema = new mongoose.Schema({
+  listing: { type: mongoose.Schema.Types.ObjectId, ref: "ShivashaServiceListing", required: true, index: true },
+  provider: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true, index: true },
+  requester: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true, index: true },
+  message: { type: String, required: true, trim: true, maxlength: 2000 },
+  consentToShare: { type: Boolean, required: true, default: false },
+  status: { type: String, enum: ["New", "Contacted", "Qualified", "Closed"], default: "New" }
+}, { timestamps: true });
+marketplaceInquirySchema.index({ provider: 1, createdAt: -1 });
+marketplaceInquirySchema.index({ requester: 1, createdAt: -1 });
+const MarketplaceInquiry = mongoose.models.ShivashaMarketplaceInquiry || mongoose.model("ShivashaMarketplaceInquiry", marketplaceInquirySchema);
+
+// All marketplace routes inherit requireAuth above. Search results expose no private contact details.
+router.get("/marketplace/listings", async (req, res, next) => {
+  try {
+    const filter = { status: "active" };
+    const department = cleanText(req.query.department, 80);
+    const q = cleanText(req.query.q, 100);
+    if (marketplaceDepartments.includes(department)) filter.department = department;
+    if (q) filter.$text = { $search: q };
+    const listings = await ServiceListing.find(filter)
+      .select("owner title department category description country priceFrom currency status createdAt")
+      .sort({ createdAt: -1 }).limit(100).lean();
+    res.json({ listings });
+  } catch (error) { next(error); }
+});
+
+router.get("/marketplace/my-listings", async (req, res, next) => {
+  try {
+    const listings = await ServiceListing.find({ owner: req.user.id, status: { $ne: "removed" } })
+      .sort({ createdAt: -1 }).limit(100).lean();
+    res.json({ listings });
+  } catch (error) { next(error); }
+});
+
+router.post("/marketplace/listings", async (req, res, next) => {
+  try {
+    const title = cleanText(req.body?.title, 120);
+    const department = cleanText(req.body?.department, 80);
+    const description = cleanText(req.body?.description, 2000);
+    const category = cleanText(req.body?.category, 80);
+    const country = cleanText(req.body?.country, 80) || "Remote";
+    const currency = cleanText(req.body?.currency, 3);
+    const priceFrom = cleanNumber(req.body?.priceFrom);
+    if (!title || !description || description.length < 20 || !marketplaceDepartments.includes(department)) {
+      return res.status(400).json({ message: "Add a title, at least 20 characters of description, and a valid department." });
+    }
+    if (!["USD", "INR", "EUR", "GBP", "AED", "CAD", "AUD"].includes(currency) || priceFrom < 0 || priceFrom > 100000000) {
+      return res.status(400).json({ message: "Invalid starting price or currency." });
+    }
+    const listing = await ServiceListing.create({
+      owner: req.user.id, title, department, description, category, country, currency, priceFrom, status: "active"
+    });
+    res.status(201).json({ listing });
+  } catch (error) { next(error); }
+});
+
+router.get("/marketplace/inquiries", async (req, res, next) => {
+  try {
+    const records = await MarketplaceInquiry.find({
+      $or: [{ provider: req.user.id }, { requester: req.user.id }]
+    }).sort({ createdAt: -1 }).limit(200).populate("listing", "title department").lean();
+    const inquiries = records.map(item => ({
+      _id: item._id, listingId: item.listing?._id,
+      listingTitle: item.listing?.title || "Service inquiry",
+      department: item.listing?.department || "", message: item.message,
+      status: item.status, createdAt: item.createdAt,
+      direction: String(item.provider) === String(req.user.id) ? "received" : "sent"
+    }));
+    res.json({ inquiries });
+  } catch (error) { next(error); }
+});
+
+router.post("/marketplace/inquiries", async (req, res, next) => {
+  try {
+    const listingId = req.body?.listingId;
+    const message = cleanText(req.body?.message, 2000);
+    if (!mongoose.isValidObjectId(listingId) || message.length < 10 || req.body?.consentToShare !== true) {
+      return res.status(400).json({ message: "A valid listing, requirement of at least 10 characters, and explicit sharing consent are required." });
+    }
+    const listing = await ServiceListing.findOne({ _id: listingId, status: "active" }).select("owner");
+    if (!listing) return res.status(404).json({ message: "This service listing is no longer available." });
+    if (String(listing.owner) === String(req.user.id)) return res.status(400).json({ message: "You cannot send an inquiry to your own listing." });
+    const inquiry = await MarketplaceInquiry.create({
+      listing: listing._id, provider: listing.owner, requester: req.user.id, message, consentToShare: true
+    });
+    res.status(201).json({ inquiry: { _id: inquiry._id, status: inquiry.status, createdAt: inquiry.createdAt } });
+  } catch (error) { next(error); }
+});
+
+router.patch("/marketplace/inquiries/:id", async (req, res, next) => {
+  try {
+    const status = cleanText(req.body?.status, 20);
+    if (!["New", "Contacted", "Qualified", "Closed"].includes(status)) {
+      return res.status(400).json({ message: "Invalid inquiry status." });
+    }
+    const inquiry = await MarketplaceInquiry.findOneAndUpdate(
+      { _id: req.params.id, provider: req.user.id },
+      { $set: { status } }, { new: true, runValidators: true }
+    ).lean();
+    if (!inquiry) return res.status(404).json({ message: "Inquiry not found for this provider account." });
+    res.json({ inquiry: { _id: inquiry._id, status: inquiry.status } });
+  } catch (error) { next(error); }
+});
+
 export default router;
