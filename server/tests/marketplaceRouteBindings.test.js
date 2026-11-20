@@ -70,7 +70,7 @@ test("marketplace revenue foundation tracks affiliate attribution and defers pay
   assert.ok(source.includes('router.get("/marketplace/orders"'));
   assert.ok(source.includes('router.patch("/marketplace/orders/:id"'));
   assert.ok(source.includes("affiliateCommission"));
-  assert.ok(source.includes("paymentStatus: \"Unpaid\""));
+  assert.ok(source.includes('default: "Unpaid"'));
   assert.ok(source.includes("You cannot order your own service."));
   assert.ok(source.includes("referral code is invalid or inactive"));
   assert.ok(adminSource.includes('router.get("/marketplace-payments"'));
