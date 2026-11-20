@@ -21,6 +21,9 @@ export default function AdminDashboard({ auth }) {
   const [softwareEnquiries, setSoftwareEnquiries] = useState([]);
   const [enquiryError, setEnquiryError] = useState("");
   const [enquiryLoading, setEnquiryLoading] = useState(true);
+  const [providerVerifications, setProviderVerifications] = useState([]);
+  const [verificationError, setVerificationError] = useState("");
+  const [verificationLoading, setVerificationLoading] = useState(true);
 
 
   useEffect(() => {
@@ -41,6 +44,14 @@ export default function AdminDashboard({ auth }) {
         if (!cancelled) setSoftwareEnquiries(data.enquiries || []);
       }).catch(err => { if (!cancelled) setEnquiryError(err.message); })
       .finally(() => { if (!cancelled) setEnquiryLoading(false); });
+
+    fetch(API_BASE + "/api/admin/marketplace-verifications", { headers })
+      .then(async response => {
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.message || "Unable to load provider verification queue");
+        if (!cancelled) setProviderVerifications(data.verifications || []);
+      }).catch(err => { if (!cancelled) setVerificationError(err.message); })
+      .finally(() => { if (!cancelled) setVerificationLoading(false); });
 
     fetch(API_BASE + "/api/users/admin/reports", { headers })
       .then(async response => {
@@ -119,6 +130,35 @@ export default function AdminDashboard({ auth }) {
             </div>
           </article>)}
         </div> : <div className="panel empty">No software plan enquiries yet.</div>}
+    </section>
+    <section className="content">
+      <div className="feed-head"><div><h2>Marketplace Provider Verification</h2><p>Manually review business details before showing a Verified provider badge.</p></div><b>{providerVerifications.length} pending</b></div>
+      {verificationError && <div className="api-error">{verificationError}</div>}
+      {verificationLoading ? <div className="panel empty">Loading provider verification requests…</div> :
+        providerVerifications.length ? <div className="panel">
+          {providerVerifications.map(item => <article className="notification-item" key={item._id}>
+            <div className="notification-copy" style={{width:"100%"}}>
+              <b>{item.businessName}</b>
+              <small>Account: {item.owner?.name || "Unknown"} · {item.owner?.email || "No email"}</small>
+              <small>{item.country} · {item.registrationType}{item.website ? " · "+item.website : ""}</small>
+              {item.businessEmail && <small>Business email: {item.businessEmail}</small>}
+              {item.publicDescription && <p>{item.publicDescription}</p>}
+              <small>Submitted: {new Date(item.createdAt).toLocaleString()} · Status: {item.status}</small>
+              <label style={{display:"grid",gap:6,marginTop:8}}>Review note<textarea rows={2} maxLength={500} id={"verification-note-"+item._id} placeholder="Explain the decision or information needed." /></label>
+              <div style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:8}}>
+                {["Verified","Needs information","Rejected"].map(status=><button key={status} type="button" className={status==="Verified"?"primary":"secondary"} onClick={async()=>{
+                  const reviewNote=document.getElementById("verification-note-"+item._id)?.value||"";
+                  try {
+                    const response=await fetch(API_BASE+"/api/admin/marketplace-verifications/"+item._id,{method:"PATCH",headers:{...headers,"Content-Type":"application/json"},body:JSON.stringify({status,reviewNote})});
+                    const data=await response.json().catch(()=>({}));
+                    if(!response.ok)throw new Error(data.message||"Unable to update provider verification");
+                    setProviderVerifications(old=>old.filter(row=>row._id!==item._id));
+                  } catch(error){setVerificationError(error.message);}
+                }}>{status}</button>)}
+              </div>
+            </div>
+          </article>)}
+        </div> : <div className="panel empty">No provider verification requests waiting for review.</div>}
     </section>
     <CreatorFinanceAdmin auth={auth} />
   </>;
