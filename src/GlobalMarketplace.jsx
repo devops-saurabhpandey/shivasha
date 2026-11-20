@@ -28,7 +28,7 @@ export default function GlobalMarketplace({auth}) {
   const [requirement,setRequirement]=useState("");
   const [recommendations,setRecommendations]=useState([]);
   const [verification,setVerification]=useState(null);
-  const [verificationForm,setVerificationForm]=useState({businessName:"",country:"India",website:"",businessEmail:"",registrationType:"Company",publicDescription:""});
+  const [verificationForm,setVerificationForm]=useState({businessName:"",country:"India",website:"",businessEmail:"",registrationType:"Company",publicDescription:""});\n  const [revenue,setRevenue]=useState({referralCode:"",orders:[],affiliateEarnings:[]});\n  const [orderDrafts,setOrderDrafts]=useState({});
   const headers={"Content-Type":"application/json",...(auth?.token?{Authorization:"Bearer "+auth.token}:{})};
   const request=useCallback(async(path,options={})=>{
     const response=await fetch(API_BASE+path,{...options,headers:{...headers,...(options.headers||{})}});
@@ -39,7 +39,7 @@ export default function GlobalMarketplace({auth}) {
   const load=useCallback(async()=>{
     setBusy(true);
     try {
-      const [publicData,ownData,inquiryData,verificationData]=await Promise.all([
+      const [publicData,ownData,inquiryData,verificationData,revenueData]=await Promise.all([
         request("/api/business-platform/marketplace/listings"),
         request("/api/business-platform/marketplace/my-listings"),
         request("/api/business-platform/marketplace/inquiries"),
@@ -48,7 +48,7 @@ export default function GlobalMarketplace({auth}) {
       setListings(publicData.listings||[]);
       setMine(ownData.listings||[]);
       setInquiries(inquiryData.inquiries||[]);
-      setVerification(verificationData.verification||null);
+      setVerification(verificationData.verification||null);\n      setRevenue({referralCode:revenueData.referralCode||"",orders:revenueData.orders||[],affiliateEarnings:revenueData.affiliateEarnings||[]});
       if(verificationData.verification) setVerificationForm({businessName:verificationData.verification.businessName||"",country:verificationData.verification.country||"India",website:verificationData.verification.website||"",businessEmail:verificationData.verification.businessEmail||"",registrationType:verificationData.verification.registrationType||"Company",publicDescription:verificationData.verification.publicDescription||""});
       setNotice("Marketplace connected. Listings and inquiries are stored on the Shivasha server.");
     } catch(error) { setNotice(error.message||"Could not load marketplace."); }
@@ -80,7 +80,7 @@ export default function GlobalMarketplace({auth}) {
     } catch(error) { setNotice(error.message); }
     finally { setBusy(false); }
   };
-  const submitVerification=async e=>{
+  const placeOrder=async listing=>{\n    const draft=orderDrafts[listing._id]||{};\n    const amount=Number(draft.amount);\n    if(!Number.isFinite(amount)||amount<=0||String(draft.description||"").trim().length<10){setNotice("Enter an agreed amount and order details (at least 10 characters).");return;}\n    setBusy(true);\n    try {await request("/api/business-platform/marketplace/orders",{method:"POST",body:JSON.stringify({listingId:listing._id,amount,description:draft.description,referralCode:draft.referralCode||""})});setNotice("Order request sent. Payment is not collected by Shivasha.");setOrderDrafts(old=>({...old,[listing._id]:{}}));await load();}\n    catch(error){setNotice(error.message||"Could not place order.");}\n    finally{setBusy(false);}\n  };\n  const updateOrder=async(order,status)=>{setBusy(true);try{await request("/api/business-platform/marketplace/orders/"+order._id,{method:"PATCH",body:JSON.stringify({status})});await load();}catch(error){setNotice(error.message);}finally{setBusy(false);}};\n  const submitVerification=async e=>{
     e.preventDefault();
     setBusy(true);
     try { const result=await request("/api/business-platform/marketplace/verification",{method:"POST",body:JSON.stringify(verificationForm)}); setVerification(result.verification); setNotice(result.message||"Verification request submitted."); }
@@ -109,7 +109,7 @@ export default function GlobalMarketplace({auth}) {
     (!department||item.department===department) &&
     (!query||[item.title,item.description,item.category,item.department,item.country].join(" ").toLowerCase().includes(query.toLowerCase()))
   );
-  const tabs=[["discover","🌐 Discover"],["publish","＋ Publish service"],["my-listings","▤ My listings"],["inquiries","✉ Inquiries"],["verification","✓ Provider verification"]];
+  const tabs=[["discover","🌐 Discover"],["publish","＋ Publish service"],["my-listings","▤ My listings"],["inquiries","✉ Inquiries"],["verification","✓ Provider verification"],["revenue","₹ Revenue & referrals"]];
   const statusOptions=["New","Contacted","Qualified","Closed"];
   return <section style={{padding:"clamp(12px,2vw,22px)",color:"#172033"}}>
     <div style={{background:"linear-gradient(125deg,#171044,#4338ca 60%,#0f766e)",borderRadius:20,padding:"24px clamp(18px,3vw,32px)",color:"#fff",marginBottom:18}}>
@@ -139,6 +139,14 @@ export default function GlobalMarketplace({auth}) {
           <label style={{display:"grid",gap:6,marginTop:14,fontSize:12,fontWeight:700,color:"#475569"}}>Your requirement<textarea value={messages[item._id]||""} onChange={e=>setMessages(prev=>({...prev,[item._id]:e.target.value}))} rows={3} maxLength={2000} placeholder="Describe what you need (min. 10 characters)..." style={{...styles.input,resize:"vertical"}}/></label>
           <p style={{fontSize:11,color:"#64748b",lineHeight:1.45}}>By sending, you consent to share this message and your Shivasha account identity with this provider.</p>
           <button type="button" disabled={busy} onClick={()=>sendInquiry(item)} style={{...styles.button,width:"100%",opacity:busy ? 0.6 : 1}}>Send inquiry</button>
+          <details style={{marginTop:12}}><summary style={{cursor:"pointer",fontSize:13,fontWeight:800,color:"#4338ca"}}>Place service order</summary>
+            <div style={{display:"grid",gap:8,marginTop:10}}>
+              <Field label={"Agreed amount ("+item.currency+")"} type="number" min="0.01" step="0.01" value={orderDrafts[item._id]?.amount||""} onChange={e=>setOrderDrafts(old=>({...old,[item._id]:{...old[item._id],amount:e.target.value}}))}/>
+              <Field label="Referral code (optional)" value={orderDrafts[item._id]?.referralCode||""} onChange={e=>setOrderDrafts(old=>({...old,[item._id]:{...old[item._id],referralCode:e.target.value}}))}/>
+              <textarea rows={2} maxLength={1000} placeholder="Scope, deliverables and agreed timeline (min. 10 characters)" value={orderDrafts[item._id]?.description||""} onChange={e=>setOrderDrafts(old=>({...old,[item._id]:{...old[item._id],description:e.target.value}}))} style={styles.input}/>
+              <button type="button" disabled={busy} onClick={()=>placeOrder(item)} style={styles.button}>Send order request</button>
+            </div>
+          </details>
         </article>)}
         {!filtered.length&&<div style={{...styles.card,gridColumn:"1/-1",textAlign:"center",color:"#64748b"}}>{busy?"Loading listings…":"No matching published services yet. Be the first to publish a service."}</div>}
       </div>
@@ -156,6 +164,12 @@ export default function GlobalMarketplace({auth}) {
     </form>}
     {tab==="my-listings"&&<div style={{display:"grid",gap:10}}>{mine.map(item=><div key={item._id} style={styles.card}><div style={{display:"flex",justifyContent:"space-between",gap:10,flexWrap:"wrap"}}><div><b>{item.title}</b><div style={{fontSize:12,color:"#64748b",marginTop:5}}>{item.department} · {item.country} · {item.status}</div></div><span style={{fontSize:11,color:item.status==="active"?"#15803d":"#b45309"}}>{item.status}</span></div><p style={{color:"#64748b",fontSize:14}}>{item.description}</p></div>)}{!mine.length&&<div style={styles.card}>You have not published a service yet.</div>}</div>}
     {tab==="inquiries"&&<div style={{display:"grid",gap:10}}>{inquiries.map(item=><div key={item._id} style={styles.card}><div style={{display:"flex",justifyContent:"space-between",gap:8,flexWrap:"wrap"}}><b>{item.listingTitle||"Service inquiry"}</b><span style={{fontSize:12,color:"#64748b"}}>{new Date(item.createdAt).toLocaleString()}</span></div><p style={{lineHeight:1.6}}>{item.message}</p><div style={{fontSize:12,color:"#64748b"}}>From account: {item.requesterName||"Shivasha member"} · {item.direction==="sent"?"Sent inquiry":"Received inquiry"}</div>{item.direction==="received"&&<label style={{display:"flex",alignItems:"center",gap:8,fontSize:13}}>Status<select value={item.status} onChange={e=>updateStatus(item,e.target.value)} style={{...styles.input,width:"auto"}}>{statusOptions.map(x=><option key={x}>{x}</option>)}</select></label>}</div>)}{!inquiries.length&&<div style={styles.card}>No inquiries yet.</div>}</div>}
+    {tab==="revenue"&&<div style={{display:"grid",gap:14}}>
+      <div style={styles.card}><h3 style={{margin:"0 0 6px"}}>Your affiliate referral code</h3><div style={{fontSize:24,fontWeight:900,letterSpacing:1,color:"#4338ca"}}>{revenue.referralCode||"Loading…"}</div><p style={{fontSize:13,color:"#64748b"}}>Share this code with a buyer. If they use it on an eligible order, attribution is recorded. Commission is only accrued after an administrator reconciles an actual payment.</p><button type="button" style={styles.button} onClick={()=>{if(navigator?.clipboard?.writeText) navigator.clipboard.writeText(revenue.referralCode).then(()=>setNotice("Referral code copied."),()=>setNotice("Copy failed; select the code manually."));}}>Copy referral code</button></div>
+      <div style={styles.card}><h3 style={{marginTop:0}}>Affiliate earnings</h3>{revenue.affiliateEarnings.length?revenue.affiliateEarnings.map(row=><p key={row._id||row.currency}><b>{row.currency} {Number(row.total||0).toFixed(2)}</b> · {row.orders} paid order(s)</p>):<p style={{color:"#64748b"}}>No confirmed affiliate earnings yet.</p>}<small style={{color:"#64748b"}}>Rates are configured by the platform owner and require legal/tax review before activation.</small></div>
+      <div style={styles.card}><h3 style={{marginTop:0}}>Your marketplace orders</h3>{revenue.orders.length?revenue.orders.map(order=><article key={order._id} style={{borderTop:"1px solid #e5eaf1",padding:"12px 0"}}><b>{order.listing?.title||"Marketplace service"}</b><div style={{fontSize:13,color:"#64748b"}}>{order.currency} {Number(order.amount).toFixed(2)} · {order.status} · Payment: {order.paymentStatus}</div>{order.affiliateCommission>0&&<div style={{fontSize:12,color:"#0f766e"}}>Affiliate commission: {order.currency} {order.affiliateCommission} ({order.commissionStatus})</div>}{order.status==="Requested"&&String(order.provider)===String(auth?.user?.id||auth?.userId)&&<button type="button" style={{...styles.button,marginTop:8}} onClick={()=>updateOrder(order,"Accepted")}>Accept order</button>}{order.status==="Accepted"&&<button type="button" style={{...styles.button,marginTop:8}} onClick={()=>updateOrder(order,"Completed")}>Mark completed</button>}</article>):<p style={{color:"#64748b"}}>No marketplace orders yet.</p>}</div>
+      <p style={{fontSize:12,color:"#64748b"}}>Shivasha does not collect or process payments in this MVP. Never enter card numbers, bank passwords, OTPs or UPI PINs here. Payment confirmation is an admin reconciliation record only.</p>
+    </div>}
     {tab==="verification"&&<form onSubmit={submitVerification} style={{...styles.card,display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:12}}><div style={{gridColumn:"1/-1"}}><h3 style={{margin:"0 0 5px"}}>Provider verification</h3><p style={{fontSize:13,color:"#64748b",margin:0}}>Submit accurate business details for manual review. Do not enter passwords, bank details, Aadhaar/PAN numbers or upload identity documents here. Document verification will be handled through a secure process in a later release.</p></div>{verification&&<div style={{gridColumn:"1/-1",padding:12,borderRadius:10,background:"#f1f5f9"}}><b>Current status: {verification.status}</b>{verification.reviewNote&&<p style={{margin:"6px 0 0",fontSize:13}}>{verification.reviewNote}</p>}</div>}<Field label="Legal / business name" required maxLength={120} value={verificationForm.businessName} onChange={e=>setVerificationForm({...verificationForm,businessName:e.target.value})}/><Field label="Country" required maxLength={80} value={verificationForm.country} onChange={e=>setVerificationForm({...verificationForm,country:e.target.value})}/><Field label="Website (https://)" type="url" maxLength={200} value={verificationForm.website} onChange={e=>setVerificationForm({...verificationForm,website:e.target.value})}/><Field label="Business email (optional)" type="email" maxLength={254} value={verificationForm.businessEmail} onChange={e=>setVerificationForm({...verificationForm,businessEmail:e.target.value})}/><label style={{display:"grid",gap:6,fontSize:13,fontWeight:700,color:"#475569"}}>Registration type<select style={styles.input} value={verificationForm.registrationType} onChange={e=>setVerificationForm({...verificationForm,registrationType:e.target.value})}>{["Company","Sole proprietor","Partnership","Non-profit","Other"].map(x=><option key={x}>{x}</option>)}</select></label><label style={{gridColumn:"1/-1",display:"grid",gap:6,fontSize:13,fontWeight:700,color:"#475569"}}>Business summary<textarea rows={3} maxLength={300} style={{...styles.input,resize:"vertical"}} value={verificationForm.publicDescription} onChange={e=>setVerificationForm({...verificationForm,publicDescription:e.target.value})}/></label><button disabled={busy||verification?.status==="Verified"} style={{...styles.button,gridColumn:"1/-1",opacity:busy||verification?.status==="Verified"?0.6:1}}>{verification?.status==="Verified"?"Provider verified":"Submit for manual review"}</button></form>}
     <p style={{fontSize:11,color:"#64748b",lineHeight:1.5,marginTop:16}}>MVP notice: account login is required. Provider verification, payments, external messaging, affiliate links and AI ranking are not activated yet. Do not treat a listing as independently verified.</p>
   </section>;
