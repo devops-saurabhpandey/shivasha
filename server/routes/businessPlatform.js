@@ -243,4 +243,62 @@ router.patch("/marketplace/inquiries/:id", async (req, res, next) => {
   } catch (error) { next(error); }
 });
 
+
+// Transparent first-stage matching: relevance scoring, not an external AI model.
+const matchTokens = value => cleanText(value, 300)
+  .toLowerCase()
+  .normalize("NFKD")
+  .replace(/[^a-z0-9\\s]/g, " ")
+  .split(/\\s+/)
+  .filter(token => token.length > 2);
+router.get("/marketplace/recommendations", async (req, res, next) => {
+  try {
+    const requirement = cleanText(req.query.requirement, 300);
+    if (requirement.length < 3) {
+      return res.status(400).json({ message: "Describe your requirement in at least 3 characters." });
+    }
+    const requestedDepartment = cleanText(req.query.department, 80);
+    const tokens = [...new Set(matchTokens(requirement))];
+    if (!tokens.length) return res.json({ recommendations: [], method: "transparent-keyword-v1" });
+    const filter = { status: "active" };
+    if (marketplaceDepartments.includes(requestedDepartment)) filter.department = requestedDepartment;
+    const candidates = await ServiceListing.find(filter)
+      .select("title department category description country priceFrom currency createdAt")
+      .sort({ createdAt: -1 }).limit(1000).lean();
+    const recommendations = candidates.map(listing => {
+      const fields = {
+        title: matchTokens(listing.title),
+        category: matchTokens(listing.category),
+        department: matchTokens(listing.department),
+        description: matchTokens(listing.description)
+      };
+      const matched = tokens.filter(token =>
+        fields.title.includes(token) || fields.category.includes(token) ||
+        fields.department.includes(token) || fields.description.includes(token)
+      );
+      const titleHits = tokens.filter(token => fields.title.includes(token)).length;
+      const categoryHits = tokens.filter(token => fields.category.includes(token)).length;
+      const departmentHits = tokens.filter(token => fields.department.includes(token)).length;
+      const descriptionHits = tokens.filter(token => fields.description.includes(token)).length;
+      const score = Math.min(100, Math.round(
+        (titleHits * 28 + categoryHits * 22 + departmentHits * 18 + descriptionHits * 8) /
+        Math.max(1, tokens.length) + (matched.length === tokens.length ? 10 : 0)
+      ));
+      const reasons = [];
+      if (titleHits) reasons.push("Matches service title");
+      if (categoryHits) reasons.push("Matches speciality");
+      if (departmentHits) reasons.push("Matches department");
+      if (descriptionHits) reasons.push("Matches description");
+      return {
+        _id: listing._id, title: listing.title, department: listing.department,
+        category: listing.category, description: listing.description, country: listing.country,
+        priceFrom: listing.priceFrom, currency: listing.currency, matchScore: score, matchReasons: reasons
+      };
+    }).filter(item => item.matchScore > 0)
+      .sort((a, b) => b.matchScore - a.matchScore)
+      .slice(0, 20);
+    res.json({ recommendations, method: "transparent-keyword-v1", disclaimer: "Relevance estimate based on listing text; not a guarantee of quality or provider verification." });
+  } catch (error) { next(error); }
+});
+
 export default router;
