@@ -6,6 +6,8 @@ import Report from "../models/Report.js";
 import { requireAuth } from "../middleware/auth.js";
 import { normalizeMarketplacePaymentReference } from "../utils/marketplaceOrderRules.js";
 import AffiliateCommissionLedger from "../models/AffiliateCommissionLedger.js";
+import AffiliatePayoutDestination from "../models/AffiliatePayoutDestination.js";
+import AffiliatePayoutRequest from "../models/AffiliatePayoutRequest.js";
 
 const router = express.Router();
 
@@ -188,7 +190,7 @@ router.post("/marketplace-payments/:id/confirm", async (req, res, next) => {
 router.get("/marketplace-commission-ledger", async (req, res, next) => {
   try {
     const status = typeof req.query.status === "string" ? req.query.status : "";
-    const allowed = ["Pending", "Accrued", "Reversed"];
+    const allowed = ["Pending", "Accrued", "Paid out", "Reversed"];
     if (status && !allowed.includes(status)) return res.status(400).json({ message: "Invalid ledger status filter." });
     const filter = status ? { status } : {};
     const [entries, totals] = await Promise.all([
@@ -202,6 +204,172 @@ router.get("/marketplace-commission-ledger", async (req, res, next) => {
       ])
     ]);
     res.json({ entries, totals, note: "Ledger records accrued commissions only. No bank/UPI payout is initiated or confirmed by this API." });
+  } catch (error) { next(error); }
+});
+
+
+router.post("/affiliate-payout-destinations/:affiliateId", async (req, res, next) => {
+  try {
+    if (!mongoose.isValidObjectId(req.params.affiliateId)) return res.status(400).json({ message: "Invalid affiliate ID." });
+    const recipientReference = typeof req.body?.recipientReference === "string" ? req.body.recipientReference.trim() : "";
+    const maskedDestination = typeof req.body?.maskedDestination === "string" ? req.body.maskedDestination.trim() : "";
+    const verificationNote = typeof req.body?.verificationNote === "string" ? req.body.verificationNote.trim().slice(0, 500) : "";
+    if (recipientReference.length < 6 || recipientReference.length > 160 || maskedDestination.length < 4 || maskedDestination.length > 100) {
+      return res.status(400).json({ message: "Provide an opaque external recipient reference (6-160 characters) and a masked destination label (4-100 characters). Never submit raw bank or UPI credentials." });
+    }
+    const affiliate = await User.findById(req.params.affiliateId).select("_id role").lean();
+    if (!affiliate || affiliate.role === "admin") return res.status(404).json({ message: "Affiliate account not found." });
+    const destination = await AffiliatePayoutDestination.findOneAndUpdate(
+      { affiliate: affiliate._id },
+      { $set: {
+        recipientReference, maskedDestination, verificationNote, status: "Verified",
+        verifiedBy: req.user.id, verifiedAt: new Date()
+      }, $setOnInsert: { affiliate: affiliate._id } },
+      { new: true, upsert: true, runValidators: true, setDefaultsOnInsert: true }
+    ).select("-recipientReference").populate("affiliate", "name email").lean();
+    res.status(200).json({
+      destination,
+      message: "Payout destination marked verified by an administrator after off-platform KYC review. Only an opaque provider recipient reference is stored; no bank/UPI transfer is performed."
+    });
+  } catch (error) { next(error); }
+});
+
+router.get("/marketplace-payout-requests", async (req, res, next) => {
+  try {
+    const status = typeof req.query.status === "string" ? req.query.status : "";
+    const allowed = ["Requested", "Approved", "Processing", "Rejected", "Paid"];
+    if (status && !allowed.includes(status)) return res.status(400).json({ message: "Invalid payout request status filter." });
+    const filter = status ? { status } : {};
+    const requests = await AffiliatePayoutRequest.find(filter)
+      .select("-transferReference -transferReferenceKey")
+      .populate("affiliate", "name email")
+      .populate("destination", "maskedDestination status")
+      .populate("approvedBy", "name email").populate("claimedBy", "name email")
+      .populate("paidBy", "name email").populate("rejectedBy", "name email")
+      .sort({ createdAt: 1 }).limit(300).lean();
+    res.json({ requests, note: "Admin review only. A separate administrator must claim an approved request before any manual external transfer can be recorded." });
+  } catch (error) { next(error); }
+});
+
+router.post("/marketplace-payout-requests/:id/approve", async (req, res, next) => {
+  try {
+    if (!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({ message: "Invalid payout request ID." });
+    const payout = await AffiliatePayoutRequest.findOne({ _id: req.params.id, status: "Requested" }).lean();
+    if (!payout) return res.status(409).json({ message: "Only a requested payout can be approved." });
+    const entries = await AffiliateCommissionLedger.find({
+      _id: { $in: payout.ledgerEntries }, payoutRequest: payout._id,
+      affiliate: payout.affiliate, currency: payout.currency, status: "Accrued"
+    }).select("_id commissionAmount").lean();
+    const reservedAmount = Number(entries.reduce((sum, entry) => sum + entry.commissionAmount, 0).toFixed(2));
+    if (entries.length !== payout.ledgerEntries.length || reservedAmount !== payout.amount) {
+      return res.status(409).json({ message: "Reserved commission entries do not match this payout request. Manual reconciliation is required." });
+    }
+    const approved = await AffiliatePayoutRequest.findOneAndUpdate(
+      { _id: payout._id, status: "Requested" },
+      { $set: { status: "Approved", approvedBy: req.user.id, approvedAt: new Date() } },
+      { new: true }
+    ).select("-transferReference -transferReferenceKey").lean();
+    if (!approved) return res.status(409).json({ message: "Another administrator already reviewed this payout request." });
+    res.json({ payoutRequest: approved, message: "Payout approved. A different administrator must claim it before external payment." });
+  } catch (error) { next(error); }
+});
+
+router.post("/marketplace-payout-requests/:id/reject", async (req, res, next) => {
+  try {
+    if (!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({ message: "Invalid payout request ID." });
+    const reason = typeof req.body?.reason === "string" ? req.body.reason.trim().slice(0, 500) : "";
+    const rejected = await AffiliatePayoutRequest.findOneAndUpdate(
+      { _id: req.params.id, status: "Requested" },
+      { $set: { status: "Rejected", rejectedBy: req.user.id, rejectedAt: new Date(), rejectionReason: reason } },
+      { new: true }
+    ).select("-transferReference -transferReferenceKey").lean();
+    if (!rejected) return res.status(409).json({ message: "Only a requested payout can be rejected." });
+    await AffiliateCommissionLedger.updateMany(
+      { payoutRequest: rejected._id, status: "Accrued" },
+      { $set: { payoutRequest: null } }
+    );
+    res.json({ payoutRequest: rejected, message: "Payout request rejected; reserved commission entries have been released." });
+  } catch (error) { next(error); }
+});
+
+router.post("/marketplace-payout-requests/:id/claim", async (req, res, next) => {
+  try {
+    if (!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({ message: "Invalid payout request ID." });
+    const current = await AffiliatePayoutRequest.findById(req.params.id).lean();
+    if (!current) return res.status(404).json({ message: "Payout request not found." });
+    if (current.status === "Processing" && String(current.claimedBy) === String(req.user.id)) {
+      return res.json({ payoutRequest: current, idempotentReplay: true });
+    }
+    if (current.status !== "Approved") return res.status(409).json({ message: "Only an approved payout can be claimed." });
+    if (String(current.approvedBy) === String(req.user.id)) {
+      return res.status(403).json({ message: "The approving administrator cannot claim or execute the same payout." });
+    }
+    const claimed = await AffiliatePayoutRequest.findOneAndUpdate(
+      { _id: current._id, status: "Approved", claimedBy: null },
+      { $set: { status: "Processing", claimedBy: req.user.id, claimedAt: new Date() } },
+      { new: true }
+    ).select("-transferReference -transferReferenceKey").lean();
+    if (!claimed) return res.status(409).json({ message: "Another administrator already claimed this payout." });
+    res.json({ payoutRequest: claimed, message: "Payout claimed. The claiming administrator may now perform the external transfer manually and record its reference." });
+  } catch (error) { next(error); }
+});
+
+router.post("/marketplace-payout-requests/:id/mark-paid", async (req, res, next) => {
+  try {
+    if (!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({ message: "Invalid payout request ID." });
+    const transferReference = typeof req.body?.transferReference === "string" ? req.body.transferReference.trim() : "";
+    const transferReferenceKey = transferReference.toLowerCase();
+    if (transferReference.length < 6 || transferReference.length > 120) {
+      return res.status(400).json({ message: "Provide an external bank/UPI/provider transfer reference (6-120 characters) after completing the transfer manually." });
+    }
+    const payout = await AffiliatePayoutRequest.findById(req.params.id).select("+transferReference +transferReferenceKey").lean();
+    if (!payout) return res.status(404).json({ message: "Payout request not found." });
+    if (payout.status === "Paid") {
+      if (payout.transferReferenceKey === transferReferenceKey) {
+        return res.json({ payoutRequest: { ...payout, transferReference: undefined, transferReferenceKey: undefined }, idempotentReplay: true });
+      }
+      return res.status(409).json({ message: "This payout is already recorded with a different transfer reference." });
+    }
+    if (payout.status !== "Processing" || String(payout.claimedBy) !== String(req.user.id)) {
+      return res.status(403).json({ message: "Only the administrator who claimed this payout may record its external transfer." });
+    }
+    const Ledger = AffiliateCommissionLedger;
+    await Ledger.updateMany(
+      { _id: { $in: payout.ledgerEntries }, payoutRequest: payout._id, status: "Accrued" },
+      { $set: { status: "Paid out", paidOutAt: new Date() } }
+    );
+    const paidEntries = await Ledger.find({
+      _id: { $in: payout.ledgerEntries }, payoutRequest: payout._id, status: "Paid out"
+    }).select("_id order").lean();
+    if (paidEntries.length !== payout.ledgerEntries.length) {
+      return res.status(503).json({ message: "Some commission entries could not be marked paid out. Retry with the same external transfer reference after reconciliation." });
+    }
+    const Order = mongoose.models.ShivashaMarketplaceOrder;
+    if (Order) await Order.updateMany(
+      { _id: { $in: paidEntries.map(entry => entry.order) }, commissionStatus: "Accrued" },
+      { $set: { commissionStatus: "Paid out" } }
+    );
+    try {
+      const marked = await AffiliatePayoutRequest.findOneAndUpdate(
+        { _id: payout._id, status: "Processing", claimedBy: req.user.id },
+        { $set: {
+          status: "Paid", paidBy: req.user.id, paidAt: new Date(),
+          transferReference, transferReferenceKey
+        } },
+        { new: true }
+      ).select("-transferReference -transferReferenceKey").lean();
+      if (!marked) {
+        const latest = await AffiliatePayoutRequest.findById(payout._id).select("+transferReferenceKey").lean();
+        if (latest?.status === "Paid" && latest.transferReferenceKey === transferReferenceKey) {
+          return res.json({ payoutRequest: { ...latest, transferReference: undefined, transferReferenceKey: undefined }, idempotentReplay: true });
+        }
+        return res.status(409).json({ message: "Payout state changed while recording the external transfer." });
+      }
+      res.json({ payoutRequest: marked, message: "External transfer reference recorded and commission ledger closed. Shivasha did not initiate the transfer." });
+    } catch (error) {
+      if (error?.code === 11000) return res.status(409).json({ message: "This external transfer reference is already associated with another payout." });
+      throw error;
+    }
   } catch (error) { next(error); }
 });
 
