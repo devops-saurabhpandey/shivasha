@@ -78,7 +78,7 @@ test("marketplace revenue foundation tracks affiliate attribution and defers pay
   assert.ok(adminSource.includes('router.post("/marketplace-payments/:id/confirm"'));
   assert.ok(adminSource.includes("MARKETPLACE_PLATFORM_FEE_PERCENT"));
   assert.ok(adminSource.includes("MARKETPLACE_AFFILIATE_SHARE_PERCENT"));
-  assert.ok(adminSource.includes("This endpoint does not collect or process money."));
+  assert.ok(adminSource.includes("This endpoint does not collect or process money"));
   assert.ok(adminUi.includes("Marketplace Payment Reconciliation"));
   assert.ok(adminSource.includes("affiliateCommissionEntry"));
   assert.ok(source.includes(' .select("_id listing amount currency status paymentStatus affiliateCommission commissionStatus createdAt updatedAt")'.trim()));
