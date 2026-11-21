@@ -80,6 +80,8 @@ test("marketplace revenue foundation tracks affiliate attribution and defers pay
   assert.ok(adminSource.includes("MARKETPLACE_AFFILIATE_SHARE_PERCENT"));
   assert.ok(adminSource.includes("This endpoint does not collect or process money."));
   assert.ok(adminUi.includes("Marketplace Payment Reconciliation"));
+  assert.ok(adminSource.includes("affiliateCommissionEntry"));
+  assert.ok(source.includes(' .select("_id listing amount currency status paymentStatus affiliateCommission commissionStatus createdAt updatedAt")'.trim()));
 });
 
 
@@ -103,4 +105,6 @@ test("only the buyer may cancel requested or accepted unpaid orders", () => {
 test("payment references normalize case and whitespace and reject non-string input", () => {
   assert.equal(normalizeMarketplacePaymentReference("  TxN-AbC-123  "), "txn-abc-123");
   assert.equal(normalizeMarketplacePaymentReference(12345), "");
+  assert.equal(normalizeMarketplacePaymentReference("X".repeat(120)).length, 120);
+  assert.equal(normalizeMarketplacePaymentReference("X".repeat(121)), "");
 });
