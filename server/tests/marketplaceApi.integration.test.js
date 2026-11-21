@@ -355,6 +355,25 @@ if (!enabled) {
 
     const available = await request("/api/business-platform/marketplace/payout-requests", { user: affiliate });
     assert.equal(available.payload.available.length, 0);
+
+    const secondOrder = await createOrder({ amount: 30000, withAffiliate: true });
+    await Order.updateOne({ _id: secondOrder._id }, { $set: { status: "Completed" } });
+    const secondConfirmed = await request(`/api/admin/marketplace-payments/${secondOrder._id}/confirm`, {
+      user: admin, method: "POST", body: { paymentReference: "PAYOUT-ORDER-PAYMENT-SECOND" }
+    });
+    assert.equal(secondConfirmed.status, 200);
+    const secondRequested = await request("/api/business-platform/marketplace/payout-requests", {
+      user: affiliate, method: "POST", body: { currency: "INR", idempotencyKey: "payout-request-0002" }
+    });
+    assert.equal(secondRequested.status, 201);
+    const secondPayoutId = secondRequested.payload.payoutRequest._id;
+    assert.equal((await request(`/api/admin/marketplace-payout-requests/${secondPayoutId}/approve`, { user: admin, method: "POST" })).status, 200);
+    assert.equal((await request(`/api/admin/marketplace-payout-requests/${secondPayoutId}/claim`, { user: secondAdmin, method: "POST" })).status, 200);
+    const duplicateTransfer = await request(`/api/admin/marketplace-payout-requests/${secondPayoutId}/mark-paid`, {
+      user: secondAdmin, method: "POST", body: { transferReference: "BANK-TRANSFER-REF-0001" }
+    });
+    assert.equal(duplicateTransfer.status, 409);
+    assert.equal(await CommissionLedger.countDocuments({ payoutRequest: secondPayoutId, status: "Accrued" }), 1);
   });
 
   test("rejecting an affiliate payout releases its reserved accrued commissions", async () => {
