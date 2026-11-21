@@ -5,6 +5,7 @@ import Post from "../models/Post.js";
 import Report from "../models/Report.js";
 import { requireAuth } from "../middleware/auth.js";
 import { normalizeMarketplacePaymentReference } from "../utils/marketplaceOrderRules.js";
+import AffiliateCommissionLedger from "../models/AffiliateCommissionLedger.js";
 
 const router = express.Router();
 
@@ -66,52 +67,124 @@ router.post("/marketplace-payments/:id/confirm", async (req, res, next) => {
     const paymentReferenceKey = normalizeMarketplacePaymentReference(paymentReference);
     const platformFeePercent = Number(process.env.MARKETPLACE_PLATFORM_FEE_PERCENT);
     const affiliateSharePercent = Number(process.env.MARKETPLACE_AFFILIATE_SHARE_PERCENT);
-    if (paymentReferenceKey.length < 5) return res.status(400).json({ message: "Enter the verified external payment reference." });
+    if (paymentReferenceKey.length < 5) return res.status(400).json({ message: "Enter the verified external payment reference (5-120 characters)." });
     if (!Number.isFinite(platformFeePercent) || platformFeePercent < 0 || platformFeePercent > 30 ||
         !Number.isFinite(affiliateSharePercent) || affiliateSharePercent < 0 || affiliateSharePercent > 100) {
       return res.status(503).json({ message: "Revenue rates are not configured. Set MARKETPLACE_PLATFORM_FEE_PERCENT (0-30) and MARKETPLACE_AFFILIATE_SHARE_PERCENT (0-100) after legal and tax review." });
     }
     const Order = mongoose.models.ShivashaMarketplaceOrder;
     if (!Order) return res.status(404).json({ message: "Marketplace order model is not initialized." });
-    // Ensure the unique payment-reference index exists before accepting a reconciliation.
-    await Order.init();
-    const order = await Order.findOne({ _id: req.params.id, status: "Completed", paymentStatus: "Unpaid" }).lean();
-    if (!order) return res.status(409).json({ message: "Completed unpaid order not found, or it has already been reconciled." });
+    await Promise.all([Order.init(), AffiliateCommissionLedger.init()]);
+    let order = await Order.findById(req.params.id).select("+paymentReferenceKey").lean();
+    if (!order || order.status !== "Completed") return res.status(409).json({ message: "Completed order not found." });
+
+    // Recover an interrupted request only when the exact same external reference is supplied.
+    if (order.paymentStatus === "Paid") {
+      if (order.paymentReferenceKey !== paymentReferenceKey) {
+        return res.status(409).json({ message: "This order has already been reconciled with a different payment reference." });
+      }
+      if (order.affiliate) {
+        const pending = await AffiliateCommissionLedger.findOne({ order: order._id, status: "Pending" });
+        if (pending) {
+          await AffiliateCommissionLedger.updateOne(
+            { _id: pending._id, status: "Pending" },
+            { $set: { status: "Accrued", accruedAt: order.paidAt || new Date() } }
+          );
+          const recovered = await AffiliateCommissionLedger.findById(pending._id).lean();
+          if (recovered?.status !== "Accrued") return res.status(503).json({ message: "Payment is recorded; commission ledger recovery is pending. Retry with the same payment reference." });
+          return res.json({ order, commissionLedger: recovered, message: "Existing payment reconciliation recovered into the commission ledger. No money was transferred." });
+        }
+      }
+      return res.status(409).json({ message: "This order has already been reconciled." });
+    }
+    if (order.paymentStatus !== "Unpaid") return res.status(409).json({ message: "Order is not in an unpaid state." });
+
     const fee = Number((order.amount * platformFeePercent / 100).toFixed(2));
     const affiliateCommission = order.affiliate ? Number((fee * affiliateSharePercent / 100).toFixed(2)) : 0;
-    // Atomic compare-and-set: only one admin request can reconcile this order.
-    // The unique partial index on paymentReferenceKey also prevents reusing a reference on another order.
+    let ledgerEntry = null;
+    if (order.affiliate) {
+      try {
+        ledgerEntry = await AffiliateCommissionLedger.create({
+          order: order._id, affiliate: order.affiliate, orderAmount: order.amount,
+          currency: order.currency, platformFeePercent, platformFeeAmount: fee,
+          affiliateSharePercent, commissionAmount: affiliateCommission,
+          paymentReferenceKey, status: "Pending", createdBy: req.user.id
+        });
+      } catch (error) {
+        if (error?.code !== 11000) throw error;
+        ledgerEntry = await AffiliateCommissionLedger.findOne({ order: order._id }).select("+paymentReferenceKey");
+        if (!ledgerEntry || ledgerEntry.paymentReferenceKey !== paymentReferenceKey || ledgerEntry.status === "Reversed") {
+          return res.status(409).json({ message: "A commission ledger entry or payment reference already exists with different details." });
+        }
+      }
+    }
+
     const reconciledOrder = await Order.findOneAndUpdate(
       { _id: order._id, status: "Completed", paymentStatus: "Unpaid" },
       { $set: {
-        paymentStatus: "Paid",
-        paymentReference,
-        paymentReferenceKey,
-        paidAt: new Date(),
-        platformFeePercent,
-        platformFeeAmount: fee,
+        paymentStatus: "Paid", paymentReference, paymentReferenceKey, paidAt: new Date(),
+        platformFeePercent, platformFeeAmount: fee,
         affiliateSharePercent: order.affiliate ? affiliateSharePercent : 0,
-        affiliateCommission,
-        commissionStatus: order.affiliate ? "Accrued" : "Not accrued",
+        affiliateCommission, commissionStatus: order.affiliate ? "Accrued" : "Not accrued",
         affiliateCommissionEntry: order.affiliate ? {
-          order: order._id,
-          affiliate: order.affiliate,
-          amount: affiliateCommission,
-          currency: order.currency,
-          sharePercent: affiliateSharePercent,
-          accruedAt: new Date()
+          order: order._id, affiliate: order.affiliate, amount: affiliateCommission,
+          currency: order.currency, sharePercent: affiliateSharePercent, accruedAt: new Date()
         } : null
       } },
       { new: true, runValidators: true }
     );
-    if (!reconciledOrder) return res.status(409).json({ message: "This order was reconciled by another request. Refresh the payment queue." });
-    res.json({ order: reconciledOrder, message: "External payment marked as reconciled by admin. This endpoint does not collect or process money." });
+
+    if (!reconciledOrder) {
+      const current = await Order.findById(order._id).select("+paymentReferenceKey").lean();
+      if (current?.paymentStatus === "Paid" && current.paymentReferenceKey === paymentReferenceKey) {
+        order = current;
+      } else {
+        return res.status(409).json({ message: "Another request changed this order. Retry only with the same payment reference if it was already reconciled." });
+      }
+    } else {
+      order = reconciledOrder.toObject();
+    }
+
+    if (ledgerEntry) {
+      await AffiliateCommissionLedger.updateOne(
+        { _id: ledgerEntry._id, status: "Pending" },
+        { $set: { status: "Accrued", accruedAt: order.paidAt || new Date() } }
+      );
+      ledgerEntry = await AffiliateCommissionLedger.findById(ledgerEntry._id).lean();
+      if (ledgerEntry?.status !== "Accrued") {
+        return res.status(503).json({ message: "Payment is recorded but commission ledger finalization is pending. Retry with the same payment reference." });
+      }
+    }
+    res.json({
+      order, commissionLedger: ledgerEntry,
+      message: "External payment reconciled and commission recorded in the ledger. This endpoint does not collect, transfer, or process money."
+    });
   } catch (error) {
-    if (error?.code === 11000 && error?.keyPattern?.paymentReferenceKey) {
-      return res.status(409).json({ message: "This external payment reference has already been used for another order." });
+    if (error?.code === 11000 && (error?.keyPattern?.paymentReferenceKey || error?.keyPattern?.order)) {
+      return res.status(409).json({ message: "This payment reference or order already has a commission ledger entry." });
     }
     next(error);
   }
+});
+
+router.get("/marketplace-commission-ledger", async (req, res, next) => {
+  try {
+    const status = typeof req.query.status === "string" ? req.query.status : "";
+    const allowed = ["Pending", "Accrued", "Reversed"];
+    if (status && !allowed.includes(status)) return res.status(400).json({ message: "Invalid ledger status filter." });
+    const filter = status ? { status } : {};
+    const [entries, totals] = await Promise.all([
+      AffiliateCommissionLedger.find(filter).select("-paymentReferenceKey")
+        .populate("affiliate", "name email").populate("createdBy", "name email")
+        .populate("order", "amount currency status paymentStatus paidAt")
+        .sort({ createdAt: -1 }).limit(500).lean(),
+      AffiliateCommissionLedger.aggregate([
+        { $match: filter },
+        { $group: { _id: { currency: "$currency", status: "$status" }, total: { $sum: "$commissionAmount" }, entries: { $sum: 1 } } }
+      ])
+    ]);
+    res.json({ entries, totals, note: "Ledger records accrued commissions only. No bank/UPI payout is initiated or confirmed by this API." });
+  } catch (error) { next(error); }
 });
 
 router.get("/ads", async (_req, res, next) => {
