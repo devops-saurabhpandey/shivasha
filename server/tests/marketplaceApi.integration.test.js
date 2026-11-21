@@ -7,6 +7,8 @@ import businessPlatformRoutes from "../routes/businessPlatform.js";
 import adminRoutes from "../routes/admin.js";
 import User from "../models/User.js";
 import AffiliateCommissionLedger from "../models/AffiliateCommissionLedger.js";
+import AffiliatePayoutDestination from "../models/AffiliatePayoutDestination.js";
+import AffiliatePayoutRequest from "../models/AffiliatePayoutRequest.js";
 
 const mongoUri = process.env.MONGODB_TEST_URI;
 const enabled = Boolean(mongoUri);
@@ -17,10 +19,13 @@ let buyer;
 let provider;
 let outsider;
 let admin;
+let secondAdmin;
 let affiliate;
 let Listing;
 let Order;
 let CommissionLedger;
+let PayoutDestination;
+let PayoutRequest;
 
 async function createUser(name, role = "employee") {
   return User.create({
@@ -79,7 +84,9 @@ if (!enabled) {
     Listing = mongoose.model("ShivashaServiceListing");
     Order = mongoose.model("ShivashaMarketplaceOrder");
     CommissionLedger = AffiliateCommissionLedger;
-    await Promise.all([User.init(), Listing.init(), Order.init(), CommissionLedger.init()]);
+    PayoutDestination = AffiliatePayoutDestination;
+    PayoutRequest = AffiliatePayoutRequest;
+    await Promise.all([User.init(), Listing.init(), Order.init(), CommissionLedger.init(), PayoutDestination.init(), PayoutRequest.init()]);
     [buyer, provider, outsider, admin, affiliate] = await Promise.all([
       createUser("Buyer"), createUser("Provider"), createUser("Outsider"),
       createUser("Admin", "admin"), createUser("Affiliate")
@@ -99,10 +106,10 @@ if (!enabled) {
     if (server) await new Promise((resolve, reject) => server.close(error => error ? reject(error) : resolve()));
     if (mongoose.connection.readyState === 1) {
       await Promise.all([
-        User.deleteMany({ _id: { $in: [buyer?._id, provider?._id, outsider?._id, admin?._id, affiliate?._id].filter(Boolean) } }),
+        User.deleteMany({ _id: { $in: [buyer?._id, provider?._id, outsider?._id, admin?._id, secondAdmin?._id, affiliate?._id].filter(Boolean) } }),
         Listing.deleteMany({}),
         Order.deleteMany({}),
-        CommissionLedger.deleteMany({})
+        CommissionLedger.deleteMany({}),\n        PayoutDestination.deleteMany({}),\n        PayoutRequest.deleteMany({})
       ]);
       await mongoose.disconnect();
     }
@@ -266,6 +273,111 @@ if (!enabled) {
     assert.equal(entry.commissionAmount, 24);
     assert.equal(Object.hasOwn(entry, "paymentReferenceKey"), false);
     assert.match(result.payload.note, /No bank\/UPI payout is initiated/i);
+  });
+
+
+  test("affiliate payouts require a verified destination, reserve balances, and enforce two-admin manual execution", async () => {
+    const order = await createOrder({ amount: 30000, withAffiliate: true });
+    await Order.updateOne({ _id: order._id }, { $set: { status: "Completed" } });
+    const confirmed = await request(`/api/admin/marketplace-payments/${order._id}/confirm`, {
+      user: admin, method: "POST", body: { paymentReference: "PAYOUT-ORDER-PAYMENT-30000" }
+    });
+    assert.equal(confirmed.status, 200);
+    assert.equal(confirmed.payload.commissionLedger.commissionAmount, 600);
+
+    const noDestination = await request("/api/business-platform/marketplace/payout-requests", {
+      user: affiliate, method: "POST", body: { currency: "INR", idempotencyKey: "payout-request-0001" }
+    });
+    assert.equal(noDestination.status, 409);
+
+    const destination = await request(`/api/admin/affiliate-payout-destinations/${affiliate._id}`, {
+      user: admin, method: "POST", body: {
+        recipientReference: "provider-recipient-token-998877",
+        maskedDestination: "UPI ••••@bank",
+        verificationNote: "KYC reviewed outside Shivasha; recipient token issued by provider."
+      }
+    });
+    assert.equal(destination.status, 200);
+    assert.equal(Object.hasOwn(destination.payload.destination, "recipientReference"), false);
+
+    const requested = await request("/api/business-platform/marketplace/payout-requests", {
+      user: affiliate, method: "POST", body: { currency: "INR", idempotencyKey: "payout-request-0001" }
+    });
+    assert.equal(requested.status, 201);
+    const payoutId = requested.payload.payoutRequest._id;
+    assert.equal(requested.payload.payoutRequest.amount, 600);
+    assert.equal(requested.payload.payoutRequest.status, "Requested");
+    assert.equal(Object.hasOwn(requested.payload.payoutRequest, "transferReference"), false);
+
+    const replay = await request("/api/business-platform/marketplace/payout-requests", {
+      user: affiliate, method: "POST", body: { currency: "INR", idempotencyKey: "payout-request-0001" }
+    });
+    assert.equal(replay.status, 200);
+    assert.equal(String(replay.payload.payoutRequest._id), String(payoutId));
+    assert.equal(await CommissionLedger.countDocuments({ payoutRequest: payoutId, status: "Accrued" }), 1);
+
+    const approved = await request(`/api/admin/marketplace-payout-requests/${payoutId}/approve`, {
+      user: admin, method: "POST"
+    });
+    assert.equal(approved.status, 200);
+    const approverCannotClaim = await request(`/api/admin/marketplace-payout-requests/${payoutId}/claim`, {
+      user: admin, method: "POST"
+    });
+    assert.equal(approverCannotClaim.status, 403);
+
+    const claimed = await request(`/api/admin/marketplace-payout-requests/${payoutId}/claim`, {
+      user: secondAdmin, method: "POST"
+    });
+    assert.equal(claimed.status, 200);
+    assert.equal(claimed.payload.payoutRequest.status, "Processing");
+
+    const otherAdminCannotPay = await request(`/api/admin/marketplace-payout-requests/${payoutId}/mark-paid`, {
+      user: admin, method: "POST", body: { transferReference: "BANK-TRANSFER-REF-0001" }
+    });
+    assert.equal(otherAdminCannotPay.status, 403);
+
+    const paid = await request(`/api/admin/marketplace-payout-requests/${payoutId}/mark-paid`, {
+      user: secondAdmin, method: "POST", body: { transferReference: "BANK-TRANSFER-REF-0001" }
+    });
+    assert.equal(paid.status, 200);
+    assert.equal(paid.payload.payoutRequest.status, "Paid");
+    assert.equal(Object.hasOwn(paid.payload.payoutRequest, "transferReference"), false);
+    assert.equal(await CommissionLedger.countDocuments({ payoutRequest: payoutId, status: "Paid out" }), 1);
+    const paidOrder = await Order.findById(order._id).lean();
+    assert.equal(paidOrder.commissionStatus, "Paid out");
+
+    const paidReplay = await request(`/api/admin/marketplace-payout-requests/${payoutId}/mark-paid`, {
+      user: secondAdmin, method: "POST", body: { transferReference: "bank-transfer-ref-0001" }
+    });
+    assert.equal(paidReplay.status, 200);
+    assert.equal(paidReplay.payload.idempotentReplay, true);
+
+    const available = await request("/api/business-platform/marketplace/payout-requests", { user: affiliate });
+    assert.equal(available.payload.available.length, 0);
+  });
+
+  test("rejecting an affiliate payout releases its reserved accrued commissions", async () => {
+    const order = await createOrder({ amount: 30000, withAffiliate: true });
+    await Order.updateOne({ _id: order._id }, { $set: { status: "Completed" } });
+    await request(`/api/admin/marketplace-payments/${order._id}/confirm`, {
+      user: admin, method: "POST", body: { paymentReference: "PAYOUT-REJECT-PAYMENT-30000" }
+    });
+    await request(`/api/admin/affiliate-payout-destinations/${affiliate._id}`, {
+      user: admin, method: "POST", body: {
+        recipientReference: "provider-recipient-token-112233",
+        maskedDestination: "Bank •••• 7788"
+      }
+    });
+    const requested = await request("/api/business-platform/marketplace/payout-requests", {
+      user: affiliate, method: "POST", body: { currency: "INR", idempotencyKey: "payout-request-reject-01" }
+    });
+    assert.equal(requested.status, 201);
+    const payoutId = requested.payload.payoutRequest._id;
+    const rejected = await request(`/api/admin/marketplace-payout-requests/${payoutId}/reject`, {
+      user: admin, method: "POST", body: { reason: "Recipient details require re-verification." }
+    });
+    assert.equal(rejected.status, 200);
+    assert.equal(await CommissionLedger.countDocuments({ payoutRequest: null, status: "Accrued", affiliate: affiliate._id }), 1);
   });
 
   test("simultaneous payment confirmations for one order reconcile exactly once", async () => {
