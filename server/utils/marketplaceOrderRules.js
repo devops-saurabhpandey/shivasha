@@ -38,5 +38,7 @@ export function getMarketplaceOrderTransitionError({ currentStatus, nextStatus, 
 }
 
 export function normalizeMarketplacePaymentReference(value) {
-  return typeof value === "string" ? value.trim().slice(0, 120).toLowerCase() : "";
+  if (typeof value !== "string") return "";
+  const normalized = value.trim();
+  return normalized.length > 0 && normalized.length <= 120 ? normalized.toLowerCase() : "";
 }
