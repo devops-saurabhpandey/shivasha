@@ -80,3 +80,27 @@ test("marketplace revenue foundation tracks affiliate attribution and defers pay
   assert.ok(adminSource.includes("This endpoint does not collect or process money."));
   assert.ok(adminUi.includes("Marketplace Payment Reconciliation"));
 });
+
+import { getMarketplaceOrderTransitionError, normalizeMarketplacePaymentReference } from "../utils/marketplaceOrderRules.js";
+
+test("marketplace order transitions enforce buyer and provider roles and valid progression", () => {
+  const base = { actorId: "provider-1", buyerId: "buyer-1", providerId: "provider-1", paymentStatus: "Unpaid" };
+  assert.equal(getMarketplaceOrderTransitionError({ ...base, currentStatus: "Requested", nextStatus: "Accepted" }), null);
+  assert.equal(getMarketplaceOrderTransitionError({ ...base, currentStatus: "Requested", nextStatus: "Completed" }), "This order status transition is not allowed.");
+  assert.equal(getMarketplaceOrderTransitionError({ ...base, actorId: "buyer-1", currentStatus: "Requested", nextStatus: "Accepted" }), "Only the provider can update this order status.");
+  assert.equal(getMarketplaceOrderTransitionError({ ...base, currentStatus: "Accepted", nextStatus: "Completed" }), null);
+  assert.equal(getMarketplaceOrderTransitionError({ ...base, currentStatus: "Completed", nextStatus: "Accepted" }), "This order status transition is not allowed.");
+});
+
+test("only the buyer may cancel requested or accepted unpaid orders", () => {
+  const base = { currentStatus: "Requested", nextStatus: "Cancelled", buyerId: "buyer-1", providerId: "provider-1", paymentStatus: "Unpaid" };
+  assert.equal(getMarketplaceOrderTransitionError({ ...base, actorId: "buyer-1" }), null);
+  assert.equal(getMarketplaceOrderTransitionError({ ...base, actorId: "provider-1" }), "Only the buyer can cancel this order.");
+  assert.equal(getMarketplaceOrderTransitionError({ ...base, actorId: "buyer-1", currentStatus: "Completed" }), "This order can no longer be cancelled.");
+  assert.equal(getMarketplaceOrderTransitionError({ ...base, actorId: "buyer-1", paymentStatus: "Paid" }), "Paid orders require an administrator refund review.");
+});
+
+test("payment references normalize case and whitespace and reject non-string input", () => {
+  assert.equal(normalizeMarketplacePaymentReference("  TxN-AbC-123  "), "txn-abc-123");
+  assert.equal(normalizeMarketplacePaymentReference(12345), "");
+});
