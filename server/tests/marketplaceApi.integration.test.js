@@ -394,6 +394,16 @@ if (!enabled) {
     });
     assert.equal(requested.status, 201);
     const payoutId = requested.payload.payoutRequest._id;
+    const approved = await request(`/api/admin/marketplace-payout-requests/${payoutId}/approve`, { user: admin, method: "POST" });
+    assert.equal(approved.status, 200);
+    const revoked = await request(`/api/admin/affiliate-payout-destinations/${payoutAffiliate._id}/revoke`, {
+      user: admin, method: "PATCH", body: { reason: "Affiliate requested destination removal." }
+    });
+    assert.equal(revoked.status, 200);
+    const blockedClaim = await request(`/api/admin/marketplace-payout-requests/${payoutId}/claim`, {
+      user: secondAdmin, method: "POST"
+    });
+    assert.equal(blockedClaim.status, 409);
     const rejected = await request(`/api/admin/marketplace-payout-requests/${payoutId}/reject`, {
       user: admin, method: "POST", body: { reason: "Recipient details require re-verification." }
     });
