@@ -303,7 +303,7 @@ if (!enabled) {
     assert.equal(Object.hasOwn(destination.payload.destination, "recipientReference"), false);
 
     const requested = await request("/api/business-platform/marketplace/payout-requests", {
-      user: affiliate, method: "POST", body: { currency: "INR", idempotencyKey: "payout-request-0001" }
+      user: payoutAffiliate, method: "POST", body: { currency: "INR", idempotencyKey: "payout-request-0001" }
     });
     assert.equal(requested.status, 201);
     const payoutId = requested.payload.payoutRequest._id;
@@ -312,7 +312,7 @@ if (!enabled) {
     assert.equal(Object.hasOwn(requested.payload.payoutRequest, "transferReference"), false);
 
     const replay = await request("/api/business-platform/marketplace/payout-requests", {
-      user: affiliate, method: "POST", body: { currency: "INR", idempotencyKey: "payout-request-0001" }
+      user: payoutAffiliate, method: "POST", body: { currency: "INR", idempotencyKey: "payout-request-0001" }
     });
     assert.equal(replay.status, 200);
     assert.equal(String(replay.payload.payoutRequest._id), String(payoutId));
@@ -357,7 +357,7 @@ if (!enabled) {
     const available = await request("/api/business-platform/marketplace/payout-requests", { user: payoutAffiliate });
     assert.equal(available.payload.available.length, 0);
 
-    const secondOrder = await createOrder({ amount: 30000, withAffiliate: true });
+    const secondOrder = await createOrder({ amount: 30000, withAffiliate: true, affiliateUser: payoutAffiliate });
     await Order.updateOne({ _id: secondOrder._id }, { $set: { status: "Completed" } });
     const secondConfirmed = await request(`/api/admin/marketplace-payments/${secondOrder._id}/confirm`, {
       user: admin, method: "POST", body: { paymentReference: "PAYOUT-ORDER-PAYMENT-SECOND" }
@@ -383,9 +383,10 @@ if (!enabled) {
     await request(`/api/admin/marketplace-payments/${order._id}/confirm`, {
       user: admin, method: "POST", body: { paymentReference: "PAYOUT-REJECT-PAYMENT-30000" }
     });
-    await request(`/api/admin/affiliate-payout-destinations/${affiliate._id}`, {
+    await request(`/api/admin/affiliate-payout-destinations/${payoutAffiliate._id}`, {
       user: admin, method: "POST", body: {
-        maskedDestination: "Bank •••• 7788"
+        maskedDestination: "Bank •••• 7788",
+        verificationNote: "Recipient details checked against off-platform KYC records."
       }
     });
     const requested = await request("/api/business-platform/marketplace/payout-requests", {
