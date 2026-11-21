@@ -211,25 +211,25 @@ router.get("/marketplace-commission-ledger", async (req, res, next) => {
 router.post("/affiliate-payout-destinations/:affiliateId", async (req, res, next) => {
   try {
     if (!mongoose.isValidObjectId(req.params.affiliateId)) return res.status(400).json({ message: "Invalid affiliate ID." });
-    const recipientReference = typeof req.body?.recipientReference === "string" ? req.body.recipientReference.trim() : "";
     const maskedDestination = typeof req.body?.maskedDestination === "string" ? req.body.maskedDestination.trim() : "";
     const verificationNote = typeof req.body?.verificationNote === "string" ? req.body.verificationNote.trim().slice(0, 500) : "";
-    if (recipientReference.length < 6 || recipientReference.length > 160 || maskedDestination.length < 4 || maskedDestination.length > 100) {
-      return res.status(400).json({ message: "Provide an opaque external recipient reference (6-160 characters) and a masked destination label (4-100 characters). Never submit raw bank or UPI credentials." });
+    if (maskedDestination.length < 4 || maskedDestination.length > 100) {
+      return res.status(400).json({ message: "Provide a masked payout destination label (4-100 characters). Never submit or store raw bank or UPI credentials." });
     }
+    await AffiliatePayoutDestination.init();
     const affiliate = await User.findById(req.params.affiliateId).select("_id role").lean();
     if (!affiliate || affiliate.role === "admin") return res.status(404).json({ message: "Affiliate account not found." });
     const destination = await AffiliatePayoutDestination.findOneAndUpdate(
       { affiliate: affiliate._id },
       { $set: {
-        recipientReference, maskedDestination, verificationNote, status: "Verified",
+        maskedDestination, verificationNote, status: "Verified",
         verifiedBy: req.user.id, verifiedAt: new Date()
       }, $setOnInsert: { affiliate: affiliate._id } },
       { new: true, upsert: true, runValidators: true, setDefaultsOnInsert: true }
     ).select("-recipientReference").populate("affiliate", "name email").lean();
     res.status(200).json({
       destination,
-      message: "Payout destination marked verified by an administrator after off-platform KYC review. Only an opaque provider recipient reference is stored; no bank/UPI transfer is performed."
+      message: "Payout destination marked verified by an administrator after off-platform KYC review. No raw bank/UPI credentials are stored; no bank/UPI transfer is performed."
     });
   } catch (error) { next(error); }
 });
@@ -278,17 +278,27 @@ router.post("/marketplace-payout-requests/:id/reject", async (req, res, next) =>
   try {
     if (!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({ message: "Invalid payout request ID." });
     const reason = typeof req.body?.reason === "string" ? req.body.reason.trim().slice(0, 500) : "";
-    const rejected = await AffiliatePayoutRequest.findOneAndUpdate(
-      { _id: req.params.id, status: "Requested" },
-      { $set: { status: "Rejected", rejectedBy: req.user.id, rejectedAt: new Date(), rejectionReason: reason } },
-      { new: true }
-    ).select("-transferReference -transferReferenceKey").lean();
-    if (!rejected) return res.status(409).json({ message: "Only a requested payout can be rejected." });
+    const existing = await AffiliatePayoutRequest.findById(req.params.id).lean();
+    if (!existing) return res.status(404).json({ message: "Payout request not found." });
+    let rejected = existing;
+    if (existing.status === "Requested") {
+      rejected = await AffiliatePayoutRequest.findOneAndUpdate(
+        { _id: req.params.id, status: "Requested" },
+        { $set: { status: "Rejected", rejectedBy: req.user.id, rejectedAt: new Date(), rejectionReason: reason } },
+        { new: true }
+      ).lean();
+      if (!rejected) return res.status(409).json({ message: "Payout request changed while being rejected." });
+    } else if (existing.status !== "Rejected") {
+      return res.status(409).json({ message: "Only a requested payout can be rejected." });
+    }
+    // Safe to retry: a rejected request may need reservation cleanup after an interrupted write.
     await AffiliateCommissionLedger.updateMany(
       { payoutRequest: rejected._id, status: "Accrued" },
       { $set: { payoutRequest: null } }
     );
-    res.json({ payoutRequest: rejected, message: "Payout request rejected; reserved commission entries have been released." });
+    const safeRejected = await AffiliatePayoutRequest.findById(rejected._id)
+      .select("-transferReference -transferReferenceKey").lean();
+    res.json({ payoutRequest: safeRejected, message: "Payout request rejected; reserved commission entries have been released." });
   } catch (error) { next(error); }
 });
 
