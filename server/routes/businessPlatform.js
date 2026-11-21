@@ -3,6 +3,9 @@ import mongoose from "mongoose";
 import { randomBytes } from "node:crypto";
 import { requireAuth } from "../middleware/auth.js";
 import { getMarketplaceOrderTransitionError } from "../utils/marketplaceOrderRules.js";
+import AffiliateCommissionLedger from "../models/AffiliateCommissionLedger.js";
+import AffiliatePayoutDestination from "../models/AffiliatePayoutDestination.js";
+import AffiliatePayoutRequest from "../models/AffiliatePayoutRequest.js";
 
 const router = express.Router();
 router.use(requireAuth);
@@ -300,7 +303,87 @@ const affiliateProfileSchema = new mongoose.Schema({
   active: { type: Boolean, default: true }
 }, { timestamps: true });
 const AffiliateProfile = mongoose.models.ShivashaAffiliateProfile || mongoose.model("ShivashaAffiliateProfile", affiliateProfileSchema);
+
 const newReferralCode = () => "SHV-" + randomBytes(5).toString("hex").toUpperCase();
+
+const payoutCurrencies = ["USD", "INR", "EUR", "GBP", "AED", "CAD", "AUD"];
+
+router.get("/marketplace/payout-requests", async (req, res, next) => {
+  try {
+    const requests = await AffiliatePayoutRequest.find({ affiliate: req.user.id })
+      .select("-transferReference -transferReferenceKey")
+      .populate("destination", "maskedDestination status")
+      .sort({ createdAt: -1 }).limit(100).lean();
+    const available = await AffiliateCommissionLedger.aggregate([
+      { $match: { affiliate: new mongoose.Types.ObjectId(req.user.id), status: "Accrued", payoutRequest: null } },
+      { $group: { _id: "$currency", amount: { $sum: "$commissionAmount" }, entries: { $sum: 1 } } }
+    ]);
+    res.json({ requests, available, note: "Available amounts are accrued commissions not yet reserved for a payout. Shivasha does not initiate bank or UPI transfers." });
+  } catch (error) { next(error); }
+});
+
+router.post("/marketplace/payout-requests", async (req, res, next) => {
+  let createdRequest = null;
+  try {
+    const currency = cleanText(req.body?.currency, 3).toUpperCase();
+    const idempotencyKey = cleanText(req.body?.idempotencyKey, 100);
+    if (!payoutCurrencies.includes(currency) || idempotencyKey.length < 8) {
+      return res.status(400).json({ message: "Provide a supported currency and an idempotency key of 8-100 characters." });
+    }
+    const prior = await AffiliatePayoutRequest.findOne({ affiliate: req.user.id, idempotencyKey })
+      .select("-transferReference -transferReferenceKey").lean();
+    if (prior) return res.status(200).json({ payoutRequest: prior, idempotentReplay: true });
+
+    const destination = await AffiliatePayoutDestination.findOne({ affiliate: req.user.id, status: "Verified" })
+      .select("maskedDestination").lean();
+    if (!destination) return res.status(409).json({ message: "A payout destination must be verified by Shivasha support before requesting a payout." });
+
+    const minVariable = `MARKETPLACE_MIN_PAYOUT_${currency}`;
+    const configuredMinimum = process.env[minVariable] ?? (currency === "INR" ? "500" : "");
+    const minimum = Number(configuredMinimum);
+    if (!Number.isFinite(minimum) || minimum <= 0) {
+      return res.status(503).json({ message: `Payout threshold is not configured. Set ${minVariable} after reviewing local payout and tax requirements.` });
+    }
+
+    const entries = await AffiliateCommissionLedger.find({
+      affiliate: req.user.id, currency, status: "Accrued", payoutRequest: null
+    }).select("_id commissionAmount").sort({ createdAt: 1 }).lean();
+    const amount = Number(entries.reduce((sum, entry) => sum + entry.commissionAmount, 0).toFixed(2));
+    if (!entries.length || amount < minimum) {
+      return res.status(400).json({ message: `Available accrued commission is below the ${currency} ${minimum} minimum payout threshold.`, availableAmount: amount, minimum });
+    }
+
+    createdRequest = await AffiliatePayoutRequest.create({
+      affiliate: req.user.id, destination: destination._id, destinationLabel: destination.maskedDestination,
+      currency, amount, ledgerEntries: entries.map(entry => entry._id), idempotencyKey, status: "Requested"
+    });
+    const reserved = await AffiliateCommissionLedger.updateMany(
+      { _id: { $in: entries.map(entry => entry._id) }, affiliate: req.user.id, currency, status: "Accrued", payoutRequest: null },
+      { $set: { payoutRequest: createdRequest._id } }
+    );
+    if (reserved.modifiedCount !== entries.length) {
+      await AffiliateCommissionLedger.updateMany({ payoutRequest: createdRequest._id }, { $set: { payoutRequest: null } });
+      await AffiliatePayoutRequest.deleteOne({ _id: createdRequest._id, status: "Requested" });
+      createdRequest = null;
+      return res.status(409).json({ message: "Some commission entries were reserved by another payout request. Refresh your balance and try again." });
+    }
+    const payoutRequest = await AffiliatePayoutRequest.findById(createdRequest._id)
+      .select("-transferReference -transferReferenceKey").populate("destination", "maskedDestination status").lean();
+    res.status(201).json({ payoutRequest, message: "Payout request submitted for review. This request does not transfer money." });
+  } catch (error) {
+    if (createdRequest?._id) {
+      await AffiliateCommissionLedger.updateMany({ payoutRequest: createdRequest._id }, { $set: { payoutRequest: null } }).catch(() => {});
+      await AffiliatePayoutRequest.deleteOne({ _id: createdRequest._id, status: "Requested" }).catch(() => {});
+    }
+    if (error?.code === 11000) {
+      const existing = await AffiliatePayoutRequest.findOne({ affiliate: req.user.id, idempotencyKey: cleanText(req.body?.idempotencyKey, 100) })
+        .select("-transferReference -transferReferenceKey").lean();
+      if (existing) return res.status(200).json({ payoutRequest: existing, idempotentReplay: true });
+    }
+    next(error);
+  }
+});
+
 
 router.get("/marketplace/revenue", async (req, res, next) => {
   try {
