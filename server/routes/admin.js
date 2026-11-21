@@ -73,6 +73,8 @@ router.post("/marketplace-payments/:id/confirm", async (req, res, next) => {
     }
     const Order = mongoose.models.ShivashaMarketplaceOrder;
     if (!Order) return res.status(404).json({ message: "Marketplace order model is not initialized." });
+    // Ensure the unique payment-reference index exists before accepting a reconciliation.
+    await Order.init();
     const order = await Order.findOne({ _id: req.params.id, status: "Completed", paymentStatus: "Unpaid" }).lean();
     if (!order) return res.status(409).json({ message: "Completed unpaid order not found, or it has already been reconciled." });
     const fee = Number((order.amount * platformFeePercent / 100).toFixed(2));
@@ -96,7 +98,12 @@ router.post("/marketplace-payments/:id/confirm", async (req, res, next) => {
     );
     if (!reconciledOrder) return res.status(409).json({ message: "This order was reconciled by another request. Refresh the payment queue." });
     res.json({ order: reconciledOrder, message: "External payment marked as reconciled by admin. This endpoint does not collect or process money." });
-  } catch (error) { next(error); }
+  } catch (error) {
+    if (error?.code === 11000 && error?.keyPattern?.paymentReferenceKey) {
+      return res.status(409).json({ message: "This external payment reference has already been used for another order." });
+    }
+    next(error);
+  }
 });
 
 router.get("/ads", async (_req, res, next) => {
