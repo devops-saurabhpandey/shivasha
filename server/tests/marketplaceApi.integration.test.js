@@ -294,7 +294,6 @@ if (!enabled) {
 
     const destination = await request(`/api/admin/affiliate-payout-destinations/${affiliate._id}`, {
       user: admin, method: "POST", body: {
-        recipientReference: "provider-recipient-token-998877",
         maskedDestination: "UPI ••••@bank",
         verificationNote: "KYC reviewed outside Shivasha; recipient token issued by provider."
       }
@@ -366,7 +365,6 @@ if (!enabled) {
     });
     await request(`/api/admin/affiliate-payout-destinations/${affiliate._id}`, {
       user: admin, method: "POST", body: {
-        recipientReference: "provider-recipient-token-112233",
         maskedDestination: "Bank •••• 7788"
       }
     });
