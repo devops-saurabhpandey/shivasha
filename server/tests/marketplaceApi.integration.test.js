@@ -6,6 +6,7 @@ import jwt from "jsonwebtoken";
 import businessPlatformRoutes from "../routes/businessPlatform.js";
 import adminRoutes from "../routes/admin.js";
 import User from "../models/User.js";
+import AffiliateCommissionLedger from "../models/AffiliateCommissionLedger.js";
 
 const mongoUri = process.env.MONGODB_TEST_URI;
 const enabled = Boolean(mongoUri);
@@ -19,6 +20,7 @@ let admin;
 let affiliate;
 let Listing;
 let Order;
+let CommissionLedger;
 
 async function createUser(name, role = "employee") {
   return User.create({
@@ -76,7 +78,8 @@ if (!enabled) {
     await mongoose.connect(mongoUri, { dbName: "shivasha_marketplace_integration_test" });
     Listing = mongoose.model("ShivashaServiceListing");
     Order = mongoose.model("ShivashaMarketplaceOrder");
-    await Promise.all([User.init(), Listing.init(), Order.init()]);
+    CommissionLedger = AffiliateCommissionLedger;
+    await Promise.all([User.init(), Listing.init(), Order.init(), CommissionLedger.init()]);
     [buyer, provider, outsider, admin, affiliate] = await Promise.all([
       createUser("Buyer"), createUser("Provider"), createUser("Outsider"),
       createUser("Admin", "admin"), createUser("Affiliate")
@@ -98,7 +101,8 @@ if (!enabled) {
       await Promise.all([
         User.deleteMany({ _id: { $in: [buyer?._id, provider?._id, outsider?._id, admin?._id, affiliate?._id].filter(Boolean) } }),
         Listing.deleteMany({}),
-        Order.deleteMany({})
+        Order.deleteMany({}),
+        CommissionLedger.deleteMany({})
       ]);
       await mongoose.disconnect();
     }
@@ -151,6 +155,12 @@ if (!enabled) {
     assert.equal(confirmed.payload.order.paymentStatus, "Paid");
     assert.equal(confirmed.payload.order.platformFeeAmount, 100);
     assert.equal(confirmed.payload.order.affiliateCommission, 20);
+    assert.equal(confirmed.payload.commissionLedger.status, "Accrued");
+    assert.equal(confirmed.payload.commissionLedger.commissionAmount, 20);
+    const ledgerEntries = await CommissionLedger.find({ order: order._id }).select("+paymentReferenceKey").lean();
+    assert.equal(ledgerEntries.length, 1);
+    assert.equal(ledgerEntries[0].status, "Accrued");
+    assert.equal(ledgerEntries[0].paymentReferenceKey, "txn-int-10001");
     const accrued = await Order.findById(order._id).select("+affiliateCommissionEntry").lean();
     assert.deepEqual({
       order: String(accrued.affiliateCommissionEntry.order),
@@ -211,6 +221,25 @@ if (!enabled) {
       assert.equal(Object.hasOwn(affiliateOrder, field), false, `unexpected private field: ${field}`);
     }
     assert.equal(affiliateOrder.affiliateCommission, 20);
+  });
+
+  test("admin commission ledger is restricted and hides external payment references", async () => {
+    const order = await createOrder({ amount: 1200, withAffiliate: true });
+    await Order.updateOne({ _id: order._id }, { $set: { status: "Completed" } });
+    const confirmed = await request(`/api/admin/marketplace-payments/${order._id}/confirm`, {
+      user: admin, method: "POST", body: { paymentReference: "LEDGER-AUDIT-1200" }
+    });
+    assert.equal(confirmed.status, 200);
+    const denied = await request("/api/admin/marketplace-commission-ledger", { user: buyer });
+    assert.equal(denied.status, 403);
+    const result = await request("/api/admin/marketplace-commission-ledger?status=Accrued", { user: admin });
+    assert.equal(result.status, 200);
+    const entry = result.payload.entries.find(item => String(item.order?._id) === String(order._id));
+    assert.ok(entry);
+    assert.equal(entry.status, "Accrued");
+    assert.equal(entry.commissionAmount, 24);
+    assert.equal(Object.hasOwn(entry, "paymentReferenceKey"), false);
+    assert.match(result.payload.note, /No bank\/UPI payout is initiated/i);
   });
 
   test("simultaneous payment confirmations for one order reconcile exactly once", async () => {
