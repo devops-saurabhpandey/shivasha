@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
+import { getMarketplaceOrderTransitionError, normalizeMarketplacePaymentReference } from "../utils/marketplaceOrderRules.js";
 
 const routeFile = fileURLToPath(new URL("../routes/businessPlatform.js", import.meta.url));
 const source = readFileSync(routeFile, "utf8");
@@ -81,7 +82,6 @@ test("marketplace revenue foundation tracks affiliate attribution and defers pay
   assert.ok(adminUi.includes("Marketplace Payment Reconciliation"));
 });
 
-import { getMarketplaceOrderTransitionError, normalizeMarketplacePaymentReference } from "../utils/marketplaceOrderRules.js";
 
 test("marketplace order transitions enforce buyer and provider roles and valid progression", () => {
   const base = { actorId: "provider-1", buyerId: "buyer-1", providerId: "provider-1", paymentStatus: "Unpaid" };
