@@ -332,56 +332,71 @@ router.post("/marketplace-payout-requests/:id/mark-paid", async (req, res, next)
     if (transferReference.length < 6 || transferReference.length > 120) {
       return res.status(400).json({ message: "Provide an external bank/UPI/provider transfer reference (6-120 characters) after completing the transfer manually." });
     }
-    const payout = await AffiliatePayoutRequest.findById(req.params.id).select("+transferReference +transferReferenceKey").lean();
+    let payout = await AffiliatePayoutRequest.findById(req.params.id).select("+transferReference +transferReferenceKey").lean();
     if (!payout) return res.status(404).json({ message: "Payout request not found." });
+    if (String(payout.claimedBy) !== String(req.user.id)) {
+      return res.status(403).json({ message: "Only the administrator who claimed this payout may record or recover its external transfer." });
+    }
     if (payout.status === "Paid") {
-      if (payout.transferReferenceKey === transferReferenceKey) {
-        return res.json({ payoutRequest: { ...payout, transferReference: undefined, transferReferenceKey: undefined }, idempotentReplay: true });
+      if (payout.transferReferenceKey !== transferReferenceKey) {
+        return res.status(409).json({ message: "This payout is already recorded with a different transfer reference." });
       }
-      return res.status(409).json({ message: "This payout is already recorded with a different transfer reference." });
+    } else {
+      if (payout.status !== "Processing") {
+        return res.status(403).json({ message: "Only the claimed administrator may mark a processing payout as paid." });
+      }
+      // Record the unique external reference before changing ledger rows. If the
+      // reference is reused, the unique index rejects it without closing commissions.
+      try {
+        const marked = await AffiliatePayoutRequest.findOneAndUpdate(
+          { _id: payout._id, status: "Processing", claimedBy: req.user.id },
+          { $set: {
+            status: "Paid", paidBy: req.user.id, paidAt: new Date(),
+            transferReference, transferReferenceKey
+          } },
+          { new: true }
+        ).select("+transferReferenceKey").lean();
+        if (!marked) {
+          payout = await AffiliatePayoutRequest.findById(payout._id).select("+transferReferenceKey").lean();
+          if (payout?.status !== "Paid" || payout.transferReferenceKey !== transferReferenceKey) {
+            return res.status(409).json({ message: "Payout state changed while recording the external transfer." });
+          }
+        } else {
+          payout = marked;
+        }
+      } catch (error) {
+        if (error?.code === 11000) return res.status(409).json({ message: "This external transfer reference is already associated with another payout." });
+        throw error;
+      }
     }
-    if (payout.status !== "Processing" || String(payout.claimedBy) !== String(req.user.id)) {
-      return res.status(403).json({ message: "Only the administrator who claimed this payout may record its external transfer." });
-    }
-    const Ledger = AffiliateCommissionLedger;
-    await Ledger.updateMany(
+
+    // Retry-safe finalization: the payout is already marked Paid with a unique
+    // transfer reference, so a crash here can be recovered by resubmitting it.
+    await AffiliateCommissionLedger.updateMany(
       { _id: { $in: payout.ledgerEntries }, payoutRequest: payout._id, status: "Accrued" },
-      { $set: { status: "Paid out", paidOutAt: new Date() } }
+      { $set: { status: "Paid out", paidOutAt: payout.paidAt || new Date() } }
     );
-    const paidEntries = await Ledger.find({
+    const paidEntries = await AffiliateCommissionLedger.find({
       _id: { $in: payout.ledgerEntries }, payoutRequest: payout._id, status: "Paid out"
     }).select("_id order").lean();
     if (paidEntries.length !== payout.ledgerEntries.length) {
-      return res.status(503).json({ message: "Some commission entries could not be marked paid out. Retry with the same external transfer reference after reconciliation." });
+      return res.status(503).json({ message: "Payout is recorded but some commission entries still need finalization. Retry with the same external transfer reference." });
     }
     const Order = mongoose.models.ShivashaMarketplaceOrder;
     if (Order) await Order.updateMany(
       { _id: { $in: paidEntries.map(entry => entry.order) }, commissionStatus: "Accrued" },
       { $set: { commissionStatus: "Paid out" } }
     );
-    try {
-      const marked = await AffiliatePayoutRequest.findOneAndUpdate(
-        { _id: payout._id, status: "Processing", claimedBy: req.user.id },
-        { $set: {
-          status: "Paid", paidBy: req.user.id, paidAt: new Date(),
-          transferReference, transferReferenceKey
-        } },
-        { new: true }
-      ).select("-transferReference -transferReferenceKey").lean();
-      if (!marked) {
-        const latest = await AffiliatePayoutRequest.findById(payout._id).select("+transferReferenceKey").lean();
-        if (latest?.status === "Paid" && latest.transferReferenceKey === transferReferenceKey) {
-          return res.json({ payoutRequest: { ...latest, transferReference: undefined, transferReferenceKey: undefined }, idempotentReplay: true });
-        }
-        return res.status(409).json({ message: "Payout state changed while recording the external transfer." });
-      }
-      res.json({ payoutRequest: marked, message: "External transfer reference recorded and commission ledger closed. Shivasha did not initiate the transfer." });
-    } catch (error) {
-      if (error?.code === 11000) return res.status(409).json({ message: "This external transfer reference is already associated with another payout." });
-      throw error;
-    }
+    const safePayout = await AffiliatePayoutRequest.findById(payout._id)
+      .select("-transferReference -transferReferenceKey").lean();
+    res.json({
+      payoutRequest: safePayout,
+      idempotentReplay: Boolean(payout.status === "Paid" && payout.paidAt && new Date(payout.paidAt).getTime() < Date.now() - 1000),
+      message: "External transfer reference recorded and commission ledger closed. Shivasha did not initiate the transfer."
+    });
   } catch (error) { next(error); }
 });
+
 
 router.get("/ads", async (_req, res, next) => {
   try {
