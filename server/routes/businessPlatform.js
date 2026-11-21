@@ -330,6 +330,7 @@ router.post("/marketplace/payout-requests", async (req, res, next) => {
     if (!payoutCurrencies.includes(currency) || idempotencyKey.length < 8) {
       return res.status(400).json({ message: "Provide a supported currency and an idempotency key of 8-100 characters." });
     }
+    await Promise.all([AffiliatePayoutRequest.init(), AffiliateCommissionLedger.init(), AffiliatePayoutDestination.init()]);
     const prior = await AffiliatePayoutRequest.findOne({ affiliate: req.user.id, idempotencyKey })
       .select("-transferReference -transferReferenceKey").lean();
     if (prior) return res.status(200).json({ payoutRequest: prior, idempotentReplay: true });
