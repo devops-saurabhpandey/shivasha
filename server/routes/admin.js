@@ -85,6 +85,9 @@ router.post("/marketplace-payments/:id/confirm", async (req, res, next) => {
       }
       if (order.affiliate) {
         const existingLedger = await AffiliateCommissionLedger.findOne({ order: order._id });
+        if (existingLedger?.status === "Accrued" && order.commissionStatus === "Accrued") {
+          return res.status(409).json({ message: "This order and its commission ledger have already been reconciled." });
+        }
         if (existingLedger?.status === "Pending") {
           await AffiliateCommissionLedger.updateOne(
             { _id: existingLedger._id, status: "Pending" },
@@ -98,10 +101,12 @@ router.post("/marketplace-payments/:id/confirm", async (req, res, next) => {
             { $set: { commissionStatus: "Accrued" } }
           );
           const refreshedOrder = await Order.findById(order._id).lean();
+          if (refreshedOrder?.commissionStatus !== "Accrued") return res.status(503).json({ message: "Commission ledger is accrued; order status recovery is pending. Retry with the same payment reference." });
           return res.json({ order: refreshedOrder, commissionLedger: recovered, message: "Existing payment reconciliation recovered into the commission ledger. No money was transferred." });
         }
         if (recovered?.status === "Pending") return res.status(503).json({ message: "Payment is recorded; commission ledger recovery is pending. Retry with the same payment reference." });
         if (recovered?.status === "Reversed") return res.status(409).json({ message: "This commission was reversed and cannot be accrued again automatically." });
+        return res.status(503).json({ message: "Payment is recorded but its commission ledger entry is missing. Admin review is required." });
       }
       return res.status(409).json({ message: "This order has already been reconciled." });
     }
