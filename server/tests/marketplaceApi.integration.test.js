@@ -109,7 +109,9 @@ if (!enabled) {
         User.deleteMany({ _id: { $in: [buyer?._id, provider?._id, outsider?._id, admin?._id, secondAdmin?._id, affiliate?._id].filter(Boolean) } }),
         Listing.deleteMany({}),
         Order.deleteMany({}),
-        CommissionLedger.deleteMany({}),\n        PayoutDestination.deleteMany({}),\n        PayoutRequest.deleteMany({})
+        CommissionLedger.deleteMany({}),
+        PayoutDestination.deleteMany({}),
+        PayoutRequest.deleteMany({})
       ]);
       await mongoose.disconnect();
     }
