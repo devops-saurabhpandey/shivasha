@@ -286,7 +286,7 @@ const marketplaceOrderSchema = new mongoose.Schema({
   platformFeeAmount: { type: Number, default: 0, min: 0 },
   affiliateSharePercent: { type: Number, default: 0, min: 0, max: 100 },
   affiliateCommission: { type: Number, default: 0, min: 0 },
-  commissionStatus: { type: String, enum: ["Not accrued", "Accrued", "Paid out", "Reversed"], default: "Not accrued" },
+  commissionStatus: { type: String, enum: ["Not accrued", "Pending", "Accrued", "Paid out", "Reversed"], default: "Not accrued" },
   affiliateCommissionEntry: { type: affiliateCommissionEntrySchema, default: null, select: false }
 }, { timestamps: true });
 marketplaceOrderSchema.index({ buyer: 1, createdAt: -1 });
