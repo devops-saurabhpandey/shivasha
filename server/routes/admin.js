@@ -237,6 +237,19 @@ router.post("/affiliate-payout-destinations/:affiliateId", async (req, res, next
   } catch (error) { next(error); }
 });
 
+router.patch("/affiliate-payout-destinations/:affiliateId/revoke", async (req, res, next) => {
+  try {
+    if (!mongoose.isValidObjectId(req.params.affiliateId)) return res.status(400).json({ message: "Invalid affiliate ID." });
+    const destination = await AffiliatePayoutDestination.findOneAndUpdate(
+      { affiliate: req.params.affiliateId, status: "Verified" },
+      { $set: { status: "Revoked", verificationNote: typeof req.body?.reason === "string" ? req.body.reason.trim().slice(0, 500) : "Revoked by administrator." } },
+      { new: true }
+    ).select("-recipientReference").populate("affiliate", "name email").lean();
+    if (!destination) return res.status(404).json({ message: "Verified payout destination not found." });
+    res.json({ destination, message: "Payout destination revoked. New payout approvals and claims are blocked until re-verification." });
+  } catch (error) { next(error); }
+});
+
 router.get("/marketplace-payout-requests", async (req, res, next) => {
   try {
     const status = typeof req.query.status === "string" ? req.query.status : "";
@@ -286,15 +299,15 @@ router.post("/marketplace-payout-requests/:id/reject", async (req, res, next) =>
     const existing = await AffiliatePayoutRequest.findById(req.params.id).lean();
     if (!existing) return res.status(404).json({ message: "Payout request not found." });
     let rejected = existing;
-    if (existing.status === "Requested") {
+    if (["Requested", "Approved"].includes(existing.status) && !existing.claimedBy) {
       rejected = await AffiliatePayoutRequest.findOneAndUpdate(
-        { _id: req.params.id, status: "Requested" },
+        { _id: req.params.id, status: { $in: ["Requested", "Approved"] }, claimedBy: null },
         { $set: { status: "Rejected", rejectedBy: req.user.id, rejectedAt: new Date(), rejectionReason: reason } },
         { new: true }
       ).lean();
       if (!rejected) return res.status(409).json({ message: "Payout request changed while being rejected." });
     } else if (existing.status !== "Rejected") {
-      return res.status(409).json({ message: "Only a requested payout can be rejected." });
+      return res.status(409).json({ message: "Only a requested or approved, unclaimed payout can be rejected." });
     }
     // Safe to retry: a rejected request may need reservation cleanup after an interrupted write.
     await AffiliateCommissionLedger.updateMany(
@@ -316,6 +329,8 @@ router.post("/marketplace-payout-requests/:id/claim", async (req, res, next) => 
       return res.json({ payoutRequest: current, idempotentReplay: true });
     }
     if (current.status !== "Approved") return res.status(409).json({ message: "Only an approved payout can be claimed." });
+    const destination = await AffiliatePayoutDestination.findOne({ _id: current.destination, affiliate: current.affiliate, status: "Verified" }).select("_id").lean();
+    if (!destination) return res.status(409).json({ message: "Payout destination has been revoked or is no longer verified." });
     if (String(current.approvedBy) === String(req.user.id)) {
       return res.status(403).json({ message: "The approving administrator cannot claim or execute the same payout." });
     }
