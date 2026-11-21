@@ -256,6 +256,17 @@ router.patch("/marketplace/inquiries/:id", async (req, res, next) => {
 
 
 
+// A per-order commission accrual event. Its fields are immutable after the
+// initial payment reconciliation; it is an audit snapshot, not a payout ledger.
+const affiliateCommissionEntrySchema = new mongoose.Schema({
+  order: { type: mongoose.Schema.Types.ObjectId, required: true, immutable: true },
+  affiliate: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true, immutable: true },
+  amount: { type: Number, required: true, min: 0, immutable: true },
+  currency: { type: String, enum: ["USD", "INR", "EUR", "GBP", "AED", "CAD", "AUD"], required: true, immutable: true },
+  sharePercent: { type: Number, required: true, min: 0, max: 100, immutable: true },
+  accruedAt: { type: Date, required: true, immutable: true }
+}, { _id: false, strict: "throw" });
+
 // Revenue foundation. No card/bank credentials are collected or stored here.
 const marketplaceOrderSchema = new mongoose.Schema({
   listing: { type: mongoose.Schema.Types.ObjectId, ref: "ShivashaServiceListing", required: true, index: true },
@@ -276,7 +287,7 @@ const marketplaceOrderSchema = new mongoose.Schema({
   affiliateSharePercent: { type: Number, default: 0, min: 0, max: 100 },
   affiliateCommission: { type: Number, default: 0, min: 0 },
   commissionStatus: { type: String, enum: ["Not accrued", "Accrued", "Paid out", "Reversed"], default: "Not accrued" },
-  affiliateCommissionEntry: { type: mongoose.Schema.Types.Mixed, default: null, select: false }
+  affiliateCommissionEntry: { type: affiliateCommissionEntrySchema, default: null, select: false }
 }, { timestamps: true });
 marketplaceOrderSchema.index({ buyer: 1, createdAt: -1 });
 marketplaceOrderSchema.index({ provider: 1, createdAt: -1 });
