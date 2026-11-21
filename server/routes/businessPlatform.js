@@ -2,6 +2,7 @@ import express from "express";
 import mongoose from "mongoose";
 import { randomBytes } from "node:crypto";
 import { requireAuth } from "../middleware/auth.js";
+import { getMarketplaceOrderTransitionError } from "../utils/marketplaceOrderRules.js";
 
 const router = express.Router();
 router.use(requireAuth);
@@ -268,6 +269,7 @@ const marketplaceOrderSchema = new mongoose.Schema({
   status: { type: String, enum: ["Requested", "Accepted", "Declined", "Completed", "Cancelled"], default: "Requested", index: true },
   paymentStatus: { type: String, enum: ["Unpaid", "Paid", "Refunded"], default: "Unpaid", index: true },
   paymentReference: { type: String, default: "", maxlength: 120 },
+  paymentReferenceKey: { type: String, select: false },
   paidAt: { type: Date, default: null },
   platformFeePercent: { type: Number, default: 0, min: 0, max: 30 },
   platformFeeAmount: { type: Number, default: 0, min: 0 },
@@ -277,6 +279,7 @@ const marketplaceOrderSchema = new mongoose.Schema({
 }, { timestamps: true });
 marketplaceOrderSchema.index({ buyer: 1, createdAt: -1 });
 marketplaceOrderSchema.index({ provider: 1, createdAt: -1 });
+marketplaceOrderSchema.index({ paymentReferenceKey: 1 }, { unique: true, partialFilterExpression: { paymentReferenceKey: { $type: "string" } } });
 const MarketplaceOrder = mongoose.models.ShivashaMarketplaceOrder || mongoose.model("ShivashaMarketplaceOrder", marketplaceOrderSchema);
 
 const affiliateProfileSchema = new mongoose.Schema({
@@ -350,14 +353,26 @@ router.patch("/marketplace/orders/:id", async (req, res, next) => {
     if (!["Accepted", "Declined", "Completed", "Cancelled"].includes(status)) return res.status(400).json({ message: "Invalid order status." });
     const order = await MarketplaceOrder.findOne({ _id: req.params.id, $or: [{ buyer: req.user.id }, { provider: req.user.id }] });
     if (!order) return res.status(404).json({ message: "Order not found." });
-    if (["Paid", "Refunded"].includes(order.paymentStatus) && status === "Cancelled") return res.status(409).json({ message: "Paid orders require an administrator refund review." });
-    if (status === "Accepted" || status === "Declined" || status === "Completed") {
-      if (String(order.provider) !== String(req.user.id)) return res.status(403).json({ message: "Only the provider can update this order status." });
+    const transitionError = getMarketplaceOrderTransitionError({
+      currentStatus: order.status,
+      nextStatus: status,
+      actorId: req.user.id,
+      buyerId: order.buyer,
+      providerId: order.provider,
+      paymentStatus: order.paymentStatus
+    });
+    if (transitionError) {
+      const forbidden = transitionError.startsWith("Only ") || transitionError.startsWith("You are not allowed");
+      return res.status(forbidden ? 403 : 409).json({ message: transitionError });
     }
-    if (status === "Cancelled" && String(order.buyer) !== String(req.user.id)) return res.status(403).json({ message: "Only the buyer can cancel this order." });
-    order.status = status;
-    await order.save();
-    res.json({ order });
+    // Compare-and-set prevents a buyer cancellation and provider acceptance racing each other.
+    const updatedOrder = await MarketplaceOrder.findOneAndUpdate(
+      { _id: order._id, status: order.status, paymentStatus: order.paymentStatus },
+      { $set: { status } },
+      { new: true, runValidators: true }
+    );
+    if (!updatedOrder) return res.status(409).json({ message: "Order changed while you were updating it. Refresh and try again." });
+    res.json({ order: updatedOrder });
   } catch (error) { next(error); }
 });
 
