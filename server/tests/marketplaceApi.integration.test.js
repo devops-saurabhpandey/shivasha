@@ -73,7 +73,7 @@ if (!enabled) {
     process.env.JWT_SECRET = secret;
     process.env.MARKETPLACE_PLATFORM_FEE_PERCENT = "10";
     process.env.MARKETPLACE_AFFILIATE_SHARE_PERCENT = "20";
-    await mongoose.connect(mongoUri);
+    await mongoose.connect(mongoUri, { dbName: "shivasha_marketplace_integration_test" });
     Listing = mongoose.model("ShivashaServiceListing");
     Order = mongoose.model("ShivashaMarketplaceOrder");
     await Promise.all([User.init(), Listing.init(), Order.init()]);
