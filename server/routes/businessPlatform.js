@@ -325,9 +325,9 @@ router.get("/marketplace/payout-requests", async (req, res, next) => {
 router.post("/marketplace/payout-requests", async (req, res, next) => {
   let createdRequest = null;
   try {
-    const currency = cleanText(req.body?.currency, 3).toUpperCase();
-    const idempotencyKey = cleanText(req.body?.idempotencyKey, 100);
-    if (!payoutCurrencies.includes(currency) || idempotencyKey.length < 8) {
+    const currency = typeof req.body?.currency === "string" ? req.body.currency.trim().toUpperCase() : "";
+    const idempotencyKey = typeof req.body?.idempotencyKey === "string" ? req.body.idempotencyKey.trim() : "";
+    if (!payoutCurrencies.includes(currency) || idempotencyKey.length < 8 || idempotencyKey.length > 100) {
       return res.status(400).json({ message: "Provide a supported currency and an idempotency key of 8-100 characters." });
     }
     await Promise.all([AffiliatePayoutRequest.init(), AffiliateCommissionLedger.init(), AffiliatePayoutDestination.init()]);
@@ -377,7 +377,7 @@ router.post("/marketplace/payout-requests", async (req, res, next) => {
       await AffiliatePayoutRequest.deleteOne({ _id: createdRequest._id, status: "Requested" }).catch(() => {});
     }
     if (error?.code === 11000) {
-      const existing = await AffiliatePayoutRequest.findOne({ affiliate: req.user.id, idempotencyKey: cleanText(req.body?.idempotencyKey, 100) })
+      const existing = await AffiliatePayoutRequest.findOne({ affiliate: req.user.id, idempotencyKey: typeof req.body?.idempotencyKey === "string" ? req.body.idempotencyKey.trim() : "" })
         .select("-transferReference -transferReferenceKey").lean();
       if (existing) return res.status(200).json({ payoutRequest: existing, idempotentReplay: true });
     }
