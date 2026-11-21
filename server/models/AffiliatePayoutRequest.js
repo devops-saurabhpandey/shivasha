@@ -21,7 +21,7 @@ const affiliatePayoutRequestSchema = new mongoose.Schema({
   paidAt: { type: Date, default: null },
   // External transfer reference is private and is only recorded after a manual transfer.
   transferReference: { type: String, default: "", maxlength: 120, select: false },
-  transferReferenceKey: { type: String, default: "", maxlength: 120, select: false }
+  transferReferenceKey: { type: String, default: undefined, maxlength: 120, select: false }
 }, { timestamps: true });
 
 affiliatePayoutRequestSchema.index({ affiliate: 1, idempotencyKey: 1 }, { unique: true });
