@@ -170,7 +170,7 @@ router.post("/marketplace-payments/:id/confirm", async (req, res, next) => {
     }
     res.json({
       order, commissionLedger: ledgerEntry,
-      message: "External payment reconciled and commission recorded in the ledger. This endpoint does not collect, transfer, or process money."
+      message: "External payment reconciled and commission recorded in the ledger. This endpoint does not collect or process money or transfer funds."
     });
   } catch (error) {
     if (error?.code === 11000 && (error?.keyPattern?.paymentReferenceKey || error?.keyPattern?.order)) {
