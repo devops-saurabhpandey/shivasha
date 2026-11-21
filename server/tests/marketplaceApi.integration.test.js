@@ -162,6 +162,9 @@ if (!enabled) {
       order: String(order._id), affiliate: String(affiliate._id),
       amount: 20, currency: "INR", sharePercent: 20
     });
+    await Order.updateOne({ _id: order._id }, { $set: { "affiliateCommissionEntry.amount": 999 } });
+    const immutableAccrual = await Order.findById(order._id).select("+affiliateCommissionEntry").lean();
+    assert.equal(immutableAccrual.affiliateCommissionEntry.amount, 20);
     assert.match(confirmed.payload.message, /does not collect or process money/i);
 
     const replay = await request(`/api/admin/marketplace-payments/${order._id}/confirm`, {
