@@ -87,9 +87,9 @@ if (!enabled) {
     PayoutDestination = AffiliatePayoutDestination;
     PayoutRequest = AffiliatePayoutRequest;
     await Promise.all([User.init(), Listing.init(), Order.init(), CommissionLedger.init(), PayoutDestination.init(), PayoutRequest.init()]);
-    [buyer, provider, outsider, admin, affiliate] = await Promise.all([
+    [buyer, provider, outsider, admin, secondAdmin, affiliate] = await Promise.all([
       createUser("Buyer"), createUser("Provider"), createUser("Outsider"),
-      createUser("Admin", "admin"), createUser("Affiliate")
+      createUser("Admin", "admin"), createUser("SecondAdmin", "admin"), createUser("Affiliate")
     ]);
     const app = express();
     app.use(express.json());
