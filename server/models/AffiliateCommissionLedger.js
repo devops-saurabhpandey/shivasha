@@ -11,7 +11,9 @@ const affiliateCommissionLedgerSchema = new mongoose.Schema({
   commissionAmount: { type: Number, required: true, min: 0, immutable: true },
   // Kept private: never return the external transaction reference to affiliates.
   paymentReferenceKey: { type: String, required: true, select: false, immutable: true },
-  status: { type: String, enum: ["Pending", "Accrued", "Reversed"], default: "Pending", index: true },
+  status: { type: String, enum: ["Pending", "Accrued", "Paid out", "Reversed"], default: "Pending", index: true },
+  payoutRequest: { type: mongoose.Schema.Types.ObjectId, ref: "ShivashaAffiliatePayoutRequest", default: null, index: true },
+  paidOutAt: { type: Date, default: null },
   createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true, immutable: true },
   accruedAt: { type: Date, default: null },
   reversedAt: { type: Date, default: null },
