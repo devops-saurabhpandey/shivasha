@@ -161,6 +161,9 @@ if (!enabled) {
     assert.equal(ledgerEntries.length, 1);
     assert.equal(ledgerEntries[0].status, "Accrued");
     assert.equal(ledgerEntries[0].paymentReferenceKey, "txn-int-10001");
+    await CommissionLedger.updateOne({ order: order._id }, { $set: { commissionAmount: 999 } });
+    const immutableLedger = await CommissionLedger.findOne({ order: order._id }).lean();
+    assert.equal(immutableLedger.commissionAmount, 20);
     const accrued = await Order.findById(order._id).select("+affiliateCommissionEntry").lean();
     assert.deepEqual({
       order: String(accrued.affiliateCommissionEntry.order),
@@ -221,6 +224,29 @@ if (!enabled) {
       assert.equal(Object.hasOwn(affiliateOrder, field), false, `unexpected private field: ${field}`);
     }
     assert.equal(affiliateOrder.affiliateCommission, 20);
+  });
+
+  test("same-reference retry recovers a pending commission ledger after payment is recorded", async () => {
+    const order = await createOrder({ amount: 2000, withAffiliate: true });
+    await Order.updateOne({ _id: order._id }, { $set: {
+      status: "Completed", paymentStatus: "Paid", paymentReference: "RECOVERY-REF-2000",
+      paymentReferenceKey: "recovery-ref-2000", paidAt: new Date(),
+      platformFeePercent: 10, platformFeeAmount: 200,
+      affiliateSharePercent: 20, affiliateCommission: 40, commissionStatus: "Pending"
+    } });
+    await CommissionLedger.create({
+      order: order._id, affiliate: affiliate._id, orderAmount: 2000, currency: "INR",
+      platformFeePercent: 10, platformFeeAmount: 200, affiliateSharePercent: 20,
+      commissionAmount: 40, paymentReferenceKey: "recovery-ref-2000",
+      status: "Pending", createdBy: admin._id
+    });
+    const result = await request(`/api/admin/marketplace-payments/${order._id}/confirm`, {
+      user: admin, method: "POST", body: { paymentReference: "RECOVERY-REF-2000" }
+    });
+    assert.equal(result.status, 200);
+    assert.equal(result.payload.commissionLedger.status, "Accrued");
+    const storedOrder = await Order.findById(order._id).lean();
+    assert.equal(storedOrder.commissionStatus, "Accrued");
   });
 
   test("admin commission ledger is restricted and hides external payment references", async () => {
