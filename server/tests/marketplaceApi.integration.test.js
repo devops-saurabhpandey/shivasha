@@ -378,7 +378,7 @@ if (!enabled) {
   });
 
   test("rejecting an affiliate payout releases its reserved accrued commissions", async () => {
-    const order = await createOrder({ amount: 30000, withAffiliate: true });
+    const order = await createOrder({ amount: 30000, withAffiliate: true, affiliateUser: payoutAffiliate });
     await Order.updateOne({ _id: order._id }, { $set: { status: "Completed" } });
     await request(`/api/admin/marketplace-payments/${order._id}/confirm`, {
       user: admin, method: "POST", body: { paymentReference: "PAYOUT-REJECT-PAYMENT-30000" }
