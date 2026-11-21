@@ -21,6 +21,7 @@ let outsider;
 let admin;
 let secondAdmin;
 let affiliate;
+let payoutAffiliate;
 let Listing;
 let Order;
 let CommissionLedger;
@@ -50,7 +51,7 @@ async function request(path, { user, method = "GET", body } = {}) {
   const payload = await response.json();
   return { status: response.status, payload };
 }
-async function createOrder({ amount = 1000, withAffiliate = false } = {}) {
+async function createOrder({ amount = 1000, withAffiliate = false, affiliateUser = affiliate } = {}) {
   const listing = await Listing.create({
     owner: provider._id,
     title: "Integration test service",
@@ -63,7 +64,7 @@ async function createOrder({ amount = 1000, withAffiliate = false } = {}) {
     listing: listing._id,
     buyer: buyer._id,
     provider: provider._id,
-    affiliate: withAffiliate ? affiliate._id : null,
+    affiliate: withAffiliate ? affiliateUser._id : null,
     referralCode: withAffiliate ? "TEST-REF" : "",
     description: "Integration test order requirement",
     amount,
@@ -87,9 +88,9 @@ if (!enabled) {
     PayoutDestination = AffiliatePayoutDestination;
     PayoutRequest = AffiliatePayoutRequest;
     await Promise.all([User.init(), Listing.init(), Order.init(), CommissionLedger.init(), PayoutDestination.init(), PayoutRequest.init()]);
-    [buyer, provider, outsider, admin, secondAdmin, affiliate] = await Promise.all([
+    [buyer, provider, outsider, admin, secondAdmin, affiliate, payoutAffiliate] = await Promise.all([
       createUser("Buyer"), createUser("Provider"), createUser("Outsider"),
-      createUser("Admin", "admin"), createUser("SecondAdmin", "admin"), createUser("Affiliate")
+      createUser("Admin", "admin"), createUser("SecondAdmin", "admin"), createUser("Affiliate"), createUser("PayoutAffiliate")
     ]);
     const app = express();
     app.use(express.json());
@@ -106,7 +107,7 @@ if (!enabled) {
     if (server) await new Promise((resolve, reject) => server.close(error => error ? reject(error) : resolve()));
     if (mongoose.connection.readyState === 1) {
       await Promise.all([
-        User.deleteMany({ _id: { $in: [buyer?._id, provider?._id, outsider?._id, admin?._id, secondAdmin?._id, affiliate?._id].filter(Boolean) } }),
+        User.deleteMany({ _id: { $in: [buyer?._id, provider?._id, outsider?._id, admin?._id, secondAdmin?._id, affiliate?._id, payoutAffiliate?._id].filter(Boolean) } }),
         Listing.deleteMany({}),
         Order.deleteMany({}),
         CommissionLedger.deleteMany({}),
@@ -279,7 +280,7 @@ if (!enabled) {
 
 
   test("affiliate payouts require a verified destination, reserve balances, and enforce two-admin manual execution", async () => {
-    const order = await createOrder({ amount: 30000, withAffiliate: true });
+    const order = await createOrder({ amount: 30000, withAffiliate: true, affiliateUser: payoutAffiliate });
     await Order.updateOne({ _id: order._id }, { $set: { status: "Completed" } });
     const confirmed = await request(`/api/admin/marketplace-payments/${order._id}/confirm`, {
       user: admin, method: "POST", body: { paymentReference: "PAYOUT-ORDER-PAYMENT-30000" }
@@ -288,11 +289,11 @@ if (!enabled) {
     assert.equal(confirmed.payload.commissionLedger.commissionAmount, 600);
 
     const noDestination = await request("/api/business-platform/marketplace/payout-requests", {
-      user: affiliate, method: "POST", body: { currency: "INR", idempotencyKey: "payout-request-0001" }
+      user: payoutAffiliate, method: "POST", body: { currency: "INR", idempotencyKey: "payout-request-0001" }
     });
     assert.equal(noDestination.status, 409);
 
-    const destination = await request(`/api/admin/affiliate-payout-destinations/${affiliate._id}`, {
+    const destination = await request(`/api/admin/affiliate-payout-destinations/${payoutAffiliate._id}`, {
       user: admin, method: "POST", body: {
         maskedDestination: "UPI ••••@bank",
         verificationNote: "KYC reviewed outside Shivasha; recipient token issued by provider."
@@ -353,7 +354,7 @@ if (!enabled) {
     assert.equal(paidReplay.status, 200);
     assert.equal(paidReplay.payload.idempotentReplay, true);
 
-    const available = await request("/api/business-platform/marketplace/payout-requests", { user: affiliate });
+    const available = await request("/api/business-platform/marketplace/payout-requests", { user: payoutAffiliate });
     assert.equal(available.payload.available.length, 0);
 
     const secondOrder = await createOrder({ amount: 30000, withAffiliate: true });
@@ -363,7 +364,7 @@ if (!enabled) {
     });
     assert.equal(secondConfirmed.status, 200);
     const secondRequested = await request("/api/business-platform/marketplace/payout-requests", {
-      user: affiliate, method: "POST", body: { currency: "INR", idempotencyKey: "payout-request-0002" }
+      user: payoutAffiliate, method: "POST", body: { currency: "INR", idempotencyKey: "payout-request-0002" }
     });
     assert.equal(secondRequested.status, 201);
     const secondPayoutId = secondRequested.payload.payoutRequest._id;
@@ -388,7 +389,7 @@ if (!enabled) {
       }
     });
     const requested = await request("/api/business-platform/marketplace/payout-requests", {
-      user: affiliate, method: "POST", body: { currency: "INR", idempotencyKey: "payout-request-reject-01" }
+      user: payoutAffiliate, method: "POST", body: { currency: "INR", idempotencyKey: "payout-request-reject-01" }
     });
     assert.equal(requested.status, 201);
     const payoutId = requested.payload.payoutRequest._id;
@@ -396,7 +397,7 @@ if (!enabled) {
       user: admin, method: "POST", body: { reason: "Recipient details require re-verification." }
     });
     assert.equal(rejected.status, 200);
-    assert.equal(await CommissionLedger.countDocuments({ payoutRequest: null, status: "Accrued", affiliate: affiliate._id }), 1);
+    assert.equal(await CommissionLedger.countDocuments({ payoutRequest: null, status: "Accrued", affiliate: payoutAffiliate._id }), 1);
   });
 
   test("simultaneous payment confirmations for one order reconcile exactly once", async () => {
