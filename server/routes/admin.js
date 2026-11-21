@@ -62,7 +62,7 @@ router.get("/marketplace-payments", async (_req, res, next) => {
 router.post("/marketplace-payments/:id/confirm", async (req, res, next) => {
   try {
     if (!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({ message: "Invalid order ID." });
-    const paymentReference = typeof req.body?.paymentReference === "string" ? req.body.paymentReference.trim().slice(0, 120) : "";
+    const paymentReference = typeof req.body?.paymentReference === "string" ? req.body.paymentReference.trim() : "";
     const paymentReferenceKey = normalizeMarketplacePaymentReference(paymentReference);
     const platformFeePercent = Number(process.env.MARKETPLACE_PLATFORM_FEE_PERCENT);
     const affiliateSharePercent = Number(process.env.MARKETPLACE_AFFILIATE_SHARE_PERCENT);
@@ -92,7 +92,15 @@ router.post("/marketplace-payments/:id/confirm", async (req, res, next) => {
         platformFeeAmount: fee,
         affiliateSharePercent: order.affiliate ? affiliateSharePercent : 0,
         affiliateCommission,
-        commissionStatus: order.affiliate ? "Accrued" : "Not accrued"
+        commissionStatus: order.affiliate ? "Accrued" : "Not accrued",
+        affiliateCommissionEntry: order.affiliate ? {
+          order: order._id,
+          affiliate: order.affiliate,
+          amount: affiliateCommission,
+          currency: order.currency,
+          sharePercent: affiliateSharePercent,
+          accruedAt: new Date()
+        } : null
       } },
       { new: true, runValidators: true }
     );
