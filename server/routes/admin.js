@@ -212,9 +212,12 @@ router.post("/affiliate-payout-destinations/:affiliateId", async (req, res, next
   try {
     if (!mongoose.isValidObjectId(req.params.affiliateId)) return res.status(400).json({ message: "Invalid affiliate ID." });
     const maskedDestination = typeof req.body?.maskedDestination === "string" ? req.body.maskedDestination.trim() : "";
-    const verificationNote = typeof req.body?.verificationNote === "string" ? req.body.verificationNote.trim().slice(0, 500) : "";
-    if (maskedDestination.length < 4 || maskedDestination.length > 100) {
-      return res.status(400).json({ message: "Provide a masked payout destination label (4-100 characters). Never submit or store raw bank or UPI credentials." });
+    const verificationNote = typeof req.body?.verificationNote === "string" ? req.body.verificationNote.trim() : "";
+    if (maskedDestination.length < 4 || maskedDestination.length > 100 || !/[•*xX]{3,}/.test(maskedDestination)) {
+      return res.status(400).json({ message: "Provide a masked payout destination label (4-100 characters) containing at least three masking characters. Never submit or store raw bank or UPI credentials." });
+    }
+    if (verificationNote.length < 10 || verificationNote.length > 500) {
+      return res.status(400).json({ message: "Record a 10-500 character note confirming that payout identity and destination checks were completed outside Shivasha." });
     }
     await AffiliatePayoutDestination.init();
     const affiliate = await User.findById(req.params.affiliateId).select("_id role").lean();
@@ -256,6 +259,8 @@ router.post("/marketplace-payout-requests/:id/approve", async (req, res, next) =
     if (!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({ message: "Invalid payout request ID." });
     const payout = await AffiliatePayoutRequest.findOne({ _id: req.params.id, status: "Requested" }).lean();
     if (!payout) return res.status(409).json({ message: "Only a requested payout can be approved." });
+    const destination = await AffiliatePayoutDestination.findOne({ _id: payout.destination, affiliate: payout.affiliate, status: "Verified" }).select("_id").lean();
+    if (!destination) return res.status(409).json({ message: "The payout destination is no longer verified. Re-verify it before approval." });
     const entries = await AffiliateCommissionLedger.find({
       _id: { $in: payout.ledgerEntries }, payoutRequest: payout._id,
       affiliate: payout.affiliate, currency: payout.currency, status: "Accrued"
