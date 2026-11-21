@@ -275,7 +275,8 @@ const marketplaceOrderSchema = new mongoose.Schema({
   platformFeeAmount: { type: Number, default: 0, min: 0 },
   affiliateSharePercent: { type: Number, default: 0, min: 0, max: 100 },
   affiliateCommission: { type: Number, default: 0, min: 0 },
-  commissionStatus: { type: String, enum: ["Not accrued", "Accrued", "Paid out", "Reversed"], default: "Not accrued" }
+  commissionStatus: { type: String, enum: ["Not accrued", "Accrued", "Paid out", "Reversed"], default: "Not accrued" },
+  affiliateCommissionEntry: { type: mongoose.Schema.Types.Mixed, default: null, select: false }
 }, { timestamps: true });
 marketplaceOrderSchema.index({ buyer: 1, createdAt: -1 });
 marketplaceOrderSchema.index({ provider: 1, createdAt: -1 });
@@ -299,15 +300,23 @@ router.get("/marketplace/revenue", async (req, res, next) => {
         catch (error) { if (error?.code !== 11000 || attempt === 2) throw error; }
       }
     }
-    const [orders, aggregate] = await Promise.all([
-      MarketplaceOrder.find({ $or: [{ buyer: req.user.id }, { provider: req.user.id }, { affiliate: req.user.id }] })
+    const [ownOrders, affiliateOrders, aggregate] = await Promise.all([
+      MarketplaceOrder.find({ $or: [{ buyer: req.user.id }, { provider: req.user.id }] })
+        .populate("listing", "title").sort({ createdAt: -1 }).limit(100).lean(),
+      // Affiliate views are deliberately restricted: never expose buyer/provider IDs,
+      // private order descriptions, referral codes, or external payment references.
+      MarketplaceOrder.find({ affiliate: req.user.id })
+        .select("_id listing amount currency status paymentStatus affiliateCommission commissionStatus createdAt updatedAt")
         .populate("listing", "title").sort({ createdAt: -1 }).limit(100).lean(),
       MarketplaceOrder.aggregate([
         { $match: { affiliate: new mongoose.Types.ObjectId(req.user.id), paymentStatus: "Paid", commissionStatus: { $in: ["Accrued", "Paid out"] } } },
         { $group: { _id: "$currency", total: { $sum: "$affiliateCommission" }, orders: { $sum: 1 } } }
       ])
     ]);
-    res.json({ referralCode: profile.referralCode, orders, affiliateEarnings: aggregate, note: "Earnings are accrued only after an administrator confirms a real payment. No payment gateway is connected." });
+    const orders = [...ownOrders, ...affiliateOrders]
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+      .slice(0, 100);
+    res.json({ referralCode: profile.referralCode, orders, affiliateEarnings: aggregate, note: "Earnings are accrued only after an administrator confirms a real payment. No payment gateway is connected; accrued earnings are not payouts." });
   } catch (error) { next(error); }
 });
 
