@@ -151,6 +151,17 @@ if (!enabled) {
     assert.equal(confirmed.payload.order.paymentStatus, "Paid");
     assert.equal(confirmed.payload.order.platformFeeAmount, 100);
     assert.equal(confirmed.payload.order.affiliateCommission, 20);
+    const accrued = await Order.findById(order._id).select("+affiliateCommissionEntry").lean();
+    assert.deepEqual({
+      order: String(accrued.affiliateCommissionEntry.order),
+      affiliate: String(accrued.affiliateCommissionEntry.affiliate),
+      amount: accrued.affiliateCommissionEntry.amount,
+      currency: accrued.affiliateCommissionEntry.currency,
+      sharePercent: accrued.affiliateCommissionEntry.sharePercent
+    }, {
+      order: String(order._id), affiliate: String(affiliate._id),
+      amount: 20, currency: "INR", sharePercent: 20
+    });
     assert.match(confirmed.payload.message, /does not collect or process money/i);
 
     const replay = await request(`/api/admin/marketplace-payments/${order._id}/confirm`, {
@@ -181,5 +192,64 @@ if (!enabled) {
       user: admin, method: "POST", body: { paymentReference: 123456 }
     });
     assert.equal(result.status, 400);
+  });
+
+  test("affiliate revenue view omits buyer/provider identity, private description and payment reference", async () => {
+    const order = await createOrder({ withAffiliate: true });
+    await Order.updateOne({ _id: order._id }, { $set: {
+      status: "Completed", paymentStatus: "Paid", paymentReference: "PRIVATE-BANK-REF-123",
+      paymentReferenceKey: "private-bank-ref-123", affiliateCommission: 20, commissionStatus: "Accrued"
+    } });
+    const result = await request("/api/business-platform/marketplace/revenue", { user: affiliate });
+    assert.equal(result.status, 200);
+    const affiliateOrder = result.payload.orders.find(item => String(item._id) === String(order._id));
+    assert.ok(affiliateOrder);
+    for (const field of ["buyer", "provider", "description", "paymentReference", "paymentReferenceKey", "referralCode"]) {
+      assert.equal(Object.hasOwn(affiliateOrder, field), false, `unexpected private field: ${field}`);
+    }
+    assert.equal(affiliateOrder.affiliateCommission, 20);
+  });
+
+  test("simultaneous payment confirmations for one order reconcile exactly once", async () => {
+    const order = await createOrder({ amount: 1500, withAffiliate: true });
+    await Order.updateOne({ _id: order._id }, { $set: { status: "Completed" } });
+    const results = await Promise.all(["CONCURRENT-ORDER-REF-A", "CONCURRENT-ORDER-REF-B"].map(paymentReference =>
+      request(`/api/admin/marketplace-payments/${order._id}/confirm`, {
+        user: admin, method: "POST", body: { paymentReference }
+      })
+    ));
+    assert.deepEqual(results.map(result => result.status).sort(), [200, 409]);
+    const stored = await Order.findById(order._id).select("+paymentReferenceKey +affiliateCommissionEntry").lean();
+    assert.equal(stored.paymentStatus, "Paid");
+    assert.equal(stored.commissionStatus, "Accrued");
+    assert.equal(stored.affiliateCommission, 30);
+    assert.ok(["concurrent-order-ref-a", "concurrent-order-ref-b"].includes(stored.paymentReferenceKey));
+    assert.equal(stored.affiliateCommissionEntry.amount, 30);
+  });
+
+  test("simultaneous confirmations cannot apply one external reference to two orders", async () => {
+    const first = await createOrder();
+    const second = await createOrder();
+    await Order.updateMany({ _id: { $in: [first._id, second._id] } }, { $set: { status: "Completed" } });
+    const results = await Promise.all([first, second].map(order =>
+      request(`/api/admin/marketplace-payments/${order._id}/confirm`, {
+        user: admin, method: "POST", body: { paymentReference: "CONCURRENT-SHARED-REF" }
+      })
+    ));
+    assert.deepEqual(results.map(result => result.status).sort(), [200, 409]);
+    assert.equal(await Order.countDocuments({ paymentReferenceKey: "concurrent-shared-ref", paymentStatus: "Paid" }), 1);
+  });
+
+  test("payment reconciliation rejects references longer than the schema limit without truncating", async () => {
+    const order = await createOrder();
+    await Order.updateOne({ _id: order._id }, { $set: { status: "Completed" } });
+    const tooLong = "X".repeat(121);
+    const result = await request(`/api/admin/marketplace-payments/${order._id}/confirm`, {
+      user: admin, method: "POST", body: { paymentReference: tooLong }
+    });
+    assert.equal(result.status, 400);
+    const unchanged = await Order.findById(order._id).lean();
+    assert.equal(unchanged.paymentStatus, "Unpaid");
+    assert.equal(unchanged.paymentReference, "");
   });
 }
