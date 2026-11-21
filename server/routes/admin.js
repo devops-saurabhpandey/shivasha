@@ -337,6 +337,7 @@ router.post("/marketplace-payout-requests/:id/mark-paid", async (req, res, next)
     if (String(payout.claimedBy) !== String(req.user.id)) {
       return res.status(403).json({ message: "Only the administrator who claimed this payout may record or recover its external transfer." });
     }
+    const wasAlreadyPaid = payout.status === "Paid";
     if (payout.status === "Paid") {
       if (payout.transferReferenceKey !== transferReferenceKey) {
         return res.status(409).json({ message: "This payout is already recorded with a different transfer reference." });
@@ -391,7 +392,7 @@ router.post("/marketplace-payout-requests/:id/mark-paid", async (req, res, next)
       .select("-transferReference -transferReferenceKey").lean();
     res.json({
       payoutRequest: safePayout,
-      idempotentReplay: Boolean(payout.status === "Paid" && payout.paidAt && new Date(payout.paidAt).getTime() < Date.now() - 1000),
+      idempotentReplay: wasAlreadyPaid,
       message: "External transfer reference recorded and commission ledger closed. Shivasha did not initiate the transfer."
     });
   } catch (error) { next(error); }
