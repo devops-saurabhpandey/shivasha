@@ -20,19 +20,19 @@ export function buildAffiliateCampaignKit({ course, referralUrl, language = "Hin
     : "Disclosure: This is an affiliate link. I may earn a commission from eligible purchases at no extra cost to you.";
   const safeUrl = String(referralUrl || "").slice(0, 500);
   const intro = language === "Hindi"
-    ? \`SHIVASHA Learning Academy पर \${title} सीखें। \${description}\`
-    : \`Explore \${title} on SHIVASHA Learning Academy. \${description}\`;
+    ? "SHIVASHA Learning Academy पर " + title + " सीखें। " + description
+    : "Explore " + title + " on SHIVASHA Learning Academy. " + description;
   const cta = language === "Hindi" ? "कोर्स की जानकारी यहाँ देखें:" : "View course details:";
+  const nl = String.fromCharCode(10);
   const copy = {
-    whatsapp: language === "Hindi"
-      ? \`📚 \${intro}\\n\\nस्तर: \${course.level} | भाषा: \${clean(course.language, 40)} | शुल्क: \${priceLabel}\\n\\n\${cta} \${safeUrl}\\n\\n\${disclosure}\`
-      : \`📚 \${intro}\\n\\nLevel: \${course.level} | Language: \${clean(course.language, 40)} | Price: \${priceLabel}\\n\\n\${cta} \${safeUrl}\\n\\n\${disclosure}\`,
-    facebook: language === "Hindi"
-      ? \`\${intro}\\n\\nइस कोर्स में क्या सीखने को मिलेगा, इसकी पूरी जानकारी कोर्स पेज पर पढ़ें।\\n\${cta} \${safeUrl}\\n\\n\${disclosure}\`
-      : \`\${intro}\\n\\nReview the course page for the full learning details and syllabus.\\n\${cta} \${safeUrl}\\n\\n\${disclosure}\`,
-    youtube: language === "Hindi"
-      ? \`वीडियो विवरण: \${title} – SHIVASHA Learning Academy\\n\\nइस कोर्स की जानकारी और उपलब्ध पाठ देखने के लिए: \${safeUrl}\\n\\n\${disclosure}\`
-      : \`Video description: \${title} – SHIVASHA Learning Academy\\n\\nSee course details and available lessons: \${safeUrl}\\n\\n\${disclosure}\`
+    whatsapp: "📚 " + intro + nl + nl + (language === "Hindi"
+      ? "स्तर: " + course.level + " | भाषा: " + clean(course.language, 40) + " | शुल्क: " + priceLabel
+      : "Level: " + course.level + " | Language: " + clean(course.language, 40) + " | Price: " + priceLabel) + nl + nl + cta + " " + safeUrl + nl + nl + disclosure,
+    facebook: intro + nl + nl + (language === "Hindi"
+      ? "इस कोर्स में क्या सीखने को मिलेगा, इसकी पूरी जानकारी कोर्स पेज पर पढ़ें।"
+      : "Review the course page for the full learning details and syllabus.") + nl + cta + " " + safeUrl + nl + nl + disclosure,
+    youtube: (language === "Hindi" ? "वीडियो विवरण: " : "Video description: ") + title + " – SHIVASHA Learning Academy" + nl + nl +
+      (language === "Hindi" ? "इस कोर्स की जानकारी और उपलब्ध पाठ देखने के लिए: " : "See course details and available lessons: ") + safeUrl + nl + nl + disclosure
   };
   const selected = [...new Set(channels)].filter(channel => ["whatsapp", "facebook", "youtube"].includes(channel));
   return selected.map(channel => ({ channel, content: copy[channel], disclosure, referralUrl: safeUrl }));
