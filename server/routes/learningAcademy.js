@@ -323,6 +323,14 @@ router.post("/orders/:id/refund-request", requireAuth, async (req,res,next) => {
   }catch(e){next(e);}
 });
 
+router.get("/admin/refund-requests", requireAuth, async (req,res,next) => {
+  try{
+    if(!await isAdmin(req.user.id))return res.status(403).json({message:"Admin access required."});
+    const orders=await LearningOrder.find({status:"refund_pending"}).populate("course","title").populate("student","name email").sort({updatedAt:1}).limit(200).lean();
+    res.json({orders});
+  }catch(e){next(e);}
+});
+
 router.patch("/admin/orders/:id/confirm-refund", requireAuth, async (req,res,next) => {
   try{
     if(!await isAdmin(req.user.id))return res.status(403).json({message:"Admin access required."});
