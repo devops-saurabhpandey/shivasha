@@ -6,6 +6,8 @@ import User from "../models/User.js";
 import AffiliatePartner from "../models/AffiliatePartner.js";
 import AffiliateEvent from "../models/AffiliateEvent.js";
 import AffiliateCommission from "../models/AffiliateCommission.js";
+import LearningCourse from "../models/LearningCourse.js";
+import { buildAffiliateCampaignKit } from "../utils/affiliateCampaignKit.js";
 
 const router = express.Router();
 const POLICY_VERSION = "2026-11-22";
@@ -63,6 +65,27 @@ router.get("/me", requireAuth, async (req, res, next) => {
       metrics: { clicks, enquiries, approvedCommission: roundMoney(totals.approved), pendingReview: roundMoney(totals.pending), reversed: roundMoney(totals.reversed) },
       commissions
     });
+  } catch (error) { next(error); }
+});
+
+router.post("/campaign-kit", requireAuth, async (req, res, next) => {
+  try {
+    const partner = await AffiliatePartner.findOne({ user: req.user.id, status: "active" }).select("code");
+    if (!partner) return res.status(403).json({ message: "An active affiliate partner profile is required." });
+    const courseId = cleanText(req.body?.courseId, 40);
+    if (!mongoose.isValidObjectId(courseId)) return res.status(400).json({ message: "Select a valid published course." });
+    const course = await LearningCourse.findOne({ _id: courseId, status: "published" }).select("title description category language level price currency").lean();
+    if (!course) return res.status(404).json({ message: "Published course not found." });
+    const language = req.body?.language === "English" ? "English" : "Hindi";
+    const requestedChannels = Array.isArray(req.body?.channels) ? req.body.channels : ["whatsapp", "facebook", "youtube"];
+    const channels = [...new Set(requestedChannels.filter(channel => ["whatsapp", "facebook", "youtube"].includes(channel)))];
+    if (!channels.length || channels.length > 3) return res.status(400).json({ message: "Choose one or more supported campaign channels." });
+    const baseUrl = process.env.PUBLIC_APP_URL || "https://devops-saurabhpandey.github.io/shivasha/";
+    const referralUrl = new URL(baseUrl);
+    referralUrl.searchParams.set("ref", partner.code);
+    referralUrl.searchParams.set("course", String(course._id));
+    const campaigns = buildAffiliateCampaignKit({ course, referralUrl: referralUrl.toString(), language, channels });
+    res.json({ course: { id: course._id, title: course.title, price: course.price, currency: course.currency }, campaigns, generatedBy: "SHIVASHA template assistant", requiresManualApproval: true });
   } catch (error) { next(error); }
 });
 
