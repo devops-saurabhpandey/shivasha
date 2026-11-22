@@ -96,7 +96,8 @@ router.patch("/admin/sales/:id/reverse", requireAuth, async (req,res,next) => {
     if(!mongoose.isValidObjectId(req.params.id))return res.status(400).json({message:"Invalid sale ID."});
     const sale=await LearningSale.findOneAndUpdate({_id:req.params.id,status:"verified"},{$set:{status:"reversed",reviewNote:String(req.body?.reason||"Refund or chargeback").trim().slice(0,300)}},{new:true});
     if(!sale)return res.status(404).json({message:"Verified sale not found or already reversed."});
-    await LearningEnrollment.updateOne({_id:sale.enrollment},{$set:{accessRevoked:true}});\n    if(sale.affiliatePartner)await AffiliateCommission.findOneAndUpdate({transactionReference:"SHVCOURSE-"+sale.transactionReference,status:{$in:["pending_review","approved"]}},{$set:{status:"reversed",reviewedBy:req.user.id,reviewedAt:new Date(),reviewNote:"Related course sale reversed."}});
+    await LearningEnrollment.updateOne({_id:sale.enrollment},{$set:{accessRevoked:true}});
+    if(sale.affiliatePartner)await AffiliateCommission.findOneAndUpdate({transactionReference:"SHVCOURSE-"+sale.transactionReference,status:{$in:["pending_review","approved"]}},{$set:{status:"reversed",reviewedBy:req.user.id,reviewedAt:new Date(),reviewNote:"Related course sale reversed."}});
     res.json({sale,message:"Sale ledger reversed. Any instructor payout must be reconciled separately."});
   }catch(e){next(e);}
 });
