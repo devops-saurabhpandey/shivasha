@@ -123,3 +123,8 @@ The Social Groups & Communities UI now shows the selected space's chat to active
 - Removal is scoped to the exact Group/Community resource and message ID. Unauthorized users cannot use a message ID to inspect or delete another space's message.
 - Deletion events are sent to active members through authenticated per-user Socket.IO rooms, applying the same two-way block filter as new-message delivery.
 - Suspended/moderation-blocked accounts cannot read or send chat messages, even if an old membership record remains active.
+
+
+## Group and Community post moderation controls
+
+The Social Groups & Communities post feed now exposes the existing scoped post APIs: authors can edit their own text posts, and authors plus active Owner/Admin/Moderator members can delete posts. The UI only displays controls as a convenience; the backend re-checks active membership, exact resource scope, authorship and moderator role for every request. Post deletion currently uses the existing hard-delete endpoint, so the confirmation explicitly warns that it cannot be undone. Moderators can delete posts but cannot edit another member's post. Comments are currently readable and addable but do not yet have edit/delete moderation controls.

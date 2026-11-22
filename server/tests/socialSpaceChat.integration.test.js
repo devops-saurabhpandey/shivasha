@@ -80,8 +80,10 @@ test("Social group and community chat is active-member-only and respects blocks"
     await User.updateOne({ _id: member._id }, { $set: { moderationBlocked: true } });
     assert.equal((await call(member, path, "POST", { text: "Suspended account" })).status, 403);
     await User.updateOne({ _id: member._id }, { $set: { moderationBlocked: false } });
+    const unread = await call(member, path, "POST", { text: "Unread message for read receipt" });
+    assert.equal(unread.status, 201);
     assert.equal((await call(owner, "/api/social/groups/" + group._id + "/chat/read", "POST", {})).body.success, true);
-    assert.equal((await SocialSpaceChatMessage.findById(sent.body._id)).readBy.some(id => String(id) === String(owner._id)), true);
+    assert.equal((await SocialSpaceChatMessage.findById(unread.body._id)).readBy.some(id => String(id) === String(owner._id)), true);
 
     await User.updateOne({ _id: owner._id }, { $addToSet: { blockedUsers: member._id } });
     const afterBlock = await call(owner, path);
