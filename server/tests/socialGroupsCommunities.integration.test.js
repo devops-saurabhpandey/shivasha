@@ -93,6 +93,20 @@ test("Social group and community routes enforce member visibility and one-time i
 
     // A member cannot issue an invitation or inspect pending requests.
     assert.equal((await call(invited, "/api/social/groups/" + group._id + "/invitations", "POST", {})).status, 404);
+
+    // Removed members may return only with a fresh invitation; banned members cannot.
+    const firstOutsiderInvite = await call(owner, "/api/social/groups/" + group._id + "/invitations", "POST", {});
+    assert.equal((await call(outsider, "/api/social/groups/invitations/redeem", "POST", { token: firstOutsiderInvite.body.invitation.token })).status, 200);
+    const removed = await call(owner, "/api/social/groups/" + group._id + "/members/" + outsider._id + "/review", "POST", { action: "remove" });
+    assert.equal(removed.status, 200);
+    const secondOutsiderInvite = await call(owner, "/api/social/groups/" + group._id + "/invitations", "POST", {});
+    assert.equal((await call(outsider, "/api/social/groups/invitations/redeem", "POST", { token: secondOutsiderInvite.body.invitation.token })).status, 200);
+    const banned = await call(owner, "/api/social/groups/" + group._id + "/members/" + outsider._id + "/review", "POST", { action: "ban" });
+    assert.equal(banned.status, 200);
+    assert.equal((await GroupMembership.findOne({ groupId: group._id, userId: outsider._id })).status, "banned");
+    const thirdOutsiderInvite = await call(owner, "/api/social/groups/" + group._id + "/invitations", "POST", {});
+    assert.equal((await call(outsider, "/api/social/groups/invitations/redeem", "POST", { token: thirdOutsiderInvite.body.invitation.token })).status, 403);
+
     // Block relationships suppress each other's identities from the member list.
     await User.updateOne({ _id: owner._id }, { $addToSet: { blockedUsers: invited._id } });
     const filtered = await call(owner, "/api/social/groups/" + group._id + "/members");
