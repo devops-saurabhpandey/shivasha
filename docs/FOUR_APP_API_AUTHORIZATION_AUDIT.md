@@ -6,6 +6,12 @@ This is a source-code audit of representative Social, Business, Edutech and Ente
 
 ## Social
 
+### Changes implemented on this branch
+- Removed author email from populated post payloads; feed, comments and reposts now expose only name, bio and avatar for the author.
+- Post deletion now reloads the requester's current database role before applying the admin/manager override, rather than trusting a potentially stale JWT role claim.
+- Added a pure authorization helper and regression tests for owner, admin, manager, ordinary user and missing-identity cases.
+- Added the regression tests to the four-app foundation CI workflow.
+
 ### Controls observed
 - Post creation, feed, comments, replies, likes, saves and reposts require authentication.
 - Saved posts are loaded from the authenticated user's `savedPosts` list.
@@ -14,9 +20,9 @@ This is a source-code audit of representative Social, Business, Edutech and Ente
 - The feed and post-by-ID endpoints return posts to any authenticated user; no post visibility/follower-only policy is applied in these routes.
 
 ### Findings / follow-up
-1. `populatePost` includes the author's email in the post response (`name email bio avatarUrl`). This is broader than necessary for a public feed; remove email from post/comment/repost population unless there is a documented product requirement.
+1. Blocked-user relationships and post visibility still need consistent enforcement across feed, post reads, comments, likes, reposts and replies. Define the intended visibility policy before changing behavior.
 2. Feed, post-by-ID, comments and interactions do not consistently enforce blocked-user relationships or visibility settings. Define the Social visibility model and enforce it on read and write paths.
-3. Post deletion uses `req.user.role` from the verified JWT for the admin/manager override. HTTP auth re-loads the account only for `moderationBlocked`; role changes may leave a stale signed role claim effective until token expiry. Prefer a fresh server-side role check or a dedicated authorization helper.
+3. Post deletion now checks the current database role. Continue reviewing other destructive Social actions for stale JWT role or permission claims.
 4. Image upload validates declared MIME type, not file signatures. Add actual file-type inspection and quotas before production hardening.
 
 ## Business
