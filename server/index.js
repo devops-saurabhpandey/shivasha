@@ -139,25 +139,29 @@ io.on("connection", socket => {
   });
 
   socket.on("presence:heartbeat", () => socket.emit("presence:pong", { at: Date.now() }));
-  socket.on("typing:start", ({ conversationId } = {}) => {
+  socket.on("typing:start", payload => {
+    const conversationId = payload?.conversationId;
     if (!isConversationRoomAuthorized(socket, conversationId)) return;
     socket.to("conversation:" + conversationId).emit("typing:start", { userId, conversationId });
   });
-  socket.on("typing:stop", ({ conversationId } = {}) => {
+  socket.on("typing:stop", payload => {
+    const conversationId = payload?.conversationId;
     if (!isConversationRoomAuthorized(socket, conversationId)) return;
     socket.to("conversation:" + conversationId).emit("typing:stop", { userId, conversationId });
   });
-  socket.on("conversation:join", async ({ conversationId } = {}) => {
+  socket.on("conversation:join", async payload => {
+    const conversationId = payload?.conversationId;
     const id = typeof conversationId === "string" ? conversationId.trim() : "";
     if (!id || id.length > 64) return;
     try {
       const conversation = await Conversation.findOne({ _id: id, participants: userId }).select("_id").lean();
-      if (conversation) socket.join("conversation:" + String(conversation._id));
+      if (conversation && socket.connected) socket.join("conversation:" + String(conversation._id));
     } catch {
       // Invalid IDs and database errors fail closed: the socket does not join.
     }
   });
-  socket.on("conversation:leave", ({ conversationId } = {}) => {
+  socket.on("conversation:leave", payload => {
+    const conversationId = payload?.conversationId;
     const id = typeof conversationId === "string" ? conversationId.trim() : "";
     if (id && id.length <= 64) socket.leave("conversation:" + id);
   });
