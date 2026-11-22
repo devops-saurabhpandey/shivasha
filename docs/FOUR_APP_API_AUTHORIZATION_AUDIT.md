@@ -94,3 +94,13 @@ This is a source-code audit of representative Social, Business, Edutech and Ente
 3. Add route-level cross-owner and cross-company negative tests for Business and Enterprise.
 4. Add Edutech guardian lifecycle and cross-student tests.
 5. Agree safe ProductMembership provisioning, then introduce product guards incrementally behind compatibility tests.
+
+
+## Social groups and communities — confirmed gap
+
+- The current Social feed, profiles, posts, follows and one-to-one direct messages exist.
+- No dedicated Group/Community models, membership records, REST route group or frontend management screens were found in the inspected model/route/navigation inventory.
+- Direct-message creation explicitly requires exactly two participants; message history, sending and read-state handlers assume one peer. Do not treat the Conversation participants array as proof that group messaging is supported.
+- Group/community implementation must add explicit membership-scoped authorization for every REST and Socket.IO action, private-content discovery rules, moderation/audit controls and cross-community negative tests.
+- Keep group messaging separate from existing one-to-one direct messages. Do not change global presence policy without explicit product approval.
+- Detailed gap and phased implementation requirements: `docs/SOCIAL_GROUPS_COMMUNITIES_GAP_AUDIT.md`.
