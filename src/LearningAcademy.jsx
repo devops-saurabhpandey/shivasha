@@ -7,6 +7,7 @@ const money=(amount,currency="INR")=>new Intl.NumberFormat("en-IN",{style:"curre
 export default function LearningAcademy({auth}) {
   const [courses,setCourses]=useState([]);
   const [mine,setMine]=useState({created:[],enrolled:[]});
+  const [pending,setPending]=useState([]);
   const [selected,setSelected]=useState(null);
   const [loading,setLoading]=useState(true);
   const [busy,setBusy]=useState(false);
@@ -22,14 +23,14 @@ export default function LearningAcademy({auth}) {
   },[auth?.token]);
   const refresh=useCallback(async()=>{
     setLoading(true);setError("");
-    try{const [catalog,own]=await Promise.all([request("/api/learning/courses"),request("/api/learning/my-courses")]);setCourses(catalog.courses||[]);setMine(own);}
+    try{const [catalog,own]=await Promise.all([request("/api/learning/courses"),request("/api/learning/my-courses")]);setCourses(catalog.courses||[]);setMine(own);if(auth?.user?.role==="admin"){const review=await request("/api/learning/admin/courses");setPending(review.courses||[]);}else setPending([]);}
     catch(e){setError(e.message);}
     finally{setLoading(false);}
-  },[request]);
+  },[request,auth?.user?.role]);
   useEffect(()=>{if(auth?.token)refresh();},[auth?.token,refresh]);
   const createCourse=async e=>{
     e.preventDefault();setBusy(true);setError("");setNotice("");
-    const lessons=form.lessons.split("\n").map(x=>x.trim()).filter(Boolean).map(title=>({title,durationMinutes:0}));
+    const lessons=form.lessons.split("\n").map(x=>x.trim()).filter(Boolean).map(line=>{const [title,...url]=line.split("|");return {title:title.trim(),videoUrl:url.join("|").trim(),durationMinutes:0};});
     try{await request("/api/learning/courses",{method:"POST",body:JSON.stringify({...form,price:Number(form.price),lessons})});setNotice("Course submitted. It will appear in the catalogue after admin review.");setShowCreate(false);setForm({...form,title:"",description:"",lessons:"परिचय"});await refresh();}
     catch(err){setError(err.message);}finally{setBusy(false);}
   };
@@ -59,9 +60,10 @@ export default function LearningAcademy({auth}) {
         <label>Language<input value={form.language} maxLength="40" onChange={e=>setForm({...form,language:e.target.value})}/></label>
         <label>Price (0 = free)<input type="number" min="0" max="1000000" step="0.01" value={form.price} onChange={e=>setForm({...form,price:e.target.value})}/></label>
       </div>
-      <label>Lesson titles (one per line)<textarea required value={form.lessons} onChange={e=>setForm({...form,lessons:e.target.value})}/></label>
+      <label>Lesson titles (one per line; optional video URL after |)<textarea required value={form.lessons} onChange={e=>setForm({...form,lessons:e.target.value})}/><small className="muted">Example: Introduction | https://your-authorized-video-link</small></label>
       <div style={{display:"flex",gap:8}}><button className="primary" disabled={busy}>{busy?"Submitting…":"Submit for review"}</button><button type="button" className="secondary" onClick={()=>setShowCreate(false)}>Cancel</button></div>
     </form>}
+    {auth?.user?.role==="admin"&&<div className="panel" style={{padding:16,marginBottom:18}}><h3>Admin · Course review queue</h3>{pending.length?pending.map(course=><div key={course._id} style={{padding:"10px 0",borderBottom:"1px solid #e5e7eb"}}><b>{course.title}</b><p className="muted">Instructor: {course.instructor?.name||"Unknown"} · {money(course.price,course.currency)}</p><div style={{display:"flex",gap:8}}><button className="primary" disabled={busy} onClick={async()=>{setBusy(true);try{await request("/api/learning/courses/"+course._id+"/review",{method:"PATCH",body:JSON.stringify({status:"published"})});setNotice("Course published.");await refresh();}catch(e){setError(e.message);}finally{setBusy(false);}}}>Publish</button><button className="secondary" disabled={busy} onClick={async()=>{setBusy(true);try{await request("/api/learning/courses/"+course._id+"/review",{method:"PATCH",body:JSON.stringify({status:"rejected",reviewNote:"Please revise and resubmit."})});setNotice("Course returned to instructor.");await refresh();}catch(e){setError(e.message);}finally{setBusy(false);}}}>Reject</button></div></div>):<p className="muted">No courses waiting for review.</p>}</div>}
     {selected&&<div className="panel" style={{padding:18,marginBottom:18}}>
       <button className="secondary" onClick={()=>setSelected(null)}>← Back to courses</button>
       <h2>{selected.course.title}</h2><p>{selected.course.description}</p>
