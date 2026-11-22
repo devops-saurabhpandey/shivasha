@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   registry-tests:
-    name: Product registry unit tests
+    name: Product registry and membership tests
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
@@ -31,6 +31,10 @@ jobs:
       - name: Build all four frontend entry points
         run: npm run build
 
-      - name: Test backend API product registry
+      - name: Install backend dependencies
         working-directory: server
-        run: node --test tests/productRegistry.test.js
+        run: npm install --no-package-lock
+
+      - name: Test product registry, access policy and membership schema
+        working-directory: server
+        run: node --test tests/productRegistry.test.js tests/productAccessPolicy.test.js tests/productMembership.test.js
