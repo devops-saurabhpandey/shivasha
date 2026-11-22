@@ -4,11 +4,12 @@ import Post from "../models/Post.js";
 import User from "../models/User.js";
 import Notification from "../models/Notification.js";
 import { requireAuth } from "../middleware/auth.js";
+import { canDeletePost } from "../social/postAuthorization.js";
 
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 2 * 1024 * 1024, files: 6 } });
 const extractHashtags = text => [...new Set((text.match(/#[a-zA-Z0-9_]+/g) || []).map(tag => tag.slice(1).toLowerCase()))].slice(0, 20);
-const populatePost = query => query.populate("author", "name email bio avatarUrl").populate("comments.user", "name avatarUrl").populate("comments.replies.user", "name avatarUrl").populate("repostOf");
+const populatePost = query => query.populate("author", "name bio avatarUrl").populate("comments.user", "name avatarUrl").populate("comments.replies.user", "name avatarUrl").populate("repostOf");
 
 async function uploadImage(file) {
   if (!["image/jpeg","image/png","image/webp","image/gif"].includes(file.mimetype)) throw new Error("Only JPG, PNG, WEBP or GIF images are allowed");
@@ -117,7 +118,13 @@ router.post("/:id/like", requireAuth, async (req, res) => {
 router.delete("/:id", requireAuth, async (req, res) => {
   const post = await Post.findById(req.params.id);
   if (!post) return res.status(404).json({ message: "Post not found" });
-  if (post.author.toString() !== req.user.id && !["admin","manager"].includes(req.user.role)) return res.status(403).json({ message: "You cannot delete this post" });
+  // Re-check privileged role from the database; JWT role claims can be stale.
+  const requester = await User.findById(req.user.id).select("role").lean();
+  if (!canDeletePost({
+    authorId: post.author,
+    requesterId: req.user.id,
+    requesterRole: requester?.role
+  })) return res.status(403).json({ message: "You cannot delete this post" });
   await post.deleteOne();
   res.json({ success: true, id: req.params.id });
 });
