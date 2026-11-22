@@ -22,7 +22,6 @@ test("guardian routes enforce expiry, one-time redemption, student consent and p
     throw new Error("Refusing to run guardian integration tests unless the derived MongoDB database ends in _test");
   }
   if (process.env.MONGODB_URI && process.env.MONGODB_URI === guardianMongoUri) {
-  if (process.env.MONGODB_URI && process.env.MONGODB_URI === guardianMongoUri) {
     throw new Error("MONGODB_TEST_URI must not point at the configured application database");
   }
 
