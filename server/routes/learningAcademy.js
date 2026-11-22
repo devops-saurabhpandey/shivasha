@@ -39,7 +39,7 @@ router.post("/admin/sales/verify", requireAuth, async (req,res,next) => {
     const affiliateRate=Number(req.body?.affiliateRatePercent||0);
     const affiliateCode=String(req.body?.affiliateCode||"").trim().toUpperCase();
     if(!mongoose.isValidObjectId(enrollmentId))return res.status(400).json({message:"Valid paid enrollment ID is required."});
-    if(!Number.isFinite(instructorRate)||instructorRate<0||instructorRate>100||!Number.isFinite(affiliateRate)||affiliateRate<0||affiliateRate>50||instructorRate+affiliateRate>100)return res.status(400).json({message:"Instructor and affiliate rates must be valid and total no more than 100%."});
+    if(String(req.body?.instructorRatePercent??"").trim()===""||!Number.isFinite(instructorRate)||instructorRate<0||instructorRate>100||!Number.isFinite(affiliateRate)||affiliateRate<0||affiliateRate>50||instructorRate+affiliateRate>100)return res.status(400).json({message:"Instructor and affiliate rates must be valid and total no more than 100%."});
     const enrollment=await LearningEnrollment.findById(enrollmentId);
     if(!enrollment||enrollment.paymentStatus!=="verified"||!enrollment.transactionReference)return res.status(404).json({message:"A payment-verified enrollment is required before recording course earnings."});
     const course=await LearningCourse.findOne({_id:enrollment.course,status:"published"});
