@@ -99,8 +99,13 @@ export default function SocialSpaces({auth,socket}) {
    if(String(message.resourceId)!==String(selected._id)||message.resourceType!==(kind==="groups"?"group":"community"))return;
    setChatMessages(prev=>prev.some(item=>item._id===message._id)?prev:[...prev,message]);
   };
+  const onDeleted=event=>{
+   if(String(event.resourceId)!==String(selected._id)||event.resourceType!==(kind==="groups"?"group":"community"))return;
+   setChatMessages(prev=>prev.map(item=>item._id===event.messageId?{...item,text:"This message was removed",deletedAt:event.deletedAt}:item));
+  };
   socket?.on("social-space:message:new",onMessage);
-  return ()=>{cancelled=true;socket?.off("social-space:message:new",onMessage)};
+  socket?.on("social-space:message:deleted",onDeleted);
+  return ()=>{cancelled=true;socket?.off("social-space:message:new",onMessage);socket?.off("social-space:message:deleted",onDeleted)};
  },[selected?._id,membership?.status,kind,auth?.token,socket]);
  const sendChatMessage=async e=>{
   e.preventDefault();const value=chatDraft.trim();if(!value||!selected)return;

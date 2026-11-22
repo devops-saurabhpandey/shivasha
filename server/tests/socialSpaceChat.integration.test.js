@@ -68,6 +68,18 @@ test("Social group and community chat is active-member-only and respects blocks"
     assert.equal(ownerFeed.status, 200);
     assert.equal(ownerFeed.body.messages.length, 1);
     assert.equal(ownerFeed.body.messages[0].text, "Hello group members");
+    assert.equal((await call(outsider, "/api/social/groups/" + group._id + "/chat/messages/" + sent.body._id, "DELETE")).status, 404);
+    const memberDelete = await call(member, "/api/social/groups/" + group._id + "/chat/messages/" + sent.body._id, "DELETE");
+    assert.equal(memberDelete.status, 200);
+    assert.equal(memberDelete.body.message.text, "This message was removed");
+    assert.ok(memberDelete.body.message.deletedAt);
+    const nextSent = await call(member, path, "POST", { text: "Moderator can remove this" });
+    const ownerModeration = await call(owner, "/api/social/groups/" + group._id + "/chat/messages/" + nextSent.body._id, "DELETE");
+    assert.equal(ownerModeration.status, 200);
+    assert.equal(String(ownerModeration.body.message.deletedBy), String(owner._id));
+    await User.updateOne({ _id: member._id }, { $set: { moderationBlocked: true } });
+    assert.equal((await call(member, path, "POST", { text: "Suspended account" })).status, 404);
+    await User.updateOne({ _id: member._id }, { $set: { moderationBlocked: false } });
     assert.equal((await call(owner, "/api/social/groups/" + group._id + "/chat/read", "POST", {})).body.success, true);
     assert.equal((await SocialSpaceChatMessage.findById(sent.body._id)).readBy.some(id => String(id) === String(owner._id)), true);
 

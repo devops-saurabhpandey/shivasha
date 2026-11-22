@@ -114,3 +114,12 @@ Every request re-loads the resource and the current user's active membership fro
 Messages from either-direction blocked peers are excluded from history. Realtime delivery uses authenticated per-user Socket.IO rooms and only sends to currently active members who are not blocked in either direction. This chat is distinct from existing one-to-one conversations and messages.
 
 The Social Groups & Communities UI now shows the selected space's chat to active members, supports sending text messages, refreshes history and listens for scoped realtime message events. Group and Community chat histories are isolated by resource type and ID.
+
+
+## Chat message removal and account moderation
+
+- Chat authors may remove their own messages. Active Owner/Admin/Moderator members may also remove messages in their space.
+- Removal is a soft-delete: the message remains as an audit placeholder ("This message was removed") with deletion time and actor ID; the original text is not returned by subsequent reads.
+- Removal is scoped to the exact Group/Community resource and message ID. Unauthorized users cannot use a message ID to inspect or delete another space's message.
+- Deletion events are sent to active members through authenticated per-user Socket.IO rooms, applying the same two-way block filter as new-message delivery.
+- Suspended/moderation-blocked accounts cannot read or send chat messages, even if an old membership record remains active.
