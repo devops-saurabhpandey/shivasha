@@ -9,7 +9,7 @@ import jwt from "jsonwebtoken";
 import Conversation from "./models/Conversation.js";
 import User from "./models/User.js";
 import { authenticateSocketUser } from "./realtime/socketAuthentication.js";
-import { isConversationRoomAuthorized } from "./realtime/conversationAccess.js";
+import { isConversationRoomAuthorized, isConversationPeerBlocked } from "./realtime/conversationAccess.js";
 import authRoutes from "./routes/auth.js";
 import userRoutes from "./routes/users.js";
 import postRoutes from "./routes/posts.js";
@@ -142,14 +142,34 @@ io.on("connection", socket => {
   });
 
   socket.on("presence:heartbeat", () => socket.emit("presence:pong", { at: Date.now() }));
-  socket.on("typing:start", payload => {
+  const canUseConversationRealtime = async conversationId => {
+    if (!isConversationRoomAuthorized(socket, conversationId)) return false;
+    try {
+      const conversation = await Conversation.findOne({ _id: conversationId, participants: userId }).select("participants").lean();
+      if (!conversation) return false;
+      return !(await isConversationPeerBlocked({
+        participantIds: conversation.participants,
+        userId,
+        findUser: id => User.findById(id).select("blockedUsers").lean()
+      }));
+    } catch {
+      return false;
+    }
+  };
+  socket.on("typing:start", async payload => {
     const conversationId = payload?.conversationId;
-    if (!isConversationRoomAuthorized(socket, conversationId)) return;
+    if (!await canUseConversationRealtime(conversationId)) {
+      if (typeof conversationId === "string") socket.leave("conversation:" + conversationId.trim());
+      return;
+    }
     socket.to("conversation:" + conversationId).emit("typing:start", { userId, conversationId });
   });
-  socket.on("typing:stop", payload => {
+  socket.on("typing:stop", async payload => {
     const conversationId = payload?.conversationId;
-    if (!isConversationRoomAuthorized(socket, conversationId)) return;
+    if (!await canUseConversationRealtime(conversationId)) {
+      if (typeof conversationId === "string") socket.leave("conversation:" + conversationId.trim());
+      return;
+    }
     socket.to("conversation:" + conversationId).emit("typing:stop", { userId, conversationId });
   });
   socket.on("conversation:join", async payload => {
@@ -157,8 +177,13 @@ io.on("connection", socket => {
     const id = typeof conversationId === "string" ? conversationId.trim() : "";
     if (!id || id.length > 64) return;
     try {
-      const conversation = await Conversation.findOne({ _id: id, participants: userId }).select("_id").lean();
-      if (conversation && socket.connected) socket.join("conversation:" + String(conversation._id));
+      const conversation = await Conversation.findOne({ _id: id, participants: userId }).select("participants").lean();
+      const blocked = conversation && await isConversationPeerBlocked({
+        participantIds: conversation.participants,
+        userId,
+        findUser: peerId => User.findById(peerId).select("blockedUsers").lean()
+      });
+      if (conversation && !blocked && socket.connected) socket.join("conversation:" + String(conversation._id));
     } catch {
       // Invalid IDs and database errors fail closed: the socket does not join.
     }
