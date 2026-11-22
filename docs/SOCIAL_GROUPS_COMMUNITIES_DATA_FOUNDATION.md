@@ -52,7 +52,7 @@ Initial endpoints on each resource:
 - `GET /:id/members` — active members only; pending requests are visible only to Owner/Admin. Returned user fields are allowlisted and blocked peers are excluded.
 - `POST /:id/members/:userId/review` — Owner/Admin can approve/reject pending requests and remove/ban active members. Owner records are protected; Admin cannot moderate another Admin.
 - `POST /:id/invitations` — active Owner/Admin can issue a random 256-bit invitation token. Only SHA-256 hash is stored; raw token is returned once.
-- `POST /invitations/redeem` — authenticated user redeems a pending, unexpired token. Conditional atomic claim ensures one-time use; existing pending join requests may be upgraded to active. Banned/removed/active memberships cannot bypass their state.
+- `POST /invitations/redeem` — authenticated user redeems a pending, unexpired token. Conditional atomic claim ensures one-time use; existing pending join requests may be upgraded to active. Banned memberships cannot be reactivated; an existing pending request can be upgraded, and a removed non-owner can rejoin only with a fresh valid invitation. Already-active members cannot redeem another invite.
 - `POST /:id/invitations/:inviteId/revoke` — Owner/Admin can revoke a pending invitation.
 
 Group and Community invitation records share a strict model but carry an explicit resource type, resource ID and unique token hash. Expiry is 24 hours; a TTL index is cleanup only, while every redemption checks expiry in its query. If membership creation fails after an invite claim, the invite is conditionally restored only for that exact redeemer/claim timestamp.
