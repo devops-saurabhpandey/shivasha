@@ -8,6 +8,7 @@ import { Server } from "socket.io";
 import jwt from "jsonwebtoken";
 import Conversation from "./models/Conversation.js";
 import User from "./models/User.js";
+import { authenticateSocketUser } from "./realtime/socketAuthentication.js";
 import { isConversationRoomAuthorized } from "./realtime/conversationAccess.js";
 import authRoutes from "./routes/auth.js";
 import userRoutes from "./routes/users.js";
@@ -62,21 +63,15 @@ const io = new Server(httpServer, {
 });
 
 io.use(async (socket, next) => {
-  try {
-    const token = socket.handshake.auth?.token;
-    if (!token || !process.env.JWT_SECRET) return next(new Error("Authentication required"));
-    const claims = jwt.verify(token, process.env.JWT_SECRET);
-    if (!claims?.id) return next(new Error("Invalid authentication token"));
-    // Match HTTP requireAuth: a valid but deleted or moderation-blocked account
-    // must not retain realtime access until its JWT expires.
-    const user = await User.findById(claims.id).select("_id moderationBlocked").lean();
-    if (!user) return next(new Error("Account not found"));
-    if (user.moderationBlocked) return next(new Error("This account is temporarily restricted"));
-    socket.user = { ...claims, id: user._id.toString() };
-    next();
-  } catch {
-    next(new Error("Invalid authentication token"));
-  }
+  const result = await authenticateSocketUser({
+    token: socket.handshake.auth?.token,
+    jwtSecret: process.env.JWT_SECRET,
+    verifyToken: jwt.verify,
+    findUser: id => User.findById(id).select("_id moderationBlocked").lean()
+  });
+  if (!result.ok) return next(new Error(result.error));
+  socket.user = result.user;
+  next();
 });
 
 io.on("connection", socket => {
