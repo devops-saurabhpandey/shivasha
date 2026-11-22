@@ -5,7 +5,7 @@ const socialInviteSchema = new mongoose.Schema({
   resourceId: { type: mongoose.Schema.Types.ObjectId, required: true, index: true },
   tokenHash: { type: String, required: true, unique: true, select: false, match: /^[a-f0-9]{64}$/ },
   createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true, index: true },
-  expiresAt: { type: Date, required: true, index: true },
+  expiresAt: { type: Date, required: true },
   status: { type: String, enum: ["pending", "redeemed", "revoked"], default: "pending", index: true },
   redeemedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
   redeemedAt: { type: Date, default: null }
