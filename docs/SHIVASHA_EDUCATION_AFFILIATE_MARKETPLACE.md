@@ -60,7 +60,7 @@ A free learner account must remain possible. Membership must not be required to 
 - Refund and chargeback processing linked to enrollment and commission reversal.
 - Accessibility, age-appropriate content controls and guardian safeguards where children are involved.
 
-## Phase 3 — creator and affiliate growth
+## Implemented Phase 4 groundwork — checkout, refunds, reviews and payout preview\n\nThe current branch adds: provider-neutral course order records; an order queue; admin-only manual reconciliation after an independently confirmed payment; authenticated refund requests and admin refund confirmation after an external refund; enrolled-student course ratings/comments with moderation; and an admin preview of verified instructor balances plus approved affiliate commissions.\n\n**Important limits:** checkout orders do not charge a card or UPI account. There is no gateway SDK, signed provider webhook, automatic payment verification, tax/KYC workflow, payout batch, bank detail storage or money transfer. Refund confirmation only records a refund that has already been executed outside SHIVASHA. Payout preview is informational only. Select a payment provider and complete legal/security review before enabling live payments.\n\n## Phase 3 — creator and affiliate growth
 
 - Instructor onboarding and content review workflow.
 - Campaign links, approved promotional assets and disclosure reminders.
