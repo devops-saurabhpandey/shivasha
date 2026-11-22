@@ -37,4 +37,4 @@ jobs:
 
       - name: Test product registry, access policy, membership schema, middleware and Business AI auth
         working-directory: server
-        run: node --test tests/productRegistry.test.js tests/productAccessPolicy.test.js tests/productMembership.test.js tests/requireProductAccess.test.js routes/businessAI.test.js
+        run: node --test tests/productRegistry.test.js tests/productAccessPolicy.test.js tests/productMembership.test.js tests/requireProductAccess.test.js routes/businessAI.test.js realtime/conversationAccess.test.js
