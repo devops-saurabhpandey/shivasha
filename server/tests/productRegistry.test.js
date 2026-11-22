@@ -18,6 +18,7 @@ test("the four product IDs are unique and resolve to four products", () => {
 test("product-specific API paths map to their owning application", () => {
   assert.equal(getProductForApiPath("/api/posts").id, PRODUCT_IDS.SOCIAL);
   assert.equal(getProductForApiPath("/api/messages/123").id, PRODUCT_IDS.SOCIAL);
+  assert.equal(getProductForApiPath("/api/creator-finance/summary").id, PRODUCT_IDS.SOCIAL);
   assert.equal(getProductForApiPath("/api/business/leads").id, PRODUCT_IDS.BUSINESS);
   assert.equal(getProductForApiPath("/api/sales-agent/run").id, PRODUCT_IDS.BUSINESS);
   assert.equal(getProductForApiPath("/api/education/quiz").id, PRODUCT_IDS.EDUTECH);
