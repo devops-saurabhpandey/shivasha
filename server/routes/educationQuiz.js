@@ -9,7 +9,7 @@ import EducationGuardianLink from "../models/EducationGuardianLink.js";
 import User from "../models/User.js";
 import { requireAuth } from "../middleware/auth.js";
 import { normalizeQuestionOptions, isValidSelectedIndex } from "../utils/educationQuizValidation.js";
-import { getGuardianInviteExpiry, buildRedeemableGuardianInviteFilter, canRedeemGuardianInvite, buildGuardianLinkTransitionFilter, buildGuardianLinkTransitionUpdate, buildStudentGuardianRequestsFilter, buildApprovedGuardianChildrenFilter } from "../education/guardianLifecycle.js";
+import { getGuardianInviteExpiry, buildRedeemableGuardianInviteFilter, canRedeemGuardianInvite, buildGuardianLinkTransitionFilter, buildGuardianLinkTransitionUpdate, buildStudentGuardianRequestsFilter, buildApprovedGuardianChildrenFilter, canGuardianReadStudentProgress } from "../education/guardianLifecycle.js";
 
 const router = Router();
 const boards = ["CBSE", "ICSE", "ISC"];
@@ -242,14 +242,15 @@ router.patch("/guardian/links/:id", requireAuth, async (req,res,next) => {
 });
 router.get("/guardian/children", requireAuth, async (req,res,next) => {
   try {
-    const links=await EducationGuardianLink.find(buildApprovedGuardianChildrenFilter(req.user.id)).populate("student","name").select("student approvedAt").lean();
-    const children=await Promise.all(links.map(async link=>{
+    const links=await EducationGuardianLink.find(buildApprovedGuardianChildrenFilter(req.user.id)).populate("student","name").select("guardian student approvedAt").lean();
+    const children=(await Promise.all(links.map(async link=>{
+      if (!canGuardianReadStudentProgress(link, req.user.id)) return null;
       const attempts=await EducationAttempt.find({student:link.student._id}).select("board grade subject totalQuestions correctCount scorePercent createdAt").sort({createdAt:-1}).limit(50).lean();
       const now=Date.now();
       const weekAgo=now-7*24*60*60*1000;
       const recent=attempts.filter(a=>{const createdAt=new Date(a.createdAt).getTime();return createdAt>=weekAgo&&createdAt<=now;});
       return {student:{id:String(link.student._id),name:link.student.name},approvedAt:link.approvedAt,summary:{testsLast7Days:recent.length,questionsLast7Days:recent.reduce((n,a)=>n+Number(a.totalQuestions||0),0),averageScoreLast7Days:recent.length?Math.round(recent.reduce((n,a)=>n+Number(a.scorePercent||0),0)/recent.length):0},recentAttempts:attempts.slice(0,10).map(a=>({board:a.board,grade:a.grade,subject:a.subject,totalQuestions:a.totalQuestions,correctCount:a.correctCount,scorePercent:a.scorePercent,createdAt:a.createdAt}))};
-    }));
+    }))).filter(Boolean);
     res.json({children});
   } catch(e) { next(e); }
 });
