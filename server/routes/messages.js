@@ -3,6 +3,7 @@ import { Router } from "express";
 import Conversation from "../models/Conversation.js";
 import Message from "../models/Message.js";
 import User from "../models/User.js";
+import { isBlockedEitherDirection } from "../social/blockPolicy.js";
 import { requireAuth } from "../middleware/auth.js";
 
 const router = Router();
@@ -12,10 +13,31 @@ const populateConversation = query =>
     .populate("participants", "name avatarUrl bio")
     .populate("lastMessage", "sender text createdAt");
 
+async function isBlockedBetween(userId, otherId) {
+  const [viewer, other] = await Promise.all([
+    User.findById(userId).select("blockedUsers").lean(),
+    User.findById(otherId).select("blockedUsers").lean()
+  ]);
+  if (!viewer || !other) return true;
+  return isBlockedEitherDirection(userId, otherId, viewer.blockedUsers || [], other.blockedUsers || []);
+}
+
+async function getBlockedPeerIds(viewerId) {
+  const [viewer, blockers] = await Promise.all([
+    User.findById(viewerId).select("blockedUsers").lean(),
+    User.find({ blockedUsers: viewerId }).select("_id").lean()
+  ]);
+  if (!viewer) throw new Error("Authenticated user not found");
+  return new Set([...(viewer.blockedUsers || []), ...blockers.map(user => user._id)].map(String));
+}
+
 router.get("/conversations", requireAuth, async (req, res) => {
-  const conversations = await populateConversation(
-    Conversation.find({ participants: req.user.id }).sort({ updatedAt: -1 })
+  const blockedIds = await getBlockedPeerIds(req.user.id);
+  const rawConversations = await Conversation.find({ participants: req.user.id }).sort({ updatedAt: -1 });
+  const visibleConversations = rawConversations.filter(conversation =>
+    conversation.participants.some(id => id.toString() !== req.user.id && !blockedIds.has(id.toString()))
   );
+  const conversations = await populateConversation(Conversation.find({ _id: { $in: visibleConversations.map(c => c._id) } }).sort({ updatedAt: -1 }));
   const unreadRows = await Message.aggregate([
     { $match: { conversation: { $in: conversations.map(c => c._id) }, sender: { $ne: new mongoose.Types.ObjectId(req.user.id) }, readBy: { $ne: new (await import("mongoose")).default.Types.ObjectId(req.user.id) } } },
     { $group: { _id: "$conversation", count: { $sum: 1 } } }
@@ -29,7 +51,7 @@ router.post("/conversations", requireAuth, async (req, res) => {
   if (!otherId || otherId === req.user.id) return res.status(400).json({ message: "Valid userId is required" });
 
   const other = await User.findById(otherId).select("_id");
-  if (!other) return res.status(404).json({ message: "User not found" });
+  if (!other || await isBlockedBetween(req.user.id, otherId)) return res.status(404).json({ message: "User not found" });
 
   let conversation = await Conversation.findOne({
     participants: { $all: [req.user.id, otherId] },
@@ -49,6 +71,8 @@ router.get("/conversations/:id/messages", requireAuth, async (req, res) => {
     participants: req.user.id
   });
   if (!conversation) return res.status(404).json({ message: "Conversation not found" });
+  const otherId = conversation.participants.find(id => id.toString() !== req.user.id)?.toString();
+  if (!otherId || await isBlockedBetween(req.user.id, otherId)) return res.status(404).json({ message: "Conversation not found" });
 
   const messages = await Message.find({ conversation: conversation._id })
     .populate("sender", "name avatarUrl")
@@ -67,6 +91,8 @@ router.post("/conversations/:id/messages", requireAuth, async (req, res) => {
     participants: req.user.id
   });
   if (!conversation) return res.status(404).json({ message: "Conversation not found" });
+  const otherId = conversation.participants.find(id => id.toString() !== req.user.id)?.toString();
+  if (!otherId || await isBlockedBetween(req.user.id, otherId)) return res.status(404).json({ message: "Conversation not found" });
 
   const message = await Message.create({
     conversation: conversation._id,
@@ -97,6 +123,8 @@ router.post("/conversations/:id/read", requireAuth, async (req, res) => {
     participants: req.user.id
   });
   if (!conversation) return res.status(404).json({ message: "Conversation not found" });
+  const otherId = conversation.participants.find(id => id.toString() !== req.user.id)?.toString();
+  if (!otherId || await isBlockedBetween(req.user.id, otherId)) return res.status(404).json({ message: "Conversation not found" });
 
   await Message.updateMany(
     { conversation: conversation._id, sender: { $ne: req.user.id }, readBy: { $ne: req.user.id } },
