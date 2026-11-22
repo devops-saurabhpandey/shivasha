@@ -7,7 +7,7 @@ import { requireAuth } from "../middleware/auth.js";
 import { isBlockedEitherDirection } from "../social/blockPolicy.js";
 
 const router = express.Router();
-const publicUser = query => query.select("-passwordHash -savedPosts -moderationBlocked");
+const publicUser = query => query.select("-passwordHash -savedPosts -moderationBlocked -blockedUsers");
 
 router.get("/me", requireAuth, async (req, res) => {
   const user = await User.findById(req.user.id).select("-passwordHash");
@@ -62,12 +62,13 @@ router.get("/search", requireAuth, async (req, res) => {
 });
 
 router.get("/:id", requireAuth, async (req, res) => {
-  const [user, me] = await Promise.all([
-    publicUser(User.findById(req.params.id).select("+blockedUsers")),
-    User.findById(req.user.id).select("following blockedUsers")
+  const [user, me, targetPrivacy] = await Promise.all([
+    publicUser(User.findById(req.params.id)),
+    User.findById(req.user.id).select("following blockedUsers"),
+    User.findById(req.params.id).select("blockedUsers")
   ]);
-  if (!user || !me) return res.status(404).json({ message: "User not found" });
-  if (isBlockedEitherDirection(me._id, user._id, me.blockedUsers || [], user.blockedUsers || [])) {
+  if (!user || !me || !targetPrivacy) return res.status(404).json({ message: "User not found" });
+  if (isBlockedEitherDirection(me._id, user._id, me.blockedUsers || [], targetPrivacy.blockedUsers || [])) {
     return res.status(404).json({ message: "User not found" });
   }
   const posts = await Post.find({ author: user._id }).populate("author", "name avatarUrl").sort({ createdAt: -1 }).limit(50);
