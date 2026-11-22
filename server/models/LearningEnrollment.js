@@ -12,4 +12,5 @@ const learningEnrollmentSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 learningEnrollmentSchema.index({ student: 1, course: 1 }, { unique: true });
+learningEnrollmentSchema.index({ transactionReference: 1 }, { unique: true, sparse: true });
 export default mongoose.model("LearningEnrollment", learningEnrollmentSchema);
