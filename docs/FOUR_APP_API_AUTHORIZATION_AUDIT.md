@@ -53,12 +53,14 @@ This is a source-code audit of representative Social, Business, Edutech and Ente
 - Student profile and study plan reads/writes are scoped to the authenticated student.
 - Published questions are returned without `answerIndex`; draft/admin question operations re-check the user's current database role.
 - Guardian access is student-controlled: short-lived hashed invite, guardian redemption, explicit student approval, and approved-link-only child progress reads.
-- Guardian progress queries use the approved guardian's own ID to select linked students.
+- Guardian lifecycle rules are centralized in `server/education/guardianLifecycle.js`; route handlers use atomic conditional redemption and student-owned approve/reject/revoke filters.
+- Guardian child-progress responses re-check that the authenticated guardian owns an approved link before loading attempts.
+- Automated tests cover the 24-hour expiry, expired/used/self-redemption rejection, atomic one-time redemption filter, student-owned approval/rejection, approved-only revocation, and guardian-specific progress visibility.
 
 ### Findings / follow-up
 1. Public question catalogue endpoints are available to any authenticated account; confirm whether product enrollment or age/guardian policy is required.
 2. Quiz answers are returned to the student immediately after submitting an attempt, which is expected for self-review; ensure no attempt endpoint can be queried by another student's ID.
-3. Add explicit tests for guardian invite expiry, one-time redemption, student approval/revocation, cross-student access denial, and concurrent redemption.
+3. Added pure lifecycle regression tests; still add MongoDB-backed route integration tests for invite expiry under database time, concurrent redemption, approval/rejection/revocation and cross-account progress denial before production launch.
 4. Define child-account age/consent, guardian identity verification, retention and deletion requirements before production launch.
 
 ## Enterprise
