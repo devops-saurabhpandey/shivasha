@@ -325,8 +325,11 @@ function createResourceRouter({ Resource, Membership, resourceKey, resourceType,
       return res.status(403).json({ message: "You are not allowed to review this membership" });
     }
     const transition = getGroupMembershipTransition(action);
+    const expectedStatus = ["approve", "reject"].includes(action)
+      ? GROUP_MEMBER_STATUS.PENDING
+      : GROUP_MEMBER_STATUS.ACTIVE;
     const updated = await Membership.findOneAndUpdate(
-      { _id: targetMembership._id, status: GROUP_MEMBER_STATUS.PENDING, role: { $ne: GROUP_MEMBER_ROLE.OWNER } },
+      { _id: targetMembership._id, status: expectedStatus, role: { $ne: GROUP_MEMBER_ROLE.OWNER } },
       { $set: transition },
       { new: true, runValidators: true }
     );
