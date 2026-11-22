@@ -2,7 +2,6 @@
 export function buildPostVisibilityFilter(viewerId, viewerBlockedIds = [], blockerIds = [], extra = {}) {
   if (!viewerId) throw new TypeError("viewerId is required");
   const excluded = new Set([...viewerBlockedIds, ...blockerIds].filter(Boolean).map(String));
-  excluded.add(String(viewerId));
   return { ...extra, author: { $nin: [...excluded] } };
 }
 
