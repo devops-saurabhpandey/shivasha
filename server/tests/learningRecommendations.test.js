@@ -20,7 +20,7 @@ test("recommendations prioritize explicit category, level and language preferenc
 test("learning history provides a related-category signal when no category is selected", () => {
   const result = rankLearningRecommendations({courses,preferences:{level:"beginner"},historyCategories:["finance"],userId:"student-1"});
   assert.equal(result[0].course._id,"3");
-  assert.ok(result[0].recommendationReason.includes("Related to courses"));
+  assert.ok(result[0].recommendationReason.includes("Matches your experience level"));
 });
 
 test("invalid preferences are ignored and results remain bounded to 20", () => {
