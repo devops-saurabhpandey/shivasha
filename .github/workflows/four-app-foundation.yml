@@ -35,6 +35,6 @@ jobs:
         working-directory: server
         run: npm install --no-package-lock
 
-      - name: Test product registry, access policy, membership schema and middleware
+      - name: Test product registry, access policy, membership schema, middleware and Business AI auth
         working-directory: server
-        run: node --test tests/productRegistry.test.js tests/productAccessPolicy.test.js tests/productMembership.test.js tests/requireProductAccess.test.js
+        run: node --test tests/productRegistry.test.js tests/productAccessPolicy.test.js tests/productMembership.test.js tests/requireProductAccess.test.js routes/businessAI.test.js
