@@ -9,7 +9,8 @@ export default function LearningAcademy({auth}) {
   const [mine,setMine]=useState({created:[],enrolled:[]});
   const [pending,setPending]=useState([]);
   const [earnings,setEarnings]=useState({totals:[],sales:[]});
-  const [unallocated,setUnallocated]=useState([]);\n  const [adminSales,setAdminSales]=useState([]);
+  const [unallocated,setUnallocated]=useState([]);
+  const [adminSales,setAdminSales]=useState([]);
   const [saleForm,setSaleForm]=useState({enrollmentId:"",instructorRatePercent:"",affiliateCode:"",affiliateRatePercent:"0"});
   const [selected,setSelected]=useState(null);
   const [loading,setLoading]=useState(true);
