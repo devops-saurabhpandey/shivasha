@@ -121,3 +121,14 @@ The registry is descriptive metadata only. It is not yet wired into `src/App.jsx
 - `MIS` is assigned to the Enterprise product in the frontend ownership registry, consistent with the approved Enterprise scope. Its current data endpoint is still mounted under the legacy `/api/business/mis` route and remains mapped to Business in the backend API registry until an additive, tested API migration is designed. The descriptive frontend registry is not authorization.
 - `CreatorEarnings` is assigned to Social, and its existing `/api/creator-finance` API prefix is mapped to Social. Affiliate Partner Centre remains Business under `/api/affiliates`.
 - Existing sidebar placement and runtime navigation have not been changed in this step.
+
+
+## Four-entry frontend build scaffold
+
+- The existing `index.html` remains the compatibility entry point for the current Social/combined application.
+- Added `business.html`, `edutech.html`, and `enterprise.html` as independent Vite HTML entry points.
+- Added a shared, product-aware portal shell driven by the frontend ownership registry.
+- Vite now builds all four HTML entry points in one build output. The three new portals clearly identify themselves as migration-stage shells and link to the existing application; they do not claim that product modules, authentication, data, or permissions are already separated.
+- The existing production entry point and current `src/App.jsx` runtime have not been modified.
+- The foundation workflow now installs frontend dependencies and runs the production Vite build in addition to registry tests.
+- Next required work: extract product-specific authenticated shells and feature screens behind server-side authorization, then add independent end-to-end tests before enabling separate deployments.
