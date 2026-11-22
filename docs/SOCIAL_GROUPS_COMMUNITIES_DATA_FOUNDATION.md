@@ -70,3 +70,17 @@ No UI, email/SMS delivery, group content model, notification type, data migratio
 3. Add group post/content model and membership-scoped read/write/moderation endpoints.
 4. Add separate group conversation and Socket.IO membership checks before group chat.
 5. Add UI only after the APIs and authorization tests are stable.
+
+
+## Group and Community content API — first text-post slice
+
+A separate SocialSpacePost model and dedicated Group/Community post routes are added. Each post records an explicit resource type and ID, so Group content cannot be read through a Community route or vice versa.
+
+- Public resource posts can be read by authenticated users; private and invite-only posts require active membership. Paused/archived resources and banned memberships fail closed.
+- Only active members of an active resource can publish, like or comment.
+- Authors can edit their own posts. Authors and active Owner/Admin/Moderator members can delete posts.
+- Post and comment text is length-limited and validated. Populated author/comment/reply data is restricted to name and avatar.
+- Reads and interactions exclude or reject users blocked in either direction. Resource creators are also checked against the viewer's current block state.
+- Existing global Social feed and one-to-one Messages remain separate and unchanged.
+
+This first slice intentionally supports text posts only. Photo/video upload is not enabled until a shared media pipeline validates image bytes, probes video containers, applies quotas and stores ownership metadata. There is no group chat, realtime event, content notification, UI, migration, production index creation, deployment or merge in this slice.
