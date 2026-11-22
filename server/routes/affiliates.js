@@ -6,6 +6,7 @@ import User from "../models/User.js";
 import AffiliatePartner from "../models/AffiliatePartner.js";
 import AffiliateEvent from "../models/AffiliateEvent.js";
 import AffiliateCommission from "../models/AffiliateCommission.js";
+import AffiliateCommissionAudit from "../models/AffiliateCommissionAudit.js";
 import LearningCourse from "../models/LearningCourse.js";
 import { buildAffiliateCampaignKit } from "../utils/affiliateCampaignKit.js";
 
@@ -143,6 +144,7 @@ router.post("/admin/conversions", async (req, res, next) => {
       partner: partner._id, user: buyer._id, transactionReference, grossAmount: roundMoney(grossAmount),
       ratePercent, commissionAmount, productDescription, verifiedAt: new Date(), status: "pending_review"
     });
+    await AffiliateCommissionAudit.create({ commission: commission._id, actor: req.user.id, action: "created_pending_review", previousStatus: null, newStatus: "pending_review", note: "Commission candidate recorded after admin-attested transaction verification." });
     res.status(201).json({ commission });
   } catch (error) {
     if (error?.code === 11000) return res.status(409).json({ message: "This transaction reference already has a commission record." });
@@ -157,13 +159,31 @@ router.patch("/admin/commissions/:id/review", async (req, res, next) => {
     const reviewNote = cleanText(req.body?.reviewNote, 300);
     if (!mongoose.isValidObjectId(id)) return res.status(400).json({ message: "Invalid commission ID." });
     if (!["approved", "reversed"].includes(status)) return res.status(400).json({ message: "Review status must be approved or reversed." });
+    const previous = await AffiliateCommission.findOne({ _id: id, status: "pending_review" }).select("_id status").lean();
+    if (!previous) return res.status(404).json({ message: "Pending commission not found; it may already have been reviewed." });
     const commission = await AffiliateCommission.findOneAndUpdate(
       { _id: id, status: "pending_review" },
       { $set: { status, reviewNote, reviewedBy: req.user.id, reviewedAt: new Date() } },
       { new: true, runValidators: true }
     );
-    if (!commission) return res.status(404).json({ message: "Pending commission not found; it may already have been reviewed." });
+    if (!commission) return res.status(409).json({ message: "Commission was reviewed by another administrator. Refresh the list." });
+    try {
+      await AffiliateCommissionAudit.create({ commission: commission._id, actor: req.user.id, action: status, previousStatus: previous.status, newStatus: status, note: reviewNote });
+    } catch (auditError) {
+      // Preserve the commission transition, but surface that its audit event needs operational repair.
+      console.error("Affiliate commission audit write failed", { commissionId: String(commission._id), error: auditError.message });
+      return res.status(500).json({ message: "Commission status changed, but its audit record could not be saved. Contact the system administrator before further action." });
+    }
     res.json({ commission });
+  } catch (error) { next(error); }
+});
+
+router.get("/admin/commissions/:id/audit", async (req, res, next) => {
+  try {
+    if (!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({ message: "Invalid commission ID." });
+    const events = await AffiliateCommissionAudit.find({ commission: req.params.id })
+      .populate("actor", "name email").sort({ createdAt: -1 }).limit(100).lean();
+    res.json({ events });
   } catch (error) { next(error); }
 });
 
