@@ -171,9 +171,13 @@ router.patch("/admin/commissions/:id/review", async (req, res, next) => {
     try {
       await AffiliateCommissionAudit.create({ commission: commission._id, actor: req.user.id, action: status, previousStatus: previous.status, newStatus: status, note: reviewNote });
     } catch (auditError) {
-      // Preserve the commission transition, but surface that its audit event needs operational repair.
+      // Best-effort compensation: do not leave a reviewed status without its audit event.
+      await AffiliateCommission.updateOne(
+        { _id: commission._id, status, reviewedBy: req.user.id },
+        { $set: { status: "pending_review", reviewNote: "", reviewedBy: null, reviewedAt: null } }
+      ).catch(rollbackError => console.error("Affiliate commission audit rollback failed", { commissionId: String(commission._id), error: rollbackError.message }));
       console.error("Affiliate commission audit write failed", { commissionId: String(commission._id), error: auditError.message });
-      return res.status(500).json({ message: "Commission status changed, but its audit record could not be saved. Contact the system administrator before further action." });
+      return res.status(500).json({ message: "Audit history could not be saved. The system attempted to restore the commission to pending review; refresh and verify its status." });
     }
     res.json({ commission });
   } catch (error) { next(error); }
