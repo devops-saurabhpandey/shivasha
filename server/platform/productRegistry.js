@@ -24,17 +24,17 @@ export const PRODUCTS = Object.freeze([
     name: "Shivasha Social",
     frontendAreas: [
       "feed", "posts", "profiles", "discover", "messages",
-      "notifications", "live"
+      "notifications", "live", "creator-earnings"
     ],
-    apiPrefixes: ["/api/posts", "/api/messages", "/api/live-videos"]
+    apiPrefixes: ["/api/posts", "/api/messages", "/api/live-videos", "/api/creator-finance"]
   }),
   freezeProduct({
     id: PRODUCT_IDS.BUSINESS,
     name: "Shivasha Business",
     frontendAreas: [
-      "business-platform", "crm", "mis", "ecommerce", "sales-agent",
+      "business-platform", "crm", "ecommerce", "sales-agent",
       "marketing", "customer-finder", "visitors-attractor", "software-hub",
-      "affiliate-center", "creator-earnings"
+      "affiliate-center"
     ],
     apiPrefixes: [
       "/api/business-platform", "/api/business-ai", "/api/business",
@@ -50,7 +50,7 @@ export const PRODUCTS = Object.freeze([
   freezeProduct({
     id: PRODUCT_IDS.ENTERPRISE,
     name: "Shivasha Enterprise",
-    frontendAreas: ["hr", "money-management", "tax-calculators", "enterprise"],
+    frontendAreas: ["hr", "mis", "money-management", "tax-calculators", "enterprise"],
     apiPrefixes: ["/api/enterprise", "/api/hr"]
   })
 ]);
