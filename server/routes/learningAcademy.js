@@ -10,6 +10,7 @@ import LearningReview from "../models/LearningReview.js";
 import AffiliatePartner from "../models/AffiliatePartner.js";
 import AffiliateCommission from "../models/AffiliateCommission.js";
 import { requireAuth } from "../middleware/auth.js";
+import { canAccessCourseLessons } from "../utils/learningAccess.js";
 
 const router = Router();
 const categories = new Set(["technology", "business", "marketing", "finance", "education", "spirituality", "wellness", "other"]);
@@ -43,7 +44,7 @@ router.post("/admin/sales/verify", requireAuth, async (req,res,next) => {
     if(!mongoose.isValidObjectId(enrollmentId))return res.status(400).json({message:"Valid paid enrollment ID is required."});
     if(String(req.body?.instructorRatePercent??"").trim()===""||!Number.isFinite(instructorRate)||instructorRate<0||instructorRate>100||!Number.isFinite(affiliateRate)||affiliateRate<0||affiliateRate>50||instructorRate+affiliateRate>100)return res.status(400).json({message:"Instructor and affiliate rates must be valid and total no more than 100%."});
     const enrollment=await LearningEnrollment.findById(enrollmentId);
-    if(!enrollment||enrollment.paymentStatus!=="verified"||!enrollment.transactionReference)return res.status(404).json({message:"A payment-verified enrollment is required before recording course earnings."});
+    if(!enrollment||enrollment.paymentStatus!=="verified"||enrollment.accessRevoked||!enrollment.transactionReference)return res.status(404).json({message:"An active payment-verified enrollment is required before recording course earnings."});
     const course=await LearningCourse.findOne({_id:enrollment.course,status:"published"});
     if(!course||course.price<=0||Math.abs(Number(enrollment.amountPaid)-Number(course.price))>0.01)return res.status(400).json({message:"Enrollment amount does not match a published paid course."});
     if(String(course.instructor)===String(enrollment.student))return res.status(400).json({message:"An instructor cannot earn commission on their own enrollment."});
@@ -162,7 +163,8 @@ router.get("/courses/:id", requireAuth, async (req,res,next) => {
     if(!course)return res.status(404).json({message:"Published course not found."});
     const enrollment=await LearningEnrollment.findOne({student:req.user.id,course:course._id}).lean();
     const enrolled=Boolean(enrollment)&&!enrollment.accessRevoked;
-    res.json({course:publicCourse(course,{includeLessonUrls:Boolean(enrollment)||course.price===0}),enrollment:enrolled?{_id:enrollment._id,paymentStatus:enrollment.paymentStatus,progress:enrollment.progress,completedAt:enrollment.completedAt,certificateId:enrollment.certificateId}:null,canAccessLessons:enrolled||course.price===0});
+    const canAccessLessons=canAccessCourseLessons({price:course.price,enrollment:enrolled?enrollment:null});
+    res.json({course:publicCourse(course,{includeLessonUrls:canAccessLessons}),enrollment:enrolled?{_id:enrollment._id,paymentStatus:enrollment.paymentStatus,progress:enrollment.progress,completedAt:enrollment.completedAt,certificateId:enrollment.certificateId}:null,canAccessLessons});
   }catch(e){next(e);}
 });
 
