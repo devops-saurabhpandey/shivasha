@@ -96,14 +96,19 @@ This is a source-code audit of representative Social, Business, Edutech and Ente
 5. Agree safe ProductMembership provisioning, then introduce product guards incrementally behind compatibility tests.
 
 
-## Social groups and communities — confirmed gap
+## Social groups and communities — implementation status
 
-- The current Social feed, profiles, posts, follows and one-to-one direct messages exist.
-- No dedicated Group/Community models, membership records, REST route group or frontend management screens were found in the inspected model/route/navigation inventory.
-- Direct-message creation explicitly requires exactly two participants; message history, sending and read-state handlers assume one peer. Do not treat the Conversation participants array as proof that group messaging is supported.
-- Group/community implementation must add explicit membership-scoped authorization for every REST and Socket.IO action, private-content discovery rules, moderation/audit controls and cross-community negative tests.
-- Keep group messaging separate from existing one-to-one direct messages. Do not change global presence policy without explicit product approval.
-- Detailed gap and phased implementation requirements: `docs/SOCIAL_GROUPS_COMMUNITIES_GAP_AUDIT.md`.
+- Social feed, profiles, posts, follows and one-to-one direct messages remain separate from the new Group/Community domain.
+- Group and Community have independent resource and membership models. Group and Community invitation records use a shared strict invite model with explicit resource type; no implicit cross-resource membership exists.
+- Authenticated API routers are mounted at `/api/social/groups` and `/api/social/communities`.
+- Create/read/list/join/leave and member review operations re-load current membership state from MongoDB. Owner/Admin privileges are not accepted from client-supplied role fields.
+- Active member lists expose only name/avatar/role/status/joinedAt, filter blocked peers in either direction, and restrict pending-request lists to Owner/Admin.
+- Invitation tokens are random 256-bit URL-safe values. Only SHA-256 hashes are stored; raw token is returned once to the inviter. Tokens expire after 24 hours, are conditionally claimed once, and may be revoked while pending.
+- Invitation redemption cannot bypass banned, removed or already-active membership state. A pending join request can be upgraded to active when a valid invitation is redeemed.
+- Owner cannot leave before ownership transfer. Admin cannot remove/ban another Admin; Owner may manage Admin membership. Owner transfer and last-owner safeguards remain future work.
+- MongoDB route integration tests cover group and community invite redemption, one-time use, hashed storage, private member visibility, pending-list restrictions, and blocked-peer filtering.
+- Direct-message creation still requires exactly two participants; group messaging is not implemented. Keep group conversations and Socket.IO rooms separate and membership-authorized before enabling chat.
+- No frontend UI, email/SMS invitation delivery, group content/posts, data migration, production index creation, deployment or merge was performed.
 
 ## Social Groups and Communities API foundation
 
