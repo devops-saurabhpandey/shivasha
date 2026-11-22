@@ -69,13 +69,6 @@ export default function AffiliateCenter({ auth }) {
     catch { setError("Clipboard access unavailable. Please select and copy the draft manually."); }
   };
 
-  const recordEnquiry = async () => {
-    setBusy(true); setError(""); setMessage("");
-    try { await request("/api/affiliates/enquiry/" + encodeURIComponent(data.partner.code), { method: "POST", body: JSON.stringify({}) }); setMessage("Your enquiry has been recorded. Enquiries are not sales and do not create commission."); await refresh(); }
-    catch (e) { setError(e.message); }
-    finally { setBusy(false); }
-  };
-
   if (loading) return <section className="content"><div className="panel">Loading Affiliate Partner Centre…</div></section>;
 
   return <section className="content">
@@ -93,7 +86,7 @@ export default function AffiliateCenter({ auth }) {
         <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}><div><small className="muted">Your referral code</small><h2 style={{ margin: "6px 0" }}>{data.partner.code}</h2></div><span className="badge">{data.partner.status}</span></div>
         <p className="muted">Share this link only with people who may genuinely be interested. Do not spam or make income guarantees.</p>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}><input readOnly value={data.referralUrl} style={{ flex: "1 1 260px" }} /><button className="primary" onClick={copyLink}>Copy referral link</button></div>
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 12 }}><button className="secondary" disabled={busy || data.partner.status !== "active"} onClick={recordEnquiry}>Record my test enquiry</button><button className="secondary" onClick={refresh}>Refresh dashboard</button></div>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 12 }}><button className="secondary" onClick={refresh}>Refresh dashboard</button></div>
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(145px,1fr))", gap: 10 }}>
         {[
