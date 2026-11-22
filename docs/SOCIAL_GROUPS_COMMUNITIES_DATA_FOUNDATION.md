@@ -47,20 +47,26 @@ Initial endpoints on each resource:
 - `GET /` — list active public resources and resources where the viewer is an active member; omit owners blocked in either direction and resources where the viewer is banned.
 - `POST /` — create a private-by-default resource and create its active Owner membership.
 - `GET /:id` — return a public resource or a private resource only to an active member; banned members and blocked creator/viewer pairs receive not-found.
-- `POST /:id/join` — submit a pending membership request. Invite-only is denied until a secure invitation flow exists.
+- `POST /:id/join` — submit a pending membership request. Invite-only requests require an invitation token.
 - `POST /:id/leave` — leave as a non-owner active member. Owner must transfer ownership first.
-- `POST /:id/members/:userId/review` — Owner/Admin can approve or reject pending requests. Re-checks current DB membership and blocks.
+- `GET /:id/members` — active members only; pending requests are visible only to Owner/Admin. Returned user fields are allowlisted and blocked peers are excluded.
+- `POST /:id/members/:userId/review` — Owner/Admin can approve/reject pending requests and remove/ban active members. Owner records are protected; Admin cannot moderate another Admin.
+- `POST /:id/invitations` — active Owner/Admin can issue a random 256-bit invitation token. Only SHA-256 hash is stored; raw token is returned once.
+- `POST /invitations/redeem` — authenticated user redeems a pending, unexpired token. Conditional atomic claim ensures one-time use; existing pending join requests may be upgraded to active. Banned/removed/active memberships cannot bypass their state.
+- `POST /:id/invitations/:inviteId/revoke` — Owner/Admin can revoke a pending invitation.
 
-Existing one-to-one Messages and Socket.IO rooms remain unchanged. These APIs do not expose member lists or group content.
+Group and Community invitation records share a strict model but carry an explicit resource type, resource ID and unique token hash. Expiry is 24 hours; a TTL index is cleanup only, while every redemption checks expiry in its query. If membership creation fails after an invite claim, the invite is conditionally restored only for that exact redeemer/claim timestamp.
+
+Existing one-to-one Messages and Socket.IO rooms remain unchanged. Group member lists are available only to active members; public visibility alone does not expose a member directory.
 
 ## Not included yet
 
-No UI, invitation delivery, group chat, group content model, notification type, data migration, production index creation, deployment or merge is included. The new models and routes are additive; no existing user records are migrated.
+No UI, email/SMS delivery, group content model, notification type, data migration, production index creation, deployment or merge is included. Invitations are manually shareable tokens; the platform does not send them automatically.
 
 ## Next implementation gates
 
-1. Add route-level authorization helpers and tests before exposing create/read/update/join/leave/invite endpoints.
-2. Define safe membership transitions, owner transfer and last-owner protection.
-3. Define how blocks affect shared groups/communities before returning member lists or content.
+1. Add owner transfer and last-owner protection before any owner-role mutation.
+2. Define how blocks affect shared group posts/content; member-list visibility currently excludes blocked peers.
+3. Add group post/content model and membership-scoped read/write/moderation endpoints.
 4. Add separate group conversation and Socket.IO membership checks before group chat.
 5. Add UI only after the APIs and authorization tests are stable.
