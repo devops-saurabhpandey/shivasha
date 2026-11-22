@@ -128,3 +128,8 @@ The Social Groups & Communities UI now shows the selected space's chat to active
 ## Group and Community post moderation controls
 
 The Social Groups & Communities post feed now exposes the existing scoped post APIs: authors can edit their own text posts, and authors plus active Owner/Admin/Moderator members can delete posts. The UI only displays controls as a convenience; the backend re-checks active membership, exact resource scope, authorship and moderator role for every request. Post deletion currently uses the existing hard-delete endpoint, so the confirmation explicitly warns that it cannot be undone. Moderators can delete posts but cannot edit another member's post. Comments are currently readable and addable but do not yet have edit/delete moderation controls.
+
+
+## Comment editing and moderation
+
+Comments now support author-only editing and author/active Owner/Admin/Moderator removal. Removal is a soft-delete: the comment text is replaced with a removal notice and `deletedAt`/`deletedBy` audit fields are retained. Deleted comments cannot be edited or removed again. All operations are scoped to the exact Group/Community and post, require active membership, and re-check author block state and moderation status. The frontend displays Edit/Remove controls only where appropriate; backend policy remains authoritative. Comment replies are not yet covered by these controls.

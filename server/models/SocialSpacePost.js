@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 const replySchema = new mongoose.Schema({ userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true }, text: { type: String, required: true, trim: true, maxlength: 1000 } }, { timestamps: true, strict: "throw" });
-const commentSchema = new mongoose.Schema({ userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true }, text: { type: String, required: true, trim: true, maxlength: 1000 }, replies: { type: [replySchema], default: [] } }, { timestamps: true, strict: "throw" });
+const commentSchema = new mongoose.Schema({ userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true }, text: { type: String, required: true, trim: true, maxlength: 1000 }, replies: { type: [replySchema], default: [] }, editedAt: { type: Date, default: null }, deletedAt: { type: Date, default: null }, deletedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null } }, { timestamps: true, strict: "throw" });
 const schema = new mongoose.Schema({
  resourceType: { type: String, enum: ["group", "community"], required: true },
  resourceId: { type: mongoose.Schema.Types.ObjectId, required: true },

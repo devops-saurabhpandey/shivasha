@@ -25,3 +25,10 @@ export function normalizeSpaceCommentText(value) {
  const text = value.trim();
  return text.length >= 1 && text.length <= SPACE_COMMENT_MAX_LENGTH ? text : null;
 }
+
+export function canEditSpaceComment({ authorId, requesterId, deletedAt } = {}) {
+ return !deletedAt && canEditSpacePost({ authorId, requesterId });
+}
+export function canDeleteSpaceComment({ authorId, requesterId, requesterRole, deletedAt } = {}) {
+ return !deletedAt && canDeleteSpacePost({ authorId, requesterId, requesterRole });
+}

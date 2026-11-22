@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { canCreateSpacePost, canReadSpaceContent, canModerateSpaceContent, canEditSpacePost, canDeleteSpacePost, normalizeSpacePostText, normalizeSpaceCommentText } from "./socialSpacePostPolicy.js";
+import { canCreateSpacePost, canReadSpaceContent, canModerateSpaceContent, canEditSpacePost, canDeleteSpacePost, canEditSpaceComment, canDeleteSpaceComment, normalizeSpacePostText, normalizeSpaceCommentText } from "./socialSpacePostPolicy.js";
 test("only active members can publish while resource is active", () => {
  assert.equal(canCreateSpacePost({ resourceStatus: "active", membership: { status: "active" } }), true);
  for (const status of ["pending", "removed", "banned", undefined]) assert.equal(canCreateSpacePost({ resourceStatus: "active", membership: { status } }), false);
@@ -31,4 +31,13 @@ test("post and comment text validation rejects empty, non-string and oversized i
  assert.equal(normalizeSpacePostText({ text: "hello" }), null);
  assert.equal(normalizeSpaceCommentText(" comment "), "comment");
  assert.equal(normalizeSpaceCommentText("x".repeat(1001)), null);
+});
+
+test("comment authors can edit; authors and moderators can delete only live comments", () => {
+ assert.equal(canEditSpaceComment({ authorId: "a", requesterId: "a" }), true);
+ assert.equal(canEditSpaceComment({ authorId: "a", requesterId: "b" }), false);
+ assert.equal(canEditSpaceComment({ authorId: "a", requesterId: "a", deletedAt: new Date() }), false);
+ assert.equal(canDeleteSpaceComment({ authorId: "a", requesterId: "b", requesterRole: "moderator" }), true);
+ assert.equal(canDeleteSpaceComment({ authorId: "a", requesterId: "b", requesterRole: "member" }), false);
+ assert.equal(canDeleteSpaceComment({ authorId: "a", requesterId: "a", deletedAt: new Date() }), false);
 });

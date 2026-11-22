@@ -7,7 +7,7 @@ import User from "../models/User.js";
 import { requireAuth } from "../middleware/auth.js";
 import { isBlockedEitherDirection } from "../social/blockPolicy.js";
 import { detectSocialMediaType } from "../media/socialMediaSignature.js";
-import { canCreateSpacePost, canReadSpaceContent, canDeleteSpacePost, canEditSpacePost, normalizeSpacePostText, normalizeSpaceCommentText } from "../social/socialSpacePostPolicy.js";
+import { canCreateSpacePost, canReadSpaceContent, canDeleteSpacePost, canEditSpacePost, canEditSpaceComment, canDeleteSpaceComment, normalizeSpacePostText, normalizeSpaceCommentText } from "../social/socialSpacePostPolicy.js";
 
 function createSpacePostRouter({ Resource, Membership, resourceType, resourceKey }) {
  const router = Router();
@@ -140,6 +140,46 @@ function createSpacePostRouter({ Resource, Membership, resourceType, resourceKey
   post.comments.push({ userId: req.user.id, text });
   await post.save();
   res.status(201).json({ comment: post.comments[post.comments.length - 1] });
+ });
+ router.patch("/:id/posts/:postId/comments/:commentId", requireAuth, async (req, res) => {
+  if (!validId(req.params.id) || !validId(req.params.postId) || !validId(req.params.commentId)) return res.status(404).json({ message: "Comment not found" });
+  const context = await loadContext(req.params.id, req.user.id);
+  if (!context || !canCreateSpacePost({ resourceStatus: context.resource.status, membership: context.membership })) return res.status(404).json({ message: "Comment not found" });
+  const post = await SocialSpacePost.findOne({ _id: req.params.postId, resourceType, resourceId: context.resource._id }).select("comments").lean();
+  const comment = post?.comments?.find(row => String(row._id) === req.params.commentId);
+  if (!comment || !canEditSpaceComment({ authorId: comment.userId, requesterId: req.user.id, deletedAt: comment.deletedAt })) return res.status(404).json({ message: "Comment not found" });
+  const [viewer, author] = await Promise.all([User.findById(req.user.id).select("blockedUsers").lean(), User.findById(comment.userId).select("blockedUsers moderationBlocked").lean()]);
+  if (!viewer || !author || author.moderationBlocked || isBlockedEitherDirection(req.user.id, comment.userId, viewer.blockedUsers || [], author.blockedUsers || [])) return res.status(404).json({ message: "Comment not found" });
+  const text = normalizeSpaceCommentText(req.body?.text);
+  if (!text) return res.status(400).json({ message: "Comment must contain 1 to 1000 characters" });
+  const editedAt = new Date();
+  const updated = await SocialSpacePost.findOneAndUpdate(
+   { _id: req.params.postId, resourceType, resourceId: context.resource._id, comments: { $elemMatch: { _id: req.params.commentId, deletedAt: null } } },
+   { $set: { "comments.$.text": text, "comments.$.editedAt": editedAt } },
+   { new: true }
+  ).select("comments").lean();
+  const saved = updated?.comments?.find(row => String(row._id) === req.params.commentId);
+  if (!saved) return res.status(409).json({ message: "Comment changed; refresh and try again" });
+  res.json({ comment: saved });
+ });
+ router.delete("/:id/posts/:postId/comments/:commentId", requireAuth, async (req, res) => {
+  if (!validId(req.params.id) || !validId(req.params.postId) || !validId(req.params.commentId)) return res.status(404).json({ message: "Comment not found" });
+  const context = await loadContext(req.params.id, req.user.id);
+  if (!context || context.membership?.status !== "active") return res.status(404).json({ message: "Comment not found" });
+  const post = await SocialSpacePost.findOne({ _id: req.params.postId, resourceType, resourceId: context.resource._id }).select("comments").lean();
+  const comment = post?.comments?.find(row => String(row._id) === req.params.commentId);
+  if (!comment || !canDeleteSpaceComment({ authorId: comment.userId, requesterId: req.user.id, requesterRole: context.membership.role, deletedAt: comment.deletedAt })) return res.status(404).json({ message: "Comment not found" });
+  const [viewer, author] = await Promise.all([User.findById(req.user.id).select("blockedUsers").lean(), User.findById(comment.userId).select("blockedUsers moderationBlocked").lean()]);
+  if (!viewer || !author || author.moderationBlocked || isBlockedEitherDirection(req.user.id, comment.userId, viewer.blockedUsers || [], author.blockedUsers || [])) return res.status(404).json({ message: "Comment not found" });
+  const deletedAt = new Date();
+  const updated = await SocialSpacePost.findOneAndUpdate(
+   { _id: req.params.postId, resourceType, resourceId: context.resource._id, comments: { $elemMatch: { _id: req.params.commentId, deletedAt: null } } },
+   { $set: { "comments.$.text": "This comment was removed", "comments.$.deletedAt": deletedAt, "comments.$.deletedBy": req.user.id } },
+   { new: true }
+  ).select("comments").lean();
+  const saved = updated?.comments?.find(row => String(row._id) === req.params.commentId);
+  if (!saved) return res.status(409).json({ message: "Comment changed; refresh and try again" });
+  res.json({ comment: saved });
  });
  router.patch("/:id/posts/:postId", requireAuth, async (req, res) => {
   if (!validId(req.params.id) || !validId(req.params.postId)) return res.status(404).json({ message: "Post not found" });
