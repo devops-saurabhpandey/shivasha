@@ -35,9 +35,27 @@ Both membership models have a unique compound index for the resource/user pair a
 - Presence visibility policy remains unchanged pending an explicit product decision.
 - The existing ProductMembership and Enterprise CompanyMembership authorization systems are not reused as Social membership.
 
+## API foundation added
+
+Mounted authenticated endpoints:
+
+- `/api/social/groups`
+- `/api/social/communities`
+
+Initial endpoints on each resource:
+
+- `GET /` — list active public resources and resources where the viewer is an active member; omit owners blocked in either direction and resources where the viewer is banned.
+- `POST /` — create a private-by-default resource and create its active Owner membership.
+- `GET /:id` — return a public resource or a private resource only to an active member; banned members and blocked creator/viewer pairs receive not-found.
+- `POST /:id/join` — submit a pending membership request. Invite-only is denied until a secure invitation flow exists.
+- `POST /:id/leave` — leave as a non-owner active member. Owner must transfer ownership first.
+- `POST /:id/members/:userId/review` — Owner/Admin can approve or reject pending requests. Re-checks current DB membership and blocks.
+
+Existing one-to-one Messages and Socket.IO rooms remain unchanged. These APIs do not expose member lists or group content.
+
 ## Not included yet
 
-No Groups/Communities HTTP routes, UI, invitation delivery, group chat, content model, notification type, data migration, production index creation, deployment or merge is included in this data-foundation step. The new models are additive and have not been connected to production requests.
+No UI, invitation delivery, group chat, group content model, notification type, data migration, production index creation, deployment or merge is included. The new models and routes are additive; no existing user records are migrated.
 
 ## Next implementation gates
 
