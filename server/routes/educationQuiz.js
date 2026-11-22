@@ -212,9 +212,10 @@ router.get("/guardian/requests/me", requireAuth, async (req,res,next) => {
   } catch(e) { next(e); }
 });
 router.patch("/guardian/links/:id", requireAuth, async (req,res,next) => {
+  let action = "";
   try {
     if(!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({message:"Invalid link ID."});
-    const action=String(req.body?.action||"");
+    action=String(req.body?.action||"");
     if(!["approve","revoke","reject"].includes(action)) return res.status(400).json({message:"Choose approve, reject or revoke."});
 
     // Use a conditional database update so concurrent approve/reject/revoke
