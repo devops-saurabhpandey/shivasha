@@ -98,3 +98,13 @@ Cross-cutting capabilities (auth, identity, authorization primitives, notificati
 - No payment gateway integration.
 - No token/session migration.
 - No changes to live deployment settings or secrets.
+
+
+## Frontend registry progress
+
+The following additive files now exist on the architecture branch:
+
+- `src/config/productNavigation.js` defines the four product identities and maps existing feature keys to Social, Business, Edutech, or Enterprise. Shared platform features are explicitly marked as shared.
+- `src/config/productNavigation.test.js` covers product identities, representative feature ownership, shared features, unknown product handling, and immutability.
+
+The registry is descriptive metadata only. It is not yet wired into `src/App.jsx`, and it does not enforce authentication, permissions, subscriptions, or tenant isolation. The existing combined navigation and all current feature render paths remain unchanged. Tests have been authored but have not yet been executed in a checked-out repository environment.
