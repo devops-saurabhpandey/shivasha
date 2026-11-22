@@ -22,8 +22,14 @@ jobs:
         with:
           node-version: 22
 
+      - name: Install frontend dependencies
+        run: npm install --no-package-lock
+
       - name: Test frontend product navigation registry
         run: node --test src/config/productNavigation.test.js
+
+      - name: Build all four frontend entry points
+        run: npm run build
 
       - name: Test backend API product registry
         working-directory: server
