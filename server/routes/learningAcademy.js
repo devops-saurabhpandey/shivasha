@@ -5,6 +5,8 @@ import User from "../models/User.js";
 import LearningCourse from "../models/LearningCourse.js";
 import LearningEnrollment from "../models/LearningEnrollment.js";
 import LearningSale from "../models/LearningSale.js";
+import LearningOrder from "../models/LearningOrder.js";
+import LearningReview from "../models/LearningReview.js";
 import AffiliatePartner from "../models/AffiliatePartner.js";
 import AffiliateCommission from "../models/AffiliateCommission.js";
 import { requireAuth } from "../middleware/auth.js";
@@ -210,6 +212,118 @@ router.post("/enrollments/:id/progress", requireAuth, async (req,res,next) => {
     if(enrollment.progress.length>=course.lessons.length&&!enrollment.completedAt){enrollment.completedAt=new Date();enrollment.certificateId="SHV-"+crypto.randomBytes(6).toString("hex").toUpperCase();}
     await enrollment.save();
     res.json({progress:enrollment.progress.length,total:course.lessons.length,completedAt:enrollment.completedAt,certificateId:enrollment.certificateId});
+  }catch(e){next(e);}
+});
+
+
+/**
+ * Provider-neutral checkout intent. This does not collect money or claim payment success.
+ * A real gateway adapter and signed webhook must be configured before automatic settlement.
+ */
+router.post("/courses/:id/checkout", requireAuth, async (req,res,next) => {
+  try {
+    if(!mongoose.isValidObjectId(req.params.id))return res.status(400).json({message:"Invalid course ID."});
+    const course=await LearningCourse.findOne({_id:req.params.id,status:"published"});
+    if(!course)return res.status(404).json({message:"Published course not found."});
+    if(course.price<=0)return res.status(400).json({message:"Free courses should use free enrollment."});
+    if(String(course.instructor)===String(req.user.id))return res.status(400).json({message:"Instructors cannot purchase their own course."});
+    const enrolled=await LearningEnrollment.findOne({student:req.user.id,course:course._id,accessRevoked:false});
+    if(enrolled)return res.status(409).json({message:"You already have active access to this course."});
+    const existing=await LearningOrder.findOne({student:req.user.id,course:course._id,status:"awaiting_payment"});
+    if(existing)return res.status(200).json({order:existing,checkoutReady:false,message:"Order exists, but no payment provider is configured. Do not send money until a secure checkout option is enabled."});
+    const order=await LearningOrder.create({orderReference:"SHVO-"+crypto.randomBytes(8).toString("hex").toUpperCase(),student:req.user.id,course:course._id,amount:course.price,currency:course.currency,status:"awaiting_payment",provider:"unconfigured"});
+    res.status(201).json({order,checkoutReady:false,message:"Order created. Payment is not enabled; no money has been charged."});
+  }catch(e){if(e?.code===11000)return res.status(409).json({message:"An order or payment reference already exists. Refresh your orders."});next(e);}
+});
+
+router.get("/my-orders", requireAuth, async (req,res,next) => {
+  try{
+    const orders=await LearningOrder.find({student:req.user.id}).populate("course","title price currency").sort({createdAt:-1}).limit(100).lean();
+    res.json({orders});
+  }catch(e){next(e);}
+});
+
+router.get("/admin/orders", requireAuth, async (req,res,next) => {
+  try{
+    if(!await isAdmin(req.user.id))return res.status(403).json({message:"Admin access required."});
+    const orders=await LearningOrder.find({status:"awaiting_payment"}).populate("course","title price currency").populate("student","name email").sort({createdAt:1}).limit(200).lean();
+    res.json({orders});
+  }catch(e){next(e);}
+});
+
+/** Admin reconciliation is only for a payment independently confirmed as settled. */
+router.post("/admin/orders/:id/reconcile", requireAuth, async (req,res,next) => {
+  try{
+    if(!await isAdmin(req.user.id))return res.status(403).json({message:"Admin access required."});
+    if(!mongoose.isValidObjectId(req.params.id))return res.status(400).json({message:"Invalid order ID."});
+    const reference=String(req.body?.transactionReference||"").trim().slice(0,120);
+    if(!reference)return res.status(400).json({message:"Verified transaction reference is required."});
+    const order=await LearningOrder.findOne({_id:req.params.id,status:"awaiting_payment"});
+    if(!order)return res.status(404).json({message:"Pending order not found or already reconciled."});
+    const course=await LearningCourse.findOne({_id:order.course,status:"published"});
+    if(!course||Math.abs(Number(course.price)-Number(order.amount))>0.01||course.currency!==order.currency)return res.status(409).json({message:"Course price changed. Do not reconcile this stale order; contact the buyer."});
+    const [usedOrder,usedEnrollment,existing]=await Promise.all([
+      LearningOrder.findOne({transactionReference:reference}),
+      LearningEnrollment.findOne({transactionReference:reference}),
+      LearningEnrollment.findOne({student:order.student,course:order.course})
+    ]);
+    if(usedOrder||usedEnrollment)return res.status(409).json({message:"This transaction reference has already been used."});
+    if(existing)return res.status(409).json({message:"Student already has an enrollment for this course."});
+    const enrollment=await LearningEnrollment.create({student:order.student,course:order.course,paymentStatus:"verified",transactionReference:reference,amountPaid:order.amount});
+    const updated=await LearningOrder.findOneAndUpdate({_id:order._id,status:"awaiting_payment"},{$set:{status:"paid",provider:"manual_reconciliation",transactionReference:reference,verifiedBy:req.user.id,verifiedAt:new Date()}},{new:true});
+    if(!updated){
+      await LearningEnrollment.deleteOne({_id:enrollment._id});
+      return res.status(409).json({message:"Order state changed during reconciliation. Refresh and retry."});
+    }
+    res.status(201).json({order:updated,enrollment,message:"Manually reconciled after independent payment confirmation. This is not an automatic gateway webhook."});
+  }catch(e){if(e?.code===11000)return res.status(409).json({message:"Duplicate payment reference or enrollment."});next(e);}
+});
+
+router.get("/courses/:id/reviews", requireAuth, async (req,res,next) => {
+  try{
+    if(!mongoose.isValidObjectId(req.params.id))return res.status(400).json({message:"Invalid course ID."});
+    const course=await LearningCourse.findOne({_id:req.params.id,status:"published"}).select("_id");
+    if(!course)return res.status(404).json({message:"Published course not found."});
+    const [reviews,summary]=await Promise.all([
+      LearningReview.find({course:course._id,status:"published"}).populate("student","name avatarUrl").sort({createdAt:-1}).limit(100).lean(),
+      LearningReview.aggregate([{$match:{course:course._id,status:"published"}},{$group:{_id:null,count:{$sum:1},average:{$avg:"$rating"}}}])
+    ]);
+    res.json({reviews,summary:{count:summary[0]?.count||0,average:summary[0]?Math.round(summary[0].average*100)/100:0}});
+  }catch(e){next(e);}
+});
+
+router.post("/courses/:id/reviews", requireAuth, async (req,res,next) => {
+  try{
+    if(!mongoose.isValidObjectId(req.params.id))return res.status(400).json({message:"Invalid course ID."});
+    const course=await LearningCourse.findOne({_id:req.params.id,status:"published"}).select("_id instructor");
+    if(!course)return res.status(404).json({message:"Published course not found."});
+    if(String(course.instructor)===String(req.user.id))return res.status(403).json({message:"Instructors cannot review their own course."});
+    const enrollment=await LearningEnrollment.findOne({student:req.user.id,course:course._id,accessRevoked:false});
+    if(!enrollment)return res.status(403).json({message:"Only enrolled students with active access can review this course."});
+    const rating=Number(req.body?.rating),title=String(req.body?.title||"").trim(),comment=String(req.body?.comment||"").trim();
+    if(!Number.isInteger(rating)||rating<1||rating>5||!comment||comment.length>1500||title.length>100)return res.status(400).json({message:"Provide a 1–5 star rating and a comment up to 1,500 characters."});
+    const review=await LearningReview.create({course:course._id,student:req.user.id,enrollment:enrollment._id,rating,title,comment,status:"pending_review"});
+    res.status(201).json({review,message:"Review submitted for moderation. It will appear after admin approval."});
+  }catch(e){if(e?.code===11000)return res.status(409).json({message:"You have already reviewed this course."});next(e);}
+});
+
+router.get("/admin/reviews", requireAuth, async (req,res,next) => {
+  try{
+    if(!await isAdmin(req.user.id))return res.status(403).json({message:"Admin access required."});
+    const reviews=await LearningReview.find({status:"pending_review"}).populate("course","title").populate("student","name email").sort({createdAt:1}).limit(200).lean();
+    res.json({reviews});
+  }catch(e){next(e);}
+});
+
+router.patch("/admin/reviews/:id", requireAuth, async (req,res,next) => {
+  try{
+    if(!await isAdmin(req.user.id))return res.status(403).json({message:"Admin access required."});
+    if(!mongoose.isValidObjectId(req.params.id))return res.status(400).json({message:"Invalid review ID."});
+    const status=String(req.body?.status||"");
+    if(!["published","rejected"].includes(status))return res.status(400).json({message:"Review status must be published or rejected."});
+    const review=await LearningReview.findOneAndUpdate({_id:req.params.id,status:"pending_review"},{$set:{status,reviewedBy:req.user.id,reviewedAt:new Date()}},{new:true,runValidators:true});
+    if(!review)return res.status(404).json({message:"Pending review not found or already moderated."});
+    res.json({review});
   }catch(e){next(e);}
 });
 
