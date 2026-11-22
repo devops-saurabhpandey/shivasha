@@ -45,3 +45,11 @@ Changes:
 - Add app/product entitlement checks only after a safe membership provisioning and existing-user compatibility plan is approved.
 - Review all remaining realtime event names and any future Edutech/Business/Enterprise rooms before introducing product-specific socket namespaces.
 - No production DB migration, membership grant, deployment or PR merge was performed.
+
+
+## Mutual-block enforcement follow-up
+
+- Socket.IO conversation joins now re-load both participants' current block lists and fail closed if either direction is blocked or either user cannot be loaded.
+- Typing start/stop events re-check conversation membership and current block state on every event; blocked or invalid access leaves the conversation room.
+- Added unit tests for both-direction block denial, allowed unblocked peers, invalid membership, and missing-user fail-closed behavior.
+- HTTP direct-message routes also hide blocked conversations and deny create/read/send/mark-read operations while a block exists.
