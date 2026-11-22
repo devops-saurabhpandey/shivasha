@@ -5,11 +5,38 @@ import User from "../models/User.js";
 import Notification from "../models/Notification.js";
 import { requireAuth } from "../middleware/auth.js";
 import { canDeletePost } from "../social/postAuthorization.js";
+import { buildPostVisibilityFilter, isBlockedEitherDirection } from "../social/blockPolicy.js";
 
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 2 * 1024 * 1024, files: 6 } });
 const extractHashtags = text => [...new Set((text.match(/#[a-zA-Z0-9_]+/g) || []).map(tag => tag.slice(1).toLowerCase()))].slice(0, 20);
 const populatePost = query => query.populate("author", "name bio avatarUrl").populate("comments.user", "name avatarUrl").populate("comments.replies.user", "name avatarUrl").populate("repostOf");
+
+async function getPostVisibilityFilter(viewerId, extra = {}) {
+  const [viewer, blockers] = await Promise.all([
+    User.findById(viewerId).select("blockedUsers").lean(),
+    User.find({ blockedUsers: viewerId }).select("_id").lean()
+  ]);
+  if (!viewer) throw new Error("Authenticated user not found");
+  return buildPostVisibilityFilter(viewerId, viewer.blockedUsers || [], blockers.map(user => user._id), extra);
+}
+
+async function isPostInteractionBlocked(viewerId, post) {
+  const [viewer, author] = await Promise.all([
+    User.findById(viewerId).select("blockedUsers").lean(),
+    User.findById(post.author).select("blockedUsers").lean()
+  ]);
+  if (!viewer || !author) return true;
+  return isBlockedEitherDirection(viewerId, post.author, viewer.blockedUsers || [], author.blockedUsers || []);
+}
+
+async function rejectBlockedPostInteraction(req, res, post) {
+  if (await isPostInteractionBlocked(req.user.id, post)) {
+    res.status(404).json({ message: "Post not found" });
+    return true;
+  }
+  return false;
+}
 
 async function uploadImage(file) {
   if (!["image/jpeg","image/png","image/webp","image/gif"].includes(file.mimetype)) throw new Error("Only JPG, PNG, WEBP or GIF images are allowed");
@@ -25,19 +52,22 @@ async function uploadImage(file) {
 }
 
 router.get("/", requireAuth, async (req, res) => {
-  const filter = req.query.hashtag ? { hashtags: String(req.query.hashtag).toLowerCase().replace(/^#/, "") } : {};
+  const extra = req.query.hashtag ? { hashtags: String(req.query.hashtag).toLowerCase().replace(/^#/, "") } : {};
+  const filter = await getPostVisibilityFilter(req.user.id, extra);
   res.json(await populatePost(Post.find(filter).sort({ createdAt: -1 }).limit(50)));
 });
 
 router.get("/:id", requireAuth, async (req, res) => {
-  const post = await populatePost(Post.findById(req.params.id));
+  const filter = await getPostVisibilityFilter(req.user.id, { _id: req.params.id });
+  const post = await populatePost(Post.findOne(filter));
   if (!post) return res.status(404).json({ message: "Post not found" });
   res.json(post);
 });
 
 router.get("/saved", requireAuth, async (req, res) => {
   const user = await User.findById(req.user.id).select("savedPosts");
-  res.json(await populatePost(Post.find({ _id: { $in: user?.savedPosts || [] } }).sort({ createdAt: -1 })));
+  const visibility = await getPostVisibilityFilter(req.user.id, { _id: { $in: user?.savedPosts || [] } });
+  res.json(await populatePost(Post.find(visibility).sort({ createdAt: -1 })));
 });
 
 router.post("/upload", requireAuth, upload.array("images", 6), async (req, res) => {
@@ -61,6 +91,7 @@ router.post("/", requireAuth, async (req, res) => {
 router.post("/:id/save", requireAuth, async (req, res) => {
   const [post, user] = await Promise.all([Post.findById(req.params.id), User.findById(req.user.id)]);
   if (!post || !user) return res.status(404).json({ message: "Post not found" });
+  if (await rejectBlockedPostInteraction(req, res, post)) return;
   const saved = user.savedPosts.some(id => id.toString() === post._id.toString());
   if (saved) user.savedPosts = user.savedPosts.filter(id => id.toString() !== post._id.toString());
   else user.savedPosts.push(post._id);
@@ -71,6 +102,7 @@ router.post("/:id/save", requireAuth, async (req, res) => {
 router.post("/:id/repost", requireAuth, async (req, res) => {
   const original = await Post.findById(req.params.id);
   if (!original) return res.status(404).json({ message: "Post not found" });
+  if (await rejectBlockedPostInteraction(req, res, original)) return;
   const existing = await Post.findOne({ author: req.user.id, repostOf: original._id });
   if (existing) return res.status(409).json({ message: "You already reposted this post" });
   const repost = await Post.create({ author: req.user.id, repostOf: original._id, text: String(req.body.text || "").trim(), hashtags: extractHashtags(String(req.body.text || "")) });
@@ -85,6 +117,7 @@ router.post("/:id/comments", requireAuth, async (req, res) => {
   if (!text) return res.status(400).json({ message: "Comment is required" });
   const post = await Post.findById(req.params.id);
   if (!post) return res.status(404).json({ message: "Post not found" });
+  if (await rejectBlockedPostInteraction(req, res, post)) return;
   post.comments.push({ user: req.user.id, text });
   await post.save();
   if (post.author.toString() !== req.user.id) { const n = await Notification.create({ recipient: post.author, actor: req.user.id, type: "comment", post: post._id }); req.app.get("io")?.to("user:" + post.author.toString()).emit("notification:new", { notificationId: n._id }); }
@@ -96,6 +129,7 @@ router.post("/:postId/comments/:commentId/replies", requireAuth, async (req, res
   if (!text) return res.status(400).json({ message: "Reply is required" });
   const post = await Post.findById(req.params.postId);
   if (!post) return res.status(404).json({ message: "Post not found" });
+  if (await rejectBlockedPostInteraction(req, res, post)) return;
   const comment = post.comments.id(req.params.commentId);
   if (!comment) return res.status(404).json({ message: "Comment not found" });
   comment.replies.push({ user: req.user.id, text });
@@ -107,6 +141,7 @@ router.post("/:postId/comments/:commentId/replies", requireAuth, async (req, res
 router.post("/:id/like", requireAuth, async (req, res) => {
   const post = await Post.findById(req.params.id);
   if (!post) return res.status(404).json({ message: "Post not found" });
+  if (await rejectBlockedPostInteraction(req, res, post)) return;
   const userId = req.user.id;
   const liked = post.likes.some(id => id.toString() === userId);
   if (liked) post.likes = post.likes.filter(id => id.toString() !== userId);
