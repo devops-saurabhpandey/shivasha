@@ -7,7 +7,7 @@ import { requireAuth } from "../middleware/auth.js";
 import { isBlockedEitherDirection } from "../social/blockPolicy.js";
 
 const router = express.Router();
-const publicUser = query => query.select("-passwordHash -savedPosts -moderationBlocked -blockedUsers");
+const publicUser = query => query.select("name bio avatarUrl businessName businessCategory businessDescription businessListed createdAt");
 
 async function getBlockedPeerIds(viewerId) {
   const [viewer, blockers] = await Promise.all([
