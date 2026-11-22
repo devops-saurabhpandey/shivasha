@@ -61,7 +61,7 @@ Existing one-to-one Messages and Socket.IO rooms remain unchanged. Group member 
 
 ## Not included yet
 
-No UI, email/SMS delivery, group content model, notification type, data migration, production index creation, deployment or merge is included. Invitations are manually shareable tokens; the platform does not send them automatically.
+No email/SMS delivery, group chat, realtime event, notification type, data migration, production index creation, deployment or merge is included. Invitations are manually shareable tokens; the platform does not send them automatically.
 
 ## Next implementation gates
 
@@ -69,7 +69,7 @@ No UI, email/SMS delivery, group content model, notification type, data migratio
 2. Define how blocks affect shared group posts/content; member-list visibility currently excludes blocked peers.
 3. Add group post/content model and membership-scoped read/write/moderation endpoints.
 4. Add separate group conversation and Socket.IO membership checks before group chat.
-5. Add UI only after the APIs and authorization tests are stable.
+5. Build the Social Groups & Communities frontend against the scoped content APIs.
 
 
 ## Group and Community content API — first text-post slice
@@ -84,3 +84,12 @@ A separate SocialSpacePost model and dedicated Group/Community post routes are a
 - Existing global Social feed and one-to-one Messages remain separate and unchanged.
 
 Text posts and secure Photo/Video attachments are supported by the API. There is no group chat, realtime event, content notification, frontend UI, migration, production index creation, deployment or merge in this slice.
+
+
+## Social Groups & Communities frontend
+
+The authenticated Social sidebar now includes a Groups & Communities workspace. It supports switching between Groups and Communities, listing accessible spaces, creating a space with public/private/invite-only privacy, redeeming an invitation token, requesting to join, reading the selected space's posts, publishing text and up to four photo/video attachments, liking posts and adding comments.
+
+The frontend uses the existing authenticated API token and the dedicated resource-scoped endpoints. Uploads use multipart FormData and do not set a JSON Content-Type header. Private content visibility and all write permissions remain enforced by the backend; hiding controls in the frontend is not treated as authorization.
+
+This UI does not yet provide member approval/moderation dashboards, invitation issuance/revocation UI, post editing/deletion controls, group chat, or realtime content updates. Those are separate follow-up slices.
