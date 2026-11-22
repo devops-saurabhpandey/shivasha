@@ -156,6 +156,9 @@ function createResourceRouter({ Resource, Membership, resourceKey, resourceLabel
     if (!mongoose.isValidObjectId(req.params.id) || !mongoose.isValidObjectId(req.params.userId)) {
       return res.status(404).json({ message: "Membership not found" });
     }
+    if (await areBlocked(req.user.id, req.params.userId)) {
+      return res.status(404).json({ message: "Membership not found" });
+    }
     const action = String(req.body?.action || "");
     if (!["approve", "reject"].includes(action)) {
       return res.status(400).json({ message: "Action must be approve or reject" });
