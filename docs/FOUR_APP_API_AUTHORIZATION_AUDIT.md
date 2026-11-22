@@ -104,7 +104,7 @@ This is a source-code audit of representative Social, Business, Edutech and Ente
 - Create/read/list/join/leave and member review operations re-load current membership state from MongoDB. Owner/Admin privileges are not accepted from client-supplied role fields.
 - Active member lists expose only name/avatar/role/status/joinedAt, filter blocked peers in either direction, and restrict pending-request lists to Owner/Admin.
 - Invitation tokens are random 256-bit URL-safe values. Only SHA-256 hashes are stored; raw token is returned once to the inviter. Tokens expire after 24 hours, are conditionally claimed once, and may be revoked while pending.
-- Invitation redemption cannot bypass banned, removed or already-active membership state. A pending join request can be upgraded to active when a valid invitation is redeemed.
+- Invitation redemption cannot bypass banned or already-active membership state; a removed non-owner may rejoin only with a fresh valid invitation. A pending join request can be upgraded to active when a valid invitation is redeemed.
 - Owner cannot leave before ownership transfer. Admin cannot remove/ban another Admin; Owner may manage Admin membership. Owner transfer and last-owner safeguards remain future work.
 - MongoDB route integration tests cover group and community invite redemption, one-time use, hashed storage, private member visibility, pending-list restrictions, and blocked-peer filtering.
 - Direct-message creation still requires exactly two participants; group messaging is not implemented. Keep group conversations and Socket.IO rooms separate and membership-authorized before enabling chat.
