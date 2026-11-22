@@ -26,6 +26,8 @@ test("only owner and admin can review non-owner membership records", () => {
   assert.equal(canReviewGroupMembership({ actorRole: GROUP_MEMBER_ROLE.OWNER, targetMembership: pending, action: "approve" }), true);
   assert.equal(canReviewGroupMembership({ actorRole: GROUP_MEMBER_ROLE.ADMIN, targetMembership: pending, action: "reject" }), true);
   assert.equal(canReviewGroupMembership({ actorRole: GROUP_MEMBER_ROLE.MODERATOR, targetMembership: pending, action: "approve" }), false);
+  assert.equal(canReviewGroupMembership({ actorRole: GROUP_MEMBER_ROLE.ADMIN, targetMembership: { ...pending, role: GROUP_MEMBER_ROLE.ADMIN }, action: "remove" }), false);
+  assert.equal(canReviewGroupMembership({ actorRole: GROUP_MEMBER_ROLE.OWNER, targetMembership: { ...pending, role: GROUP_MEMBER_ROLE.ADMIN }, action: "remove" }), true);
   assert.equal(canReviewGroupMembership({ actorRole: GROUP_MEMBER_ROLE.MEMBER, targetMembership: pending, action: "approve" }), false);
   assert.equal(canReviewGroupMembership({ actorRole: GROUP_MEMBER_ROLE.OWNER, targetMembership: { ...pending, role: "owner" }, action: "remove" }), false);
 });
