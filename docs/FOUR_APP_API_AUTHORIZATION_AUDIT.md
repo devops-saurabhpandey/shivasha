@@ -104,3 +104,15 @@ This is a source-code audit of representative Social, Business, Edutech and Ente
 - Group/community implementation must add explicit membership-scoped authorization for every REST and Socket.IO action, private-content discovery rules, moderation/audit controls and cross-community negative tests.
 - Keep group messaging separate from existing one-to-one direct messages. Do not change global presence policy without explicit product approval.
 - Detailed gap and phased implementation requirements: `docs/SOCIAL_GROUPS_COMMUNITIES_GAP_AUDIT.md`.
+
+## Social Groups and Communities API foundation
+
+- Added authenticated routers at `/api/social/groups` and `/api/social/communities`.
+- Both resource types have separate models and membership records; they do not reuse Enterprise CompanyMembership or ProductMembership.
+- Create operations establish an active Owner membership. Resource creation is cleaned up if the initial owner membership cannot be created.
+- Resource lists return active public resources plus private resources for active members, excluding owners blocked in either direction and resources where the viewer is banned.
+- Detail reads require public visibility or active membership; banned memberships and blocked creator/viewer pairs fail closed.
+- Join requests persist as pending; invite-only requests are denied until an invitation-token workflow is implemented.
+- Owner/Admin review actions re-load active actor membership from MongoDB, reject unsupported transitions, and conditionally update pending membership records.
+- Leaving is available to active non-owners; Owner leave is denied until ownership transfer exists.
+- Member lists, group content, invitations, group chat, and Socket.IO group rooms are not exposed by these endpoints.
