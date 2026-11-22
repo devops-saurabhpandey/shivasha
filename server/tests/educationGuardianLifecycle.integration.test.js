@@ -14,10 +14,14 @@ const mongoUri = process.env.MONGODB_TEST_URI;
 test("guardian routes enforce expiry, one-time redemption, student consent and per-guardian progress isolation", {
   skip: !mongoUri && "Set MONGODB_TEST_URI to an isolated MongoDB *_test database"
 }, async () => {
-  const databaseName = decodeURIComponent(new URL(mongoUri).pathname.replace(/^\//, ""));
+  const guardianMongoUrl = new URL(mongoUri);
+  guardianMongoUrl.pathname = "/shivasha_guardian_test";
+  const guardianMongoUri = guardianMongoUrl.toString();
+  const databaseName = decodeURIComponent(guardianMongoUrl.pathname.replace(/^\//, ""));
   if (!databaseName || !/_test$/i.test(databaseName)) {
-    throw new Error("Refusing to run guardian integration tests unless MONGODB_TEST_URI names a database ending in _test");
+    throw new Error("Refusing to run guardian integration tests unless the derived MongoDB database ends in _test");
   }
+  if (process.env.MONGODB_URI && process.env.MONGODB_URI === guardianMongoUri) {
   if (process.env.MONGODB_URI && process.env.MONGODB_URI === guardianMongoUri) {
     throw new Error("MONGODB_TEST_URI must not point at the configured application database");
   }
