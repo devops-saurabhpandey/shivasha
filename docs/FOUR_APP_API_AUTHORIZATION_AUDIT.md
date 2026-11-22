@@ -7,6 +7,8 @@ This is a source-code audit of representative Social, Business, Edutech and Ente
 ## Social
 
 ### Changes implemented on this branch
+- Extended mutual-block filtering to Social Discover, user search, Business Directory, profile connections, and notification feeds/unread counts. Public user projections continue to omit private block lists.
+- Direct-message conversation lists now omit a conversation when either participant has blocked the other. Creating a conversation and reading, sending, or marking messages read are denied with 404 when either-direction blocking exists.
 - Added a mutual-block policy: a post is hidden when the viewer blocked its author or the author blocked the viewer.
 - Applied this policy to feed and hashtag reads, direct post reads, saved-post reads, and post save/repost/comment/reply/like actions. Blocked interactions return 404 to avoid confirming inaccessible content.
 - Applied mutual-block checks to profile reads and follow actions. Block lists are excluded from public user projections.
@@ -24,7 +26,7 @@ This is a source-code audit of representative Social, Business, Edutech and Ente
 - The feed and post-by-ID endpoints return posts to any authenticated user; no post visibility/follower-only policy is applied in these routes.
 
 ### Findings / follow-up
-1. Continue extending the mutual-block policy to every Social surface, including search/discovery, connections, notifications, messaging and Socket.IO presence/rooms. Confirm expected privacy semantics before enabling follower-only/private profiles.
+1. Continue auditing Socket.IO conversation-room joins and typing events after a block is added, plus global presence broadcasts. Ensure already-open rooms are invalidated or rechecked when either participant blocks the other. Confirm expected privacy semantics before enabling follower-only/private profiles.
 2. Feed, post-by-ID, comments and interactions do not consistently enforce blocked-user relationships or visibility settings. Define the Social visibility model and enforce it on read and write paths.
 3. Post deletion now checks the current database role. Continue reviewing other destructive Social actions for stale JWT role or permission claims.
 4. Image upload validates declared MIME type, not file signatures. Add actual file-type inspection and quotas before production hardening.
