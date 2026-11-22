@@ -22,8 +22,8 @@ test("rejects unsupported channels by returning no campaign assets",()=>{
 });
 
 test("normalizes untrusted course text and always includes affiliate disclosure",()=>{
- const kit=buildAffiliateCampaignKit({course:{...course,title:"Course\\nGuaranteed income!!!"},referralUrl:"https://example.test",channels:["facebook"]});
- assert.ok(!kit[0].content.includes("Course\\n"));
+ const kit=buildAffiliateCampaignKit({course:{...course,title:"Course Guaranteed income!!!"},referralUrl:"https://example.test",channels:["facebook"]});
+ assert.ok(!kit[0].content.toLowerCase().includes("guaranteed income"));
  assert.ok(kit[0].content.includes("Disclosure:")===false);
  assert.ok(kit[0].content.includes("प्रकटीकरण:"));
 });
