@@ -144,7 +144,12 @@ router.post("/admin/conversions", async (req, res, next) => {
       partner: partner._id, user: buyer._id, transactionReference, grossAmount: roundMoney(grossAmount),
       ratePercent, commissionAmount, productDescription, verifiedAt: new Date(), status: "pending_review"
     });
-    await AffiliateCommissionAudit.create({ commission: commission._id, actor: req.user.id, action: "created_pending_review", previousStatus: null, newStatus: "pending_review", note: "Commission candidate recorded after admin-attested transaction verification." });
+    try {
+      await AffiliateCommissionAudit.create({ commission: commission._id, actor: req.user.id, action: "created_pending_review", previousStatus: null, newStatus: "pending_review", note: "Commission candidate recorded after admin-attested transaction verification." });
+    } catch (auditError) {
+      await AffiliateCommission.deleteOne({ _id: commission._id }).catch(rollbackError => console.error("Affiliate commission creation rollback failed", { commissionId: String(commission._id), error: rollbackError.message }));
+      throw auditError;
+    }
     res.status(201).json({ commission });
   } catch (error) {
     if (error?.code === 11000) return res.status(409).json({ message: "This transaction reference already has a commission record." });
