@@ -44,8 +44,23 @@ test("allows an active member with the exact product, tenant and permission", as
   assert.equal(filter.productId, "business");
   assert.equal(filter.tenantId, "tenant-a");
   assert.equal(filter.status, "active");
+  assert.deepEqual(filter.$or, [{ expiresAt: null }, { expiresAt: { $gt: now } }]);
   assert.equal(req.productAccess.productId, "business");
   assert.deepEqual(req.productAccess.permissions, ["leads:read"]);
+});
+
+test("queries only memberships that have not expired", async () => {
+  let filter;
+  const middleware = requireProductAccess({
+    productId: "business",
+    tenantResolver: async () => "tenant-a",
+    membershipModel: { findOne: async value => { filter = value; return null; } },
+    clock: () => now
+  });
+  const res = makeResponse();
+  await middleware(makeRequest(), res, () => assert.fail("must not call next"));
+  assert.deepEqual(filter.$or, [{ expiresAt: null }, { expiresAt: { $gt: now } }]);
+  assert.equal(res.statusCode, 403);
 });
 
 test("denies missing membership and cross-product membership", async () => {
