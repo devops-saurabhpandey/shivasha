@@ -96,7 +96,7 @@ router.patch("/admin/sales/:id/reverse", requireAuth, async (req,res,next) => {
     if(!mongoose.isValidObjectId(req.params.id))return res.status(400).json({message:"Invalid sale ID."});
     const sale=await LearningSale.findOneAndUpdate({_id:req.params.id,status:"verified"},{$set:{status:"reversed",reviewNote:String(req.body?.reason||"Refund or chargeback").trim().slice(0,300)}},{new:true});
     if(!sale)return res.status(404).json({message:"Verified sale not found or already reversed."});
-    if(sale.affiliatePartner)await AffiliateCommission.findOneAndUpdate({transactionReference:"SHVCOURSE-"+sale.transactionReference,status:"pending_review"},{$set:{status:"reversed",reviewedBy:req.user.id,reviewedAt:new Date(),reviewNote:"Related course sale reversed."}});
+    await LearningEnrollment.updateOne({_id:sale.enrollment},{$set:{accessRevoked:true}});\n    if(sale.affiliatePartner)await AffiliateCommission.findOneAndUpdate({transactionReference:"SHVCOURSE-"+sale.transactionReference,status:{$in:["pending_review","approved"]}},{$set:{status:"reversed",reviewedBy:req.user.id,reviewedAt:new Date(),reviewNote:"Related course sale reversed."}});
     res.json({sale,message:"Sale ledger reversed. Any instructor payout must be reconciled separately."});
   }catch(e){next(e);}
 });
@@ -158,7 +158,7 @@ router.get("/courses/:id", requireAuth, async (req,res,next) => {
     const course=await LearningCourse.findOne({_id:req.params.id,status:"published"}).populate("instructor","name avatarUrl").lean();
     if(!course)return res.status(404).json({message:"Published course not found."});
     const enrollment=await LearningEnrollment.findOne({student:req.user.id,course:course._id}).lean();
-    const enrolled=Boolean(enrollment);
+    const enrolled=Boolean(enrollment)&&!enrollment.accessRevoked;
     res.json({course:publicCourse(course,{includeLessonUrls:Boolean(enrollment)||course.price===0}),enrollment:enrollment?{_id:enrollment._id,paymentStatus:enrollment.paymentStatus,progress:enrollment.progress,completedAt:enrollment.completedAt,certificateId:enrollment.certificateId}:null,canAccessLessons:enrolled||course.price===0});
   }catch(e){next(e);}
 });
@@ -199,7 +199,7 @@ router.post("/admin/enrollments/verify-payment", requireAuth, async (req,res,nex
 router.post("/enrollments/:id/progress", requireAuth, async (req,res,next) => {
   try {
     if(!mongoose.isValidObjectId(req.params.id))return res.status(400).json({message:"Invalid enrollment ID."});
-    const enrollment=await LearningEnrollment.findOne({_id:req.params.id,student:req.user.id});
+    const enrollment=await LearningEnrollment.findOne({_id:req.params.id,student:req.user.id,accessRevoked:false});
     if(!enrollment)return res.status(404).json({message:"Enrollment not found."});
     const course=await LearningCourse.findOne({_id:enrollment.course,status:"published"});
     if(!course)return res.status(404).json({message:"Course is unavailable."});
