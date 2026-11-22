@@ -16,6 +16,9 @@ export default function LearningAcademy({auth}) {
   const [refundRequests,setRefundRequests]=useState([]);
   const [pendingReviews,setPendingReviews]=useState([]);
   const [payoutPreview,setPayoutPreview]=useState({instructors:[],affiliates:[]});
+  const [discoveryPreferences,setDiscoveryPreferences]=useState({category:"",level:"",language:"Hindi"});
+  const [recommendations,setRecommendations]=useState([]);
+  const [discoveryLoading,setDiscoveryLoading]=useState(false);
   const [reviewForm,setReviewForm]=useState({rating:"5",title:"",comment:""});
   const [saleForm,setSaleForm]=useState({enrollmentId:"",instructorRatePercent:"",affiliateCode:"",affiliateRatePercent:"0"});
   const [selected,setSelected]=useState(null);
@@ -38,6 +41,7 @@ export default function LearningAcademy({auth}) {
     finally{setLoading(false);}
   },[request,auth?.user?.role]);
   useEffect(()=>{if(auth?.token)refresh();},[auth?.token,refresh]);
+  const findRecommendations=async()=>{setDiscoveryLoading(true);setError("");try{const params=new URLSearchParams(Object.entries(discoveryPreferences).filter(([,v])=>v));const d=await request("/api/learning/recommendations?"+params.toString());setRecommendations(d.recommendations||[]);}catch(e){setError(e.message);}finally{setDiscoveryLoading(false);}};
   const createCourse=async e=>{
     e.preventDefault();setBusy(true);setError("");setNotice("");
     const lessons=form.lessons.split("\n").map(x=>x.trim()).filter(Boolean).map(line=>{const [title,...url]=line.split("|");return {title:title.trim(),videoUrl:url.join("|").trim(),durationMinutes:0};});
@@ -100,6 +104,18 @@ export default function LearningAcademy({auth}) {
     </div>}
     <div className="panel" style={{padding:16,marginBottom:16}}><h3>My learning</h3>{orders.length>0&&<div style={{marginBottom:12}}><h4>My course orders</h4>{orders.map(o=><div key={o._id} style={{padding:"8px 0",borderBottom:"1px solid #e5e7eb"}}><b>{o.course?.title||"Course order"}</b> · {money(o.amount,o.currency)} · {o.status}<p className="muted">{o.orderReference}</p>{o.status==="awaiting_payment"&&<button className="secondary" disabled={busy} onClick={async()=>{if(!window.confirm("Cancel this unpaid course order?"))return;setBusy(true);try{const d=await request("/api/learning/orders/"+o._id+"/cancel",{method:"PATCH",body:"{}"});setNotice(d.message);await refresh();}catch(e){setError(e.message);}finally{setBusy(false);}}}>Cancel unpaid order</button>}{o.status==="paid"&&<button className="secondary" disabled={busy} onClick={async()=>{const reason=window.prompt("Why are you requesting a refund?");if(!reason)return;setBusy(true);try{const d=await request("/api/learning/orders/"+o._id+"/refund-request",{method:"POST",body:JSON.stringify({reason})});setNotice(d.message);await refresh();}catch(e){setError(e.message);}finally{setBusy(false);}}}>Request refund</button>}</div>)}</div>}{mine.enrolled.length?mine.enrolled.map(x=><div key={x.enrollmentId} style={{padding:"8px 0",borderBottom:"1px solid #e5e7eb",display:"flex",justifyContent:"space-between",gap:8}}><span>{x.course.title} · {x.progress} lessons complete</span><button className="secondary" onClick={()=>openCourse(x.course._id)}>Continue</button></div>):<p className="muted">You have not enrolled in a course yet.</p>}</div>
     {auth?.user?.role==="admin"&&adminOrders.length===0&&<div className="panel" style={{padding:12,marginBottom:16}}><h3>Admin · Refund requests</h3><p className="muted">Refund-pending orders are handled in the admin queue after independently executing the refund. Refresh this page after an order enters refund-pending state.</p></div>}
+    <div className="panel" style={{padding:16,marginBottom:18}}>
+      <h3>Personalized Course Discovery</h3>
+      <p className="muted">Choose your interests to find relevant courses. Recommendations use your selected preferences and previous active enrollments; no external AI service or payment gateway is required.</p>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(150px,1fr))",gap:10}}>
+        <label>Learning category<select value={discoveryPreferences.category} onChange={e=>setDiscoveryPreferences({...discoveryPreferences,category:e.target.value})}><option value="">Any category</option>{CATEGORIES.map(x=><option key={x} value={x}>{x}</option>)}</select></label>
+        <label>Experience level<select value={discoveryPreferences.level} onChange={e=>setDiscoveryPreferences({...discoveryPreferences,level:e.target.value})}><option value="">Any level</option><option value="beginner">Beginner</option><option value="intermediate">Intermediate</option><option value="advanced">Advanced</option></select></label>
+        <label>Preferred language<input maxLength="40" value={discoveryPreferences.language} onChange={e=>setDiscoveryPreferences({...discoveryPreferences,language:e.target.value})} placeholder="Hindi, English…"/></label>
+      </div>
+      <button className="primary" style={{marginTop:10}} disabled={discoveryLoading} onClick={findRecommendations}>{discoveryLoading?"Finding courses…":"Find my courses"}</button>
+      {recommendations.length>0&&<div style={{marginTop:16}}><h4>Recommended for you</h4><div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:10}}>{recommendations.map(item=><article className="panel" key={item.course._id} style={{padding:12}}><span className="badge">{item.course.category}</span><h4>{item.course.title}</h4><p>{item.course.description.slice(0,130)}</p><small className="muted">{item.recommendationReason} · {item.course.level} · {item.course.language}</small><h4>{money(item.course.price,item.course.currency)}</h4><button className="secondary" onClick={()=>openCourse(item.course._id)}>View course</button></article>)}</div></div>}
+      {recommendations.length===0&&!discoveryLoading&&<p className="muted">Choose your preferences and select Find my courses.</p>}
+    </div>
     <h3>Explore courses</h3>
     {loading?<p>Loading courses…</p>:<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(230px,1fr))",gap:12}}>
       {courses.map(course=><article className="panel" key={course._id} style={{padding:16}}><span className="badge">{course.category}</span><h3>{course.title}</h3><p>{course.description.slice(0,180)}</p><small className="muted">{course.language} · {course.level} · {course.lessons.length} lessons</small><h3>{money(course.price,course.currency)}</h3><button className="primary" onClick={()=>openCourse(course._id)}>{enrolledIds.has(String(course._id))?"Continue learning":"View course"}</button></article>)}
