@@ -131,8 +131,8 @@ function createResourceRouter({ Resource, Membership, resourceKey, resourceType,
     if (existing?.status === GROUP_MEMBER_STATUS.BANNED) {
       return res.status(403).json({ message: "Membership is restricted" });
     }
-    if (existing?.status === GROUP_MEMBER_STATUS.ACTIVE || existing?.status === GROUP_MEMBER_STATUS.REMOVED) {
-      return res.status(409).json({ message: "An existing membership prevents invitation redemption" });
+    if (existing?.status === GROUP_MEMBER_STATUS.ACTIVE) {
+      return res.status(409).json({ message: "You are already an active member" });
     }
 
     const claimed = await SocialInvite.findOneAndUpdate(
@@ -144,10 +144,10 @@ function createResourceRouter({ Resource, Membership, resourceKey, resourceType,
 
     try {
       let membership;
-      if (existing?.status === GROUP_MEMBER_STATUS.PENDING) {
+      if (existing?.status === GROUP_MEMBER_STATUS.PENDING || existing?.status === GROUP_MEMBER_STATUS.REMOVED) {
         membership = await Membership.findOneAndUpdate(
-          { _id: existing._id, status: GROUP_MEMBER_STATUS.PENDING, role: GROUP_MEMBER_ROLE.MEMBER },
-          { $set: { status: GROUP_MEMBER_STATUS.ACTIVE, joinedAt: now, invitedBy: claimed.createdBy } },
+          { _id: existing._id, status: existing.status, role: { $ne: GROUP_MEMBER_ROLE.OWNER } },
+          { $set: { status: GROUP_MEMBER_STATUS.ACTIVE, role: GROUP_MEMBER_ROLE.MEMBER, joinedAt: now, invitedBy: claimed.createdBy } },
           { new: true, runValidators: true }
         );
       } else {
