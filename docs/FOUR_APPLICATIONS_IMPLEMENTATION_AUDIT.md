@@ -108,3 +108,9 @@ The following additive files now exist on the architecture branch:
 - `src/config/productNavigation.test.js` covers product identities, representative feature ownership, shared features, unknown product handling, and immutability.
 
 The registry is descriptive metadata only. It is not yet wired into `src/App.jsx`, and it does not enforce authentication, permissions, subscriptions, or tenant isolation. The existing combined navigation and all current feature render paths remain unchanged. Tests have been authored but have not yet been executed in a checked-out repository environment.
+
+
+### Automated validation workflow
+
+- Added `.github/workflows/four-app-foundation.yml` to run the frontend and backend registry unit tests with Node.js 22 on pull requests targeting `main` and pushes to the architecture branch.
+- The workflow file is committed. A completed GitHub Actions run has not yet been observed, so test success is not claimed.
