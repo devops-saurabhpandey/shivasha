@@ -49,6 +49,7 @@ export default function LearningAcademy({auth}) {
     catch(err){setError(err.message);}finally{setBusy(false);}
   };
   const openCourse=async id=>{setError("");setNotice("");try{const [d,reviewData]=await Promise.all([request("/api/learning/courses/"+id),request("/api/learning/courses/"+id+"/reviews")]);setSelected({...d,reviews:reviewData.reviews||[],reviewSummary:reviewData.summary||{count:0,average:0}});}catch(e){setError(e.message);}};
+  useEffect(()=>{const courseId=new URLSearchParams(window.location.search).get("course");if(courseId&&/^[a-f0-9]{24}$/i.test(courseId))openCourse(courseId);},[]);
   const enroll=async()=>{
     if(!selected?.course)return;setBusy(true);setError("");setNotice("");
     try{const d=await request("/api/learning/courses/"+selected.course._id+"/enroll",{method:"POST",body:"{}"});setNotice(d.message);await openCourse(selected.course._id);await refresh();}
