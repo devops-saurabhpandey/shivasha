@@ -21,6 +21,9 @@ export default function AdminDashboard({ auth }) {
   const [softwareEnquiries, setSoftwareEnquiries] = useState([]);
   const [enquiryError, setEnquiryError] = useState("");
   const [enquiryLoading, setEnquiryLoading] = useState(true);
+  const [riskReviews, setRiskReviews] = useState([]);
+  const [riskLoading, setRiskLoading] = useState(true);
+  const [riskError, setRiskError] = useState("");
 
 
   useEffect(() => {
@@ -41,6 +44,14 @@ export default function AdminDashboard({ auth }) {
         if (!cancelled) setSoftwareEnquiries(data.enquiries || []);
       }).catch(err => { if (!cancelled) setEnquiryError(err.message); })
       .finally(() => { if (!cancelled) setEnquiryLoading(false); });
+
+    fetch(API_BASE + "/api/affiliates/risk-review", { headers })
+      .then(async response => {
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.message || "Unable to load affiliate risk review");
+        if (!cancelled) setRiskReviews(data.reviews || []);
+      }).catch(err => { if (!cancelled) setRiskError(err.message); })
+      .finally(() => { if (!cancelled) setRiskLoading(false); });
 
     fetch(API_BASE + "/api/users/admin/reports", { headers })
       .then(async response => {
@@ -119,6 +130,31 @@ export default function AdminDashboard({ auth }) {
             </div>
           </article>)}
         </div> : <div className="panel empty">No software plan enquiries yet.</div>}
+    </section>
+    <section className="content">
+      <div className="feed-head"><div><h2>Affiliate Trust & Risk Review</h2><p>Advisory signals for pending commissions. Signals are not proof of fraud and do not automatically change commission status.</p></div><b>{riskReviews.filter(item => item.riskLevel === "review").length} flagged for review</b></div>
+      {riskError && <div className="api-error" role="alert">{riskError}</div>}
+      {riskLoading ? <div className="panel empty">Loading affiliate risk review…</div> :
+        riskReviews.length ? <div className="panel">
+          {riskReviews.map(item => {
+            const commission = item.commission || {};
+            const signals = item.riskSignals || [];
+            return <article className="notification-item" key={commission._id}>
+              <div className="notification-copy" style={{ width: "100%" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
+                  <b>{commission.productDescription || "Affiliate transaction"}</b>
+                  <span className="badge">{signals.length ? "Manual review suggested" : "No current signal"}</span>
+                </div>
+                <small>Partner: {commission.partner?.user?.name || commission.partner?.code || "Unknown"} · Buyer: {commission.user?.name || "Unknown"}</small>
+                <small>Reference: {commission.transactionReference || "—"} · Sale: {money(commission.grossAmount)} · Commission: {money(commission.commissionAmount)} ({commission.ratePercent ?? 0}%)</small>
+                <small>Verified: {commission.verifiedAt ? new Date(commission.verifiedAt).toLocaleString() : "—"} · Status: {commission.status || "—"}</small>
+                <small>Recent context: {item.context?.clicksLastHour ?? 0} clicks in 1 hour · {item.context?.buyerConversionsLastDay ?? 0} partner/buyer conversions in 24 hours</small>
+                {signals.length > 0 ? <ul style={{ margin: "8px 0", paddingLeft: 20 }}>{signals.map(signal => <li key={signal.code}><b>{signal.code.replaceAll("_", " ")}</b>: {signal.message}</li>)}</ul> : <small>No configured risk threshold was triggered. Continue normal verification.</small>}
+                <small>Review the original transaction evidence and partner explanation before taking action. This panel does not approve, reverse, freeze or withhold commission.</small>
+              </div>
+            </article>;
+          })}
+        </div> : <div className="panel empty">No pending affiliate commissions are currently queued for review.</div>}
     </section>
     <CreatorFinanceAdmin auth={auth} />
   </>;
