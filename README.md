@@ -34,6 +34,8 @@ The existing React-based social community app, Node.js/Express API and MongoDB d
 - Direct messaging and real-time presence/typing integration
 - User report/moderation UI
 - Unified Content Studio prototype with filters for long videos, Reels/Shorts, articles, images, courses, live-event formats and business product videos
+- Learning Academy foundation: instructor course submissions, admin review, published catalogue, free enrollment, lesson progress and completion certificate IDs
+- Affiliate Partner Centre: free partner enrollment, referral links, click/enquiry tracking and admin-reviewed commission records; payouts and payment gateway checkout are not enabled
 - Four-Purushartha category dashboards with 12-house subcategories
 - Authenticated content publishing for articles, images, videos, Reels, courses, live-event listings and business videos
 - Database-backed content feed, category/house/type/search filters, own-content view and owner-only deletion
