@@ -19,6 +19,16 @@ test("SocialInvite stores only hashed token material and has bounded lifecycle f
   assert.ok(SocialInvite.schema.indexes().some(([keys, options]) => keys.expiresAt === 1 && options.expireAfterSeconds === 60));
 });
 
+test("SocialInvite rejects malformed token hashes", async () => {
+  await assert.rejects(() => new SocialInvite({
+    resourceType: "group",
+    resourceId: new mongoose.Types.ObjectId(),
+    tokenHash: "plaintext-token",
+    createdBy: new mongoose.Types.ObjectId(),
+    expiresAt: new Date()
+  }).validate());
+});
+
 test("SocialInvite rejects unsupported resource types and lifecycle states", async () => {
   await assert.rejects(() => new SocialInvite({
     resourceType: "enterprise",
