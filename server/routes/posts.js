@@ -57,17 +57,17 @@ router.get("/", requireAuth, async (req, res) => {
   res.json(await populatePost(Post.find(filter).sort({ createdAt: -1 }).limit(50)));
 });
 
+router.get("/saved", requireAuth, async (req, res) => {
+  const user = await User.findById(req.user.id).select("savedPosts");
+  const visibility = await getPostVisibilityFilter(req.user.id, { _id: { $in: user?.savedPosts || [] } });
+  res.json(await populatePost(Post.find(visibility).sort({ createdAt: -1 })));
+});
+
 router.get("/:id", requireAuth, async (req, res) => {
   const filter = await getPostVisibilityFilter(req.user.id, { _id: req.params.id });
   const post = await populatePost(Post.findOne(filter));
   if (!post) return res.status(404).json({ message: "Post not found" });
   res.json(post);
-});
-
-router.get("/saved", requireAuth, async (req, res) => {
-  const user = await User.findById(req.user.id).select("savedPosts");
-  const visibility = await getPostVisibilityFilter(req.user.id, { _id: { $in: user?.savedPosts || [] } });
-  res.json(await populatePost(Post.find(visibility).sort({ createdAt: -1 })));
 });
 
 router.post("/upload", requireAuth, upload.array("images", 6), async (req, res) => {
