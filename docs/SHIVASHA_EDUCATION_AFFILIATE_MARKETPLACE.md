@@ -81,7 +81,7 @@ The branch adds provider-neutral course order records and learner order history;
 
 ## Phase 5 — AI assistance and global readiness
 
-- AI course discovery and learning recommendations grounded in published catalogue data.
+- Implemented personalized course discovery using transparent catalogue ranking by learner category, level, language and active enrollment history. It excludes own/already-enrolled courses and does not call an external generative AI provider.
 - Implemented template-based affiliate campaign drafts for WhatsApp, Facebook and YouTube, in Hindi or English, based only on published SHIVASHA courses. Every draft includes the partner referral URL and affiliate disclosure; content is copied for manual review and is never auto-published. The generator removes common guaranteed-income/job/lead claims. This is a deterministic template assistant, not an external generative AI model.
 - Fraud/risk signals with human review and appeal.
 - Multi-language, multi-currency and country-specific legal/payment reviews before enabling each market.
