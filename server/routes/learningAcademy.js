@@ -11,7 +11,7 @@ const categories = new Set(["technology", "business", "marketing", "finance", "e
 const levels = new Set(["beginner", "intermediate", "advanced"]);
 const safeUrl = value => { try { const u = new URL(String(value || "")); return ["https:", "http:"].includes(u.protocol) ? u.toString() : ""; } catch { return ""; } };
 const isAdmin = async id => (await User.findById(id).select("role"))?.role === "admin";
-const publicCourse = course => ({ _id: course._id, title: course.title, description: course.description, category: course.category, language: course.language, level: course.level, price: course.price, currency: course.currency, thumbnailUrl: course.thumbnailUrl, lessons: course.lessons.map(({_id,title,description,durationMinutes,order}) => ({_id,title,description,durationMinutes,order})), instructor: course.instructor, createdAt: course.createdAt });
+const publicCourse = (course, { includeLessonUrls = false } = {}) => ({ _id: course._id, title: course.title, description: course.description, category: course.category, language: course.language, level: course.level, price: course.price, currency: course.currency, thumbnailUrl: course.thumbnailUrl, lessons: course.lessons.map(({_id,title,description,videoUrl,durationMinutes,order}) => ({_id,title,description,...(includeLessonUrls ? {videoUrl} : {}),durationMinutes,order})), instructor: course.instructor, createdAt: course.createdAt });
 
 router.get("/courses", requireAuth, async (req,res,next) => {
   try {
@@ -63,7 +63,7 @@ router.get("/courses/:id", requireAuth, async (req,res,next) => {
     if(!course)return res.status(404).json({message:"Published course not found."});
     const enrollment=await LearningEnrollment.findOne({student:req.user.id,course:course._id}).lean();
     const enrolled=Boolean(enrollment);
-    res.json({course:publicCourse(course),enrollment:enrollment?{_id:enrollment._id,paymentStatus:enrollment.paymentStatus,progress:enrollment.progress,completedAt:enrollment.completedAt,certificateId:enrollment.certificateId}:null,canAccessLessons:enrolled||course.price===0});
+    res.json({course:publicCourse(course,{includeLessonUrls:Boolean(enrollment)||course.price===0}),enrollment:enrollment?{_id:enrollment._id,paymentStatus:enrollment.paymentStatus,progress:enrollment.progress,completedAt:enrollment.completedAt,certificateId:enrollment.certificateId}:null,canAccessLessons:enrolled||course.price===0});
   }catch(e){next(e);}
 });
 
@@ -83,11 +83,20 @@ router.post("/admin/enrollments/verify-payment", requireAuth, async (req,res,nex
     if(!await isAdmin(req.user.id))return res.status(403).json({message:"Admin access required."});
     const {courseId,studentId}=req.body||{},reference=String(req.body?.transactionReference||"").trim().slice(0,120);
     if(!mongoose.isValidObjectId(courseId)||!mongoose.isValidObjectId(studentId)||!reference)return res.status(400).json({message:"Valid course, student and transaction reference are required."});
-    const course=await LearningCourse.findOne({_id:courseId,status:"published"});
+    const [course,student,referenceUse,existing]=await Promise.all([
+      LearningCourse.findOne({_id:courseId,status:"published"}),
+      User.findById(studentId).select("_id"),
+      LearningEnrollment.findOne({transactionReference:reference}),
+      LearningEnrollment.findOne({student:studentId,course:courseId})
+    ]);
     if(!course||course.price<=0)return res.status(400).json({message:"Select a published paid course."});
-    const enrollment=await LearningEnrollment.findOneAndUpdate({student:studentId,course:courseId},{$setOnInsert:{paymentStatus:"verified",transactionReference:reference,amountPaid:course.price}},{new:true,upsert:true,runValidators:true});
-    if(enrollment.transactionReference!==reference&&enrollment.paymentStatus!=="verified")return res.status(409).json({message:"Enrollment payment state conflict."});
-    res.status(200).json({enrollment,message:"Admin-recorded payment verification complete. No payment gateway is connected in this phase."});
+    if(!student)return res.status(404).json({message:"Student account not found."});
+    if(referenceUse)return referenceUse.student.toString()===studentId&&referenceUse.course.toString()===courseId
+      ? res.status(200).json({enrollment:referenceUse,message:"This payment reference was already recorded for this enrollment."})
+      : res.status(409).json({message:"This transaction reference is already used by another enrollment."});
+    if(existing)return res.status(409).json({message:"Student already has an enrollment for this course."});
+    const enrollment=await LearningEnrollment.create({student:studentId,course:courseId,paymentStatus:"verified",transactionReference:reference,amountPaid:course.price});
+    res.status(201).json({enrollment,message:"Admin-recorded payment verification complete. No payment gateway is connected in this phase."});
   }catch(e){if(e?.code===11000)return res.status(409).json({message:"This student is already enrolled or transaction was already recorded."});next(e);}
 });
 
