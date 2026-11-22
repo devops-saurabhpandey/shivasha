@@ -114,3 +114,10 @@ The registry is descriptive metadata only. It is not yet wired into `src/App.jsx
 
 - Added `.github/workflows/four-app-foundation.yml` to run the frontend and backend registry unit tests with Node.js 22 on pull requests targeting `main` and pushes to the architecture branch.
 - The workflow file is committed. A completed GitHub Actions run has not yet been observed, so test success is not claimed.
+
+
+## Ownership alignment note
+
+- `MIS` is assigned to the Enterprise product in the frontend ownership registry, consistent with the approved Enterprise scope. Its current data endpoint is still mounted under the legacy `/api/business/mis` route and remains mapped to Business in the backend API registry until an additive, tested API migration is designed. The descriptive frontend registry is not authorization.
+- `CreatorEarnings` is assigned to Social, and its existing `/api/creator-finance` API prefix is mapped to Social. Affiliate Partner Centre remains Business under `/api/affiliates`.
+- Existing sidebar placement and runtime navigation have not been changed in this step.
