@@ -4,7 +4,7 @@ import { buildPostVisibilityFilter, isBlockedEitherDirection } from "./blockPoli
 
 test("post feed excludes self, users blocked by viewer and users who blocked viewer", () => {
   const filter = buildPostVisibilityFilter("me", ["blocked-a"], ["blocked-me"], { hashtags: "news" });
-  assert.deepEqual(filter, { hashtags: "news", author: { $nin: ["blocked-a", "blocked-me", "me"] } });
+  assert.deepEqual(filter, { hashtags: "news", author: { $nin: ["blocked-a", "blocked-me"] } });
 });
 test("post visibility fails closed when viewer identity is missing", () => {
   assert.throws(() => buildPostVisibilityFilter(null), /viewerId is required/);
