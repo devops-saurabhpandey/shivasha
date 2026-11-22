@@ -21,7 +21,7 @@ export default function SocialSpaces({auth,socket}) {
  const [text,setText]=useState(""),[files,setFiles]=useState([]),[comments,setComments]=useState({}),[commentDrafts,setCommentDrafts]=useState({});
  const [inviteToken,setInviteToken]=useState("");
  const [members,setMembers]=useState([]),[pendingMembers,setPendingMembers]=useState([]),[issuedInvite,setIssuedInvite]=useState(null);
- const [chatMessages,setChatMessages]=useState([]),[chatDraft,setChatDraft]=useState(""),[chatLoading,setChatLoading]=useState(false),[chatSending,setChatSending]=useState(false);
+ const [chatMessages,setChatMessages]=useState([]),[chatDraft,setChatDraft]=useState(""),[chatLoading,setChatLoading]=useState(false),[chatSending,setChatSending]=useState(false),[chatDeleting,setChatDeleting]=useState("");
  const root=kind==="groups"?"/api/social/groups":"/api/social/communities";
  const label=kind==="groups"?"Group":"Community";
  const loadItems=async()=>{
@@ -115,6 +115,11 @@ export default function SocialSpaces({auth,socket}) {
    setChatMessages(prev=>prev.some(item=>item._id===message._id)?prev:[...prev,message]);setChatDraft("");
   }catch(e){setError(e.message)}finally{setChatSending(false)}
  };
+ const deleteChatMessage=async message=>{
+  if(!selected)return;setChatDeleting(message._id);setError("");
+  try{const data=await request(root+"/"+selected._id+"/chat/messages/"+message._id,auth,{method:"DELETE"});setChatMessages(prev=>prev.map(item=>item._id===message._id?data.message:item));setNotice("Chat message removed")}
+  catch(e){setError(e.message)}finally{setChatDeleting("")}
+ };
  const privacyLabel={public:"Public",private:"Private", "invite-only":"Invite only"};
  return <section style={styles.shell}>
   <header style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:12,flexWrap:"wrap",marginBottom:18}}>
@@ -178,7 +183,7 @@ export default function SocialSpaces({auth,socket}) {
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8}}><div><h3 style={{margin:"0 0 4px"}}>{label} Chat</h3><p style={styles.muted}>Only active members can read and send messages.</p></div><button type="button" onClick={()=>request(root+"/"+selected._id+"/chat/messages",auth).then(data=>setChatMessages(data.messages||[])).catch(e=>setError(e.message))} style={{...styles.button,background:"#eef1f7"}}>↻ Refresh</button></div>
       <div aria-live="polite" style={{display:"grid",gap:8,maxHeight:360,overflowY:"auto",padding:4}}>
        {chatLoading?<p style={styles.muted}>Loading chat…</p>:chatMessages.length?chatMessages.map(message=><div key={message._id} style={{padding:"10px 12px",borderRadius:12,background:String(message.senderId?._id||message.senderId)===String(auth.user?.id||auth.user?._id)?"#edf2ff":"#f5f6f8",justifySelf:String(message.senderId?._id||message.senderId)===String(auth.user?.id||auth.user?._id)?"end":"start",maxWidth:"90%"}}>
-        <b style={{fontSize:12}}>{message.senderId?.name||"Member"}</b><div style={{whiteSpace:"pre-wrap",overflowWrap:"anywhere",marginTop:4}}>{message.text}</div><div style={{...styles.muted,fontSize:11,marginTop:4}}>{message.createdAt?new Date(message.createdAt).toLocaleString():""}</div>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10}}><b style={{fontSize:12}}>{message.senderId?.name||"Member"}</b>{!message.deletedAt&&(String(message.senderId?._id||message.senderId)===String(auth.user?.id||auth.user?._id)||["owner","admin","moderator"].includes(membership?.role))&&<button type="button" disabled={chatDeleting===message._id} onClick={()=>deleteChatMessage(message)} style={{border:0,background:"transparent",color:"#a12b24",fontSize:11,cursor:"pointer"}}>{chatDeleting===message._id?"Removing…":"Remove"}</button>}</div><div style={{whiteSpace:"pre-wrap",overflowWrap:"anywhere",marginTop:4,fontStyle:message.deletedAt?"italic":"normal",color:message.deletedAt?"#667085":"inherit"}}>{message.text}</div><div style={{...styles.muted,fontSize:11,marginTop:4}}>{message.createdAt?new Date(message.createdAt).toLocaleString():""}</div>
        </div>):<p style={styles.muted}>No messages yet. Start the conversation.</p>}
       </div>
       <form onSubmit={sendChatMessage} style={{display:"flex",gap:8,alignItems:"end"}}>
