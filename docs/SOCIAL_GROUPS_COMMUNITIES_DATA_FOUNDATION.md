@@ -93,3 +93,10 @@ The authenticated Social sidebar now includes a Groups & Communities workspace. 
 The frontend uses the existing authenticated API token and the dedicated resource-scoped endpoints. Uploads use multipart FormData and do not set a JSON Content-Type header. Private content visibility and all write permissions remain enforced by the backend; hiding controls in the frontend is not treated as authorization.
 
 This UI does not yet provide member approval/moderation dashboards, invitation issuance/revocation UI, post editing/deletion controls, group chat, or realtime content updates. Those are separate follow-up slices.
+
+
+## Owner/Admin frontend controls
+
+The Groups & Communities workspace includes a management panel for active Owner/Admin members. It loads active members and pending requests through the member-list API, allows permitted approvals/rejections and remove/ban actions, and issues one-time invitation tokens with copy and revoke controls. The UI suppresses moderation controls for Owner accounts and prevents Admin users from seeing moderation actions against peer Admins; backend policy remains the final authorization boundary.
+
+Invitation tokens are displayed once and expire after 24 hours. The UI does not expose a token history because the API intentionally does not return raw tokens after issuance.

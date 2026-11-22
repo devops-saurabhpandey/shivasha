@@ -20,6 +20,7 @@ export default function SocialSpaces({auth}) {
  const [showCreate,setShowCreate]=useState(false),[name,setName]=useState(""),[description,setDescription]=useState(""),[privacy,setPrivacy]=useState("private");
  const [text,setText]=useState(""),[files,setFiles]=useState([]),[comments,setComments]=useState({}),[commentDrafts,setCommentDrafts]=useState({});
  const [inviteToken,setInviteToken]=useState("");
+ const [members,setMembers]=useState([]),[pendingMembers,setPendingMembers]=useState([]),[issuedInvite,setIssuedInvite]=useState(null);
  const root=kind==="groups"?"/api/social/groups":"/api/social/communities";
  const label=kind==="groups"?"Group":"Community";
  const loadItems=async()=>{
@@ -28,10 +29,15 @@ export default function SocialSpaces({auth}) {
   catch(e){setError(e.message);setItems([])}finally{setLoading(false)}
  };
  const loadSpace=async(item)=>{
-  setSelected(item);setPosts([]);setError("");setNotice("");setMembership(null);
+  setSelected(item);setPosts([]);setError("");setNotice("");setMembership(null);setMembers([]);setPendingMembers([]);setIssuedInvite(null);
   try{
    const [detail,feed]=await Promise.all([request(root+"/"+item._id,auth),request(root+"/"+item._id+"/posts",auth)]);
-   setMembership(detail.membership||null);setSelected(detail[kind==="groups"?"group":"community"]||item);setPosts(feed.posts||[]);
+   const nextMembership=detail.membership||null;
+   setMembership(nextMembership);setSelected(detail[kind==="groups"?"group":"community"]||item);setPosts(feed.posts||[]);
+   if(nextMembership?.status==="active"&&["owner","admin"].includes(nextMembership.role)){
+    const [active,pending]=await Promise.all([request(root+"/"+item._id+"/members",auth),request(root+"/"+item._id+"/members?status=pending",auth)]);
+    setMembers(active.members||[]);setPendingMembers(pending.members||[]);
+   }
   }catch(e){setError(e.message)}
  };
  useEffect(()=>{setSelected(null);setMembership(null);setPosts([]);loadItems()},[kind]);
@@ -74,6 +80,10 @@ export default function SocialSpaces({auth}) {
   catch(e){setError(e.message)}
  };
  const canPost=membership?.status==="active";
+ const canManage=canPost&&["owner","admin"].includes(membership?.role);
+ const reviewMember=async(userId,action)=>{setBusy(true);setError("");try{await request(root+"/"+selected._id+"/members/"+userId+"/review",auth,{method:"POST",body:JSON.stringify({action})});await loadSpace(selected);setNotice("Member status updated")}catch(e){setError(e.message)}finally{setBusy(false)}};
+ const createInvite=async()=>{setBusy(true);setError("");try{const data=await request(root+"/"+selected._id+"/invitations",auth,{method:"POST",body:JSON.stringify({})});setIssuedInvite(data.invitation);setNotice("Invitation token created. Copy it now; it is shown only once.")}catch(e){setError(e.message)}finally{setBusy(false)}};
+ const revokeInvite=async()=>{if(!issuedInvite)return;setBusy(true);setError("");try{await request(root+"/"+selected._id+"/invitations/"+issuedInvite.id+"/revoke",auth,{method:"POST",body:JSON.stringify({})});setIssuedInvite(null);setNotice("Invitation revoked")}catch(e){setError(e.message)}finally{setBusy(false)}};
  const privacyLabel={public:"Public",private:"Private", "invite-only":"Invite only"};
  return <section style={styles.shell}>
   <header style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:12,flexWrap:"wrap",marginBottom:18}}>
@@ -109,6 +119,24 @@ export default function SocialSpaces({auth}) {
       <div style={{display:"flex",justifyContent:"space-between",gap:10,alignItems:"start"}}><div><h3 style={{margin:"0 0 6px"}}>{selected.name}</h3><p style={styles.muted}>{selected.description||"No description."}</p></div><span style={{fontSize:11,fontWeight:750,whiteSpace:"nowrap"}}>{privacyLabel[selected.privacy]}</span></div>
       {membership?.status==="active"?<div style={{fontSize:13,color:"#176b42",fontWeight:750}}>✓ Active member · {membership.role||"member"}</div>:membership?.status==="pending"?<div style={{fontSize:13,color:"#8a5a12",fontWeight:750}}>⌛ Membership request pending</div>:<button disabled={busy||selected.privacy==="invite-only"} onClick={join} style={{...styles.button,background:"#172554",color:"#fff"}}>{selected.privacy==="invite-only"?"Invitation required":"Request to join"}</button>}
      </div>
+     {canManage&&<section style={{...styles.panel,display:"grid",gap:12}}>
+      <div><h4 style={{margin:"0 0 4px"}}>Member management</h4><p style={styles.muted}>Review requests and manage active members. Server-side role checks remain authoritative.</p></div>
+      <div><b style={{fontSize:13}}>Pending requests ({pendingMembers.length})</b>
+       {pendingMembers.length?pendingMembers.map(row=><div key={row.user.id} style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,padding:"8px 0",borderBottom:"1px solid #edf0f5"}}><span style={{fontSize:13}}>{row.user.name}</span><span style={{display:"flex",gap:6}}><button type="button" disabled={busy} onClick={()=>reviewMember(row.user.id,"approve")} style={{...styles.button,background:"#e6f5eb",color:"#176b42"}}>Approve</button><button type="button" disabled={busy} onClick={()=>reviewMember(row.user.id,"reject")} style={{...styles.button,background:"#fcebea",color:"#a12b24"}}>Reject</button></span></div>):<p style={styles.muted}>No pending requests.</p>}
+      </div>
+      <div><b style={{fontSize:13}}>Active members ({members.length})</b>
+       {members.map(row=><div key={row.user.id} style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,padding:"8px 0",borderBottom:"1px solid #edf0f5"}}><span style={{fontSize:13}}>{row.user.name} · <span style={styles.muted}>{row.role}</span></span>{row.role!=="owner"&&(membership.role==="owner"||row.role!=="admin")&&<span style={{display:"flex",gap:6}}><button type="button" disabled={busy} onClick={()=>reviewMember(row.user.id,"remove")} style={{...styles.button,background:"#eef1f7"}}>Remove</button><button type="button" disabled={busy} onClick={()=>reviewMember(row.user.id,"ban")} style={{...styles.button,background:"#fcebea",color:"#a12b24"}}>Ban</button></span>}</div>)}
+      </div>
+      <div style={{borderTop:"1px solid #edf0f5",paddingTop:12}}>
+       <b style={{fontSize:13}}>Secure invitation</b><p style={styles.muted}>Create a one-time token valid for 24 hours. The raw token is displayed only once.</p>
+       <button type="button" disabled={busy} onClick={createInvite} style={{...styles.button,background:"#172554",color:"#fff"}}>＋ Create invitation token</button>
+       {issuedInvite&&<div style={{marginTop:10,padding:10,borderRadius:10,background:"#f6f7fa"}}>
+        <div style={{fontSize:12,fontWeight:750}}>Copy and share this token securely</div><code style={{display:"block",overflowWrap:"anywhere",padding:"8px 0"}}>{issuedInvite.token}</code>
+        <div style={styles.muted}>Expires: {new Date(issuedInvite.expiresAt).toLocaleString()}</div>
+        <div style={{display:"flex",gap:8,marginTop:8}}><button type="button" onClick={()=>{if(navigator.clipboard?.writeText)navigator.clipboard.writeText(issuedInvite.token).then(()=>setNotice("Invitation token copied")).catch(()=>setError("Copy failed; select and copy the token manually"));else setError("Clipboard unavailable; select and copy the token manually")}} style={{...styles.button,background:"#e8edf8"}}>Copy token</button><button type="button" disabled={busy} onClick={revokeInvite} style={{...styles.button,background:"#fcebea",color:"#a12b24"}}>Revoke</button></div>
+       </div>}
+      </div>
+     </section>}
      {canPost&&<form onSubmit={publish} style={{...styles.panel,display:"grid",gap:10}}>
       <b>Share an update</b><textarea value={text} onChange={e=>setText(e.target.value)} maxLength={3000} rows={3} placeholder={"Write something for this "+label.toLowerCase()+"…"} style={styles.input}/>
       <label style={{fontSize:13,fontWeight:700}}>Add photos or videos <input id="social-space-files" type="file" accept="image/jpeg,image/png,image/webp,image/gif,video/webm,video/ogg,video/mp4,video/quicktime" multiple onChange={e=>setFiles(Array.from(e.target.files||[]).slice(0,4))} style={{display:"block",marginTop:8,fontWeight:400}}/></label>
