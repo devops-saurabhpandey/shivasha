@@ -75,9 +75,10 @@ test("Social group and community chat is active-member-only and respects blocks"
     const afterBlock = await call(owner, path);
     assert.equal(afterBlock.body.messages.length, 0);
 
-    const community = await Community.create({ name: "Chat Community", privacy: "private", createdBy: owner._id });
+    const community = await Community.create({ name: "Chat Community", privacy: "private", createdBy: outsider._id });
     await CommunityMembership.create([
-      { communityId: community._id, userId: owner._id, role: "owner", status: "active", joinedAt: new Date() },
+      { communityId: community._id, userId: outsider._id, role: "owner", status: "active", joinedAt: new Date() },
+      { communityId: community._id, userId: owner._id, role: "member", status: "active", joinedAt: new Date() },
       { communityId: community._id, userId: member._id, role: "member", status: "active", joinedAt: new Date() }
     ]);
     const communityPath = "/api/social/communities/" + community._id + "/chat/messages";
