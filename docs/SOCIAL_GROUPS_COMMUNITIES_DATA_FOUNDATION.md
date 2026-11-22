@@ -29,6 +29,7 @@ Both membership models have a unique compound index for the resource/user pair a
 ## Authorization and compatibility
 
 - Added `server/social/groupAccessPolicy.js` with pure authorization decisions and unit tests.
+- Added `server/social/groupMembershipPolicy.js` to gate requests, restrict review actions to Owner/Admin, protect the Owner record, and define pending/active/removed/banned transitions. These are pure policy helpers; HTTP routes still need to re-check current database state.
 - Existing one-to-one `Conversation` and `Message` models/routes are unchanged. Multi-member group messaging must use a separate group conversation design and must authorize every HTTP and Socket.IO operation against current membership.
 - Existing block relationships must be checked on membership requests, invitations, content visibility and realtime interactions. Shared-community behavior for users who block one another needs explicit product policy before exposing shared member lists or content.
 - Presence visibility policy remains unchanged pending an explicit product decision.
