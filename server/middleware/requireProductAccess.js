@@ -65,7 +65,7 @@ export function requireProductAccess({
         productId,
         tenantId,
         role: membership.role,
-        permissions: [...membership.permissions]
+        permissions: Array.isArray(membership.permissions) ? [...membership.permissions] : []
       });
       return next();
     } catch {
