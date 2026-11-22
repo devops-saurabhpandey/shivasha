@@ -313,8 +313,8 @@ function createResourceRouter({ Resource, Membership, resourceKey, resourceType,
       return res.status(404).json({ message: "Membership not found" });
     }
     const action = String(req.body?.action || "");
-    if (!["approve", "reject"].includes(action)) {
-      return res.status(400).json({ message: "Action must be approve or reject" });
+    if (!["approve", "reject", "remove", "ban"].includes(action)) {
+      return res.status(400).json({ message: "Action must be approve, reject, remove or ban" });
     }
     const [actorMembership, targetMembership] = await Promise.all([
       Membership.findOne({ ...resourceIdFilter(req.params.id), userId: req.user.id, status: GROUP_MEMBER_STATUS.ACTIVE }).lean(),
