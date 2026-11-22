@@ -22,6 +22,9 @@ test("Social group and community routes enforce member visibility and one-time i
   url.pathname = "/shivasha_social_test";
   const databaseName = decodeURIComponent(url.pathname.replace(/^\//, ""));
   if (!databaseName.endsWith("_test")) throw new Error("Refusing to run Social integration tests outside an isolated *_test database");
+  if (process.env.MONGODB_URI && process.env.MONGODB_URI === url.toString()) {
+    throw new Error("MONGODB_TEST_URI must not point at the configured application database");
+  }
   await mongoose.connect(url.toString(), { serverSelectionTimeoutMS: 15000 });
   process.env.JWT_SECRET = "shivasha-social-integration-test-only-secret";
   const app = express();
@@ -61,6 +64,15 @@ test("Social group and community routes enforce member visibility and one-time i
     await GroupMembership.create({ groupId: group._id, userId: owner._id, role: "owner", status: "active", joinedAt: new Date() });
     assert.equal((await call(outsider, "/api/social/groups/" + group._id)).status, 404);
     assert.equal((await call(outsider, "/api/social/groups/" + group._id + "/members")).status, 404);
+
+    const expiredInvite = await call(owner, "/api/social/groups/" + group._id + "/invitations", "POST", {});
+    const expiredHash = hashSocialInviteToken(expiredInvite.body.invitation.token);
+    await SocialInvite.updateOne({ tokenHash: expiredHash }, { $set: { expiresAt: new Date(Date.now() - 1000) } });
+    assert.equal((await call(outsider, "/api/social/groups/invitations/redeem", "POST", { token: expiredInvite.body.invitation.token })).status, 404);
+
+    const revokedInvite = await call(owner, "/api/social/groups/" + group._id + "/invitations", "POST", {});
+    assert.equal((await call(owner, "/api/social/groups/" + group._id + "/invitations/" + revokedInvite.body.invitation.id + "/revoke", "POST", {})).status, 200);
+    assert.equal((await call(outsider, "/api/social/groups/invitations/redeem", "POST", { token: revokedInvite.body.invitation.token })).status, 404);
 
     const issued = await call(owner, "/api/social/groups/" + group._id + "/invitations", "POST", {});
     assert.equal(issued.status, 201);
