@@ -27,7 +27,7 @@ Audit branch: `architecture/four-app-shared-core`
 2. Audit whether Business AI usage should require a Business product entitlement or subscription. Do not enforce this until the onboarding/grant lifecycle is ready.
 3. Keep `/api/business`, `/api/business-platform`, and `/api/sales-agent` behavior compatible while introducing explicit Business memberships gradually.
 4. For Business organizations, design a tenant model and trusted resource-based tenant resolver before adding tenant-level access checks.
-5. Keep Enterprise CompanyMembership and HR authorization intact; write integration tests before any refactor.
+5. Keep Enterprise CompanyMembership and HR authorization intact; added focused HR authorization tests for trusted database membership loading, company scope, role spoofing, suspended membership, inactive companies and storage failures. Full database-backed route integration tests remain required before any refactor.
 6. Separately audit Socket.IO conversation joins and live rooms; HTTP authorization middleware does not protect socket events.
 
 ## Safety boundary
