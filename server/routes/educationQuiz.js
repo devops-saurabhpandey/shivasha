@@ -243,7 +243,7 @@ router.patch("/guardian/links/:id", requireAuth, async (req,res,next) => {
 });
 router.get("/guardian/children", requireAuth, async (req,res,next) => {
   try {
-    const links=await EducationGuardianLink.find(buildApprovedGuardianChildrenFilter(req.user.id)).populate("student","name").select("guardian student approvedAt").lean();
+    const links=await EducationGuardianLink.find(buildApprovedGuardianChildrenFilter(req.user.id)).populate("student","name").select("guardian student status approvedAt").lean();
     const children=(await Promise.all(links.map(async link=>{
       if (!canGuardianReadStudentProgress(link, req.user.id)) return null;
       const attempts=await EducationAttempt.find({student:link.student._id}).select("board grade subject totalQuestions correctCount scorePercent createdAt").sort({createdAt:-1}).limit(50).lean();
