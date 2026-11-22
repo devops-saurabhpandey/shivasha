@@ -238,6 +238,15 @@ router.post("/courses/:id/checkout", requireAuth, async (req,res,next) => {
   }catch(e){if(e?.code===11000)return res.status(409).json({message:"An order or payment reference already exists. Refresh your orders."});next(e);}
 });
 
+router.patch("/orders/:id/cancel", requireAuth, async (req,res,next) => {
+  try{
+    if(!mongoose.isValidObjectId(req.params.id))return res.status(400).json({message:"Invalid order ID."});
+    const order=await LearningOrder.findOneAndUpdate({_id:req.params.id,student:req.user.id,status:"awaiting_payment"},{$set:{status:"cancelled",refundNote:"Cancelled by student before payment."}},{new:true});
+    if(!order)return res.status(404).json({message:"Pending order not found or it can no longer be cancelled."});
+    res.json({order,message:"Unpaid order cancelled. No payment was taken."});
+  }catch(e){next(e);}
+});
+
 router.get("/my-orders", requireAuth, async (req,res,next) => {
   try{
     const orders=await LearningOrder.find({student:req.user.id}).populate("course","title price currency").sort({createdAt:-1}).limit(100).lean();
@@ -384,7 +393,7 @@ router.patch("/admin/reviews/:id", requireAuth, async (req,res,next) => {
 
 router.get("/certificates/:id", requireAuth, async (req,res,next) => {
   try {
-    const enrollment=await LearningEnrollment.findOne({certificateId:String(req.params.id),student:req.user.id}).populate("course","title category").lean();
+    const enrollment=await LearningEnrollment.findOne({certificateId:String(req.params.id),student:req.user.id,accessRevoked:false}).populate("course","title category").lean();
     if(!enrollment||!enrollment.completedAt)return res.status(404).json({message:"Certificate not found."});
     res.json({certificate:{id:enrollment.certificateId,student:req.user.id,course:enrollment.course?.title,completedAt:enrollment.completedAt,issuer:"SHIVASHA Learning Academy"}});
   }catch(e){next(e);}
