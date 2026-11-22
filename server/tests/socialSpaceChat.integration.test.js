@@ -78,7 +78,7 @@ test("Social group and community chat is active-member-only and respects blocks"
     assert.equal(ownerModeration.status, 200);
     assert.equal(String(ownerModeration.body.message.deletedBy), String(owner._id));
     await User.updateOne({ _id: member._id }, { $set: { moderationBlocked: true } });
-    assert.equal((await call(member, path, "POST", { text: "Suspended account" })).status, 404);
+    assert.equal((await call(member, path, "POST", { text: "Suspended account" })).status, 403);
     await User.updateOne({ _id: member._id }, { $set: { moderationBlocked: false } });
     assert.equal((await call(owner, "/api/social/groups/" + group._id + "/chat/read", "POST", {})).body.success, true);
     assert.equal((await SocialSpaceChatMessage.findById(sent.body._id)).readBy.some(id => String(id) === String(owner._id)), true);
