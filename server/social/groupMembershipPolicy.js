@@ -15,6 +15,7 @@ export function canRequestGroupMembership({ privacy, existingMembership, isBlock
 export function canReviewGroupMembership({ actorRole, targetMembership, action } = {}) {
   if (![GROUP_MEMBER_ROLE.OWNER, GROUP_MEMBER_ROLE.ADMIN].includes(actorRole)) return false;
   if (!targetMembership || targetMembership.role === GROUP_MEMBER_ROLE.OWNER) return false;
+  if (actorRole === GROUP_MEMBER_ROLE.ADMIN && targetMembership.role === GROUP_MEMBER_ROLE.ADMIN) return false;
   if (action === "approve" || action === "reject") {
     return targetMembership.status === GROUP_MEMBER_STATUS.PENDING;
   }
