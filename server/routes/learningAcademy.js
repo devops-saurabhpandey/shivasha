@@ -11,6 +11,7 @@ import AffiliatePartner from "../models/AffiliatePartner.js";
 import AffiliateCommission from "../models/AffiliateCommission.js";
 import { requireAuth } from "../middleware/auth.js";
 import { canAccessCourseLessons } from "../utils/learningAccess.js";
+import { rankLearningRecommendations } from "../utils/learningRecommendations.js";
 
 const router = Router();
 const categories = new Set(["technology", "business", "marketing", "finance", "education", "spirituality", "wellness", "other"]);
@@ -103,6 +104,31 @@ router.patch("/admin/sales/:id/reverse", requireAuth, async (req,res,next) => {
     if(sale.affiliatePartner)await AffiliateCommission.findOneAndUpdate({transactionReference:"SHVCOURSE-"+sale.transactionReference,status:{$in:["pending_review","approved"]}},{$set:{status:"reversed",reviewedBy:req.user.id,reviewedAt:new Date(),reviewNote:"Related course sale reversed."}});
     res.json({sale,message:"Sale ledger reversed. Any instructor payout must be reconciled separately."});
   }catch(e){next(e);}
+});
+
+router.get("/recommendations", requireAuth, async (req,res,next) => {
+  try {
+    const preferences = {
+      category: categories.has(String(req.query.category || "")) ? String(req.query.category) : "",
+      level: levels.has(String(req.query.level || "")) ? String(req.query.level) : "",
+      language: String(req.query.language || "").trim().slice(0,40)
+    };
+    const [courses,enrollments] = await Promise.all([
+      LearningCourse.find({status:"published"}).populate("instructor","name avatarUrl").sort({createdAt:-1}).limit(100).lean(),
+      LearningEnrollment.find({student:req.user.id,accessRevoked:false}).populate("course","category").select("course").lean()
+    ]);
+    const enrolledCourseIds = enrollments.filter(e=>e.course?._id).map(e=>e.course._id);
+    const historyCategories = enrollments.map(e=>e.course?.category).filter(Boolean);
+    const recommendations = rankLearningRecommendations({courses,preferences,historyCategories,enrolledCourseIds,userId:req.user.id});
+    res.json({
+      preferences,
+      recommendations:recommendations.map(({course,score,recommendationReason})=>({
+        course:publicCourse(course),
+        score,
+        recommendationReason
+      }))
+    });
+  } catch(e){next(e);}
 });
 
 router.get("/courses", requireAuth, async (req,res,next) => {
