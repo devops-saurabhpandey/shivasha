@@ -21,19 +21,17 @@ test("membership model uses explicit product-scoped roles and statuses", () => {
 
 test("membership schema requires identity, product and role; access is pending by default", () => {
   const schema = ProductMembership.schema;
-  for (const field of ["userId", "productId", "role"]) {
-    assert.equal(schema.path(field).options.required, true);
-  }
-  assert.equal(schema.path("status").defaultValue, "pending");
-  assert.deepEqual(schema.path("permissions").defaultValue, []);
-  assert.equal(schema.path("tenantId").defaultValue, null);
+  for (const field of ["userId", "productId", "role"]) assert.equal(schema.path(field).options.required, true);
+  const membership = new ProductMembership();
+  assert.equal(membership.status, "pending");
+  assert.deepEqual(membership.permissions, []);
+  assert.equal(membership.tenantId, null);
 });
 
 test("membership schema has distinct unique indexes for product and tenant memberships", () => {
   const indexes = ProductMembership.schema.indexes();
   const productLevel = indexes.find(([, options]) => options.name === "uniq_product_level_membership");
   const tenantLevel = indexes.find(([, options]) => options.name === "uniq_tenant_product_membership");
-
   assert.ok(productLevel);
   assert.ok(tenantLevel);
   assert.equal(productLevel[1].unique, true);
@@ -42,11 +40,20 @@ test("membership schema has distinct unique indexes for product and tenant membe
   assert.equal(tenantLevel[1].partialFilterExpression.tenantId.$type, "objectId");
 });
 
-test("membership schema rejects cross-domain role identifiers", async () => {
+test("membership schema rejects a role belonging to another product", async () => {
   const membership = new ProductMembership({
     userId: new mongoose.Types.ObjectId(),
     productId: "social",
     role: "business_owner"
   });
-  await assert.rejects(() => membership.validate(), /role/);
+  await assert.rejects(() => membership.validate(), /Role must belong to the selected product/);
+});
+
+test("membership schema accepts a role belonging to its selected product", async () => {
+  const membership = new ProductMembership({
+    userId: new mongoose.Types.ObjectId(),
+    productId: "social",
+    role: "social_creator"
+  });
+  await assert.doesNotReject(() => membership.validate());
 });
