@@ -6,6 +6,8 @@ import mongoose from "mongoose";
 import http from "http";
 import { Server } from "socket.io";
 import jwt from "jsonwebtoken";
+import Conversation from "./models/Conversation.js";
+import { isConversationRoomAuthorized } from "./realtime/conversationAccess.js";
 import authRoutes from "./routes/auth.js";
 import userRoutes from "./routes/users.js";
 import postRoutes from "./routes/posts.js";
@@ -137,10 +139,28 @@ io.on("connection", socket => {
   });
 
   socket.on("presence:heartbeat", () => socket.emit("presence:pong", { at: Date.now() }));
-  socket.on("typing:start", ({ conversationId } = {}) => { if (conversationId) socket.to("conversation:" + conversationId).emit("typing:start", { userId, conversationId }); });
-  socket.on("typing:stop", ({ conversationId } = {}) => { if (conversationId) socket.to("conversation:" + conversationId).emit("typing:stop", { userId, conversationId }); });
-  socket.on("conversation:join", ({ conversationId } = {}) => { if (conversationId) socket.join("conversation:" + conversationId); });
-  socket.on("conversation:leave", ({ conversationId } = {}) => { if (conversationId) socket.leave("conversation:" + conversationId); });
+  socket.on("typing:start", ({ conversationId } = {}) => {
+    if (!isConversationRoomAuthorized(socket, conversationId)) return;
+    socket.to("conversation:" + conversationId).emit("typing:start", { userId, conversationId });
+  });
+  socket.on("typing:stop", ({ conversationId } = {}) => {
+    if (!isConversationRoomAuthorized(socket, conversationId)) return;
+    socket.to("conversation:" + conversationId).emit("typing:stop", { userId, conversationId });
+  });
+  socket.on("conversation:join", async ({ conversationId } = {}) => {
+    const id = typeof conversationId === "string" ? conversationId.trim() : "";
+    if (!id || id.length > 64) return;
+    try {
+      const conversation = await Conversation.findOne({ _id: id, participants: userId }).select("_id").lean();
+      if (conversation) socket.join("conversation:" + String(conversation._id));
+    } catch {
+      // Invalid IDs and database errors fail closed: the socket does not join.
+    }
+  });
+  socket.on("conversation:leave", ({ conversationId } = {}) => {
+    const id = typeof conversationId === "string" ? conversationId.trim() : "";
+    if (id && id.length <= 64) socket.leave("conversation:" + id);
+  });
 
   socket.on("disconnect", () => {
     const count = Math.max((onlineUsers.get(userId) || 1) - 1, 0);
