@@ -270,7 +270,13 @@ router.post("/admin/orders/:id/reconcile", requireAuth, async (req,res,next) => 
     if(usedOrder||usedEnrollment)return res.status(409).json({message:"This transaction reference has already been used."});
     if(existing)return res.status(409).json({message:"Student already has an enrollment for this course."});
     const enrollment=await LearningEnrollment.create({student:order.student,course:order.course,paymentStatus:"verified",transactionReference:reference,amountPaid:order.amount});
-    const updated=await LearningOrder.findOneAndUpdate({_id:order._id,status:"awaiting_payment"},{$set:{status:"paid",provider:"manual_reconciliation",transactionReference:reference,verifiedBy:req.user.id,verifiedAt:new Date()}},{new:true});
+    let updated;
+    try{
+      updated=await LearningOrder.findOneAndUpdate({_id:order._id,status:"awaiting_payment"},{$set:{status:"paid",provider:"manual_reconciliation",transactionReference:reference,verifiedBy:req.user.id,verifiedAt:new Date()}},{new:true});
+    }catch(error){
+      await LearningEnrollment.deleteOne({_id:enrollment._id});
+      throw error;
+    }
     if(!updated){
       await LearningEnrollment.deleteOne({_id:enrollment._id});
       return res.status(409).json({message:"Order state changed during reconciliation. Refresh and retry."});
@@ -305,6 +311,45 @@ router.post("/courses/:id/reviews", requireAuth, async (req,res,next) => {
     const review=await LearningReview.create({course:course._id,student:req.user.id,enrollment:enrollment._id,rating,title,comment,status:"pending_review"});
     res.status(201).json({review,message:"Review submitted for moderation. It will appear after admin approval."});
   }catch(e){if(e?.code===11000)return res.status(409).json({message:"You have already reviewed this course."});next(e);}
+});
+
+
+router.post("/orders/:id/refund-request", requireAuth, async (req,res,next) => {
+  try{
+    if(!mongoose.isValidObjectId(req.params.id))return res.status(400).json({message:"Invalid order ID."});
+    const order=await LearningOrder.findOneAndUpdate({_id:req.params.id,student:req.user.id,status:"paid"},{$set:{status:"refund_pending",refundNote:String(req.body?.reason||"Student refund request").trim().slice(0,300)}},{new:true});
+    if(!order)return res.status(404).json({message:"Paid order not found or refund already requested."});
+    res.json({order,message:"Refund request recorded for admin review. No money has been refunded by this request."});
+  }catch(e){next(e);}
+});
+
+router.patch("/admin/orders/:id/confirm-refund", requireAuth, async (req,res,next) => {
+  try{
+    if(!await isAdmin(req.user.id))return res.status(403).json({message:"Admin access required."});
+    if(!mongoose.isValidObjectId(req.params.id))return res.status(400).json({message:"Invalid order ID."});
+    const order=await LearningOrder.findOne({_id:req.params.id,status:"refund_pending"});
+    if(!order)return res.status(404).json({message:"Refund-pending order not found."});
+    const confirmation=String(req.body?.refundConfirmation||"").trim().slice(0,120);
+    if(!confirmation)return res.status(400).json({message:"Enter the independently verified refund reference before confirming."});
+    const enrollment=await LearningEnrollment.findOne({student:order.student,course:order.course,transactionReference:order.transactionReference});
+    if(!enrollment)return res.status(409).json({message:"Related enrollment was not found; reconcile manually before closing the refund."});
+    const sale=await LearningSale.findOneAndUpdate({enrollment:enrollment._id,status:"verified"},{$set:{status:"reversed",reviewNote:"Refund confirmed: "+confirmation}},{new:true});
+    enrollment.accessRevoked=true;enrollment.completedAt=null;enrollment.certificateId=undefined;await enrollment.save();
+    if(sale?.affiliatePartner)await AffiliateCommission.findOneAndUpdate({transactionReference:"SHVCOURSE-"+sale.transactionReference,status:{$in:["pending_review","approved"]}},{$set:{status:"reversed",reviewedBy:req.user.id,reviewedAt:new Date(),reviewNote:"Related course order refund confirmed."}});
+    order.status="refunded";order.refundNote=("Refund confirmed: "+confirmation).slice(0,300);await order.save();
+    res.json({order,message:"Refund status recorded and course access revoked. The refund must already have been executed outside SHIVASHA."});
+  }catch(e){next(e);}
+});
+
+router.get("/admin/payouts/preview", requireAuth, async (req,res,next) => {
+  try{
+    if(!await isAdmin(req.user.id))return res.status(403).json({message:"Admin access required."});
+    const [instructors,affiliates]=await Promise.all([
+      LearningSale.aggregate([{$match:{status:"verified",instructorAmount:{$gt:0}}},{$group:{_id:{recipient:"$instructor",currency:"$currency"},amount:{$sum:"$instructorAmount"},sourceCount:{$sum:1}}},{$lookup:{from:"users",localField:"_id.recipient",foreignField:"_id",as:"user"}},{$unwind:{path:"$user",preserveNullAndEmptyArrays:true}},{$project:{recipient:"$_id.recipient",currency:"$_id.currency",amount:1,sourceCount:1,name:"$user.name",email:"$user.email"}}]),
+      AffiliateCommission.aggregate([{$match:{status:"approved",commissionAmount:{$gt:0}}},{$lookup:{from:"affiliatepartners",localField:"partner",foreignField:"_id",as:"partner"}},{$unwind:"$partner"},{$group:{_id:{recipient:"$partner.user",currency:"INR"},amount:{$sum:"$commissionAmount"},sourceCount:{$sum:1}}},{$lookup:{from:"users",localField:"_id.recipient",foreignField:"_id",as:"user"}},{$unwind:{path:"$user",preserveNullAndEmptyArrays:true}},{$project:{recipient:"$_id.recipient",currency:"$_id.currency",amount:1,sourceCount:1,name:"$user.name",email:"$user.email"}}])
+    ]);
+    res.json({instructors,affiliates,note:"Preparation preview only. No bank details, payout batch, transfer, or payment instruction is created. Verify tax, KYC, refunds, chargebacks and contracts before paying."});
+  }catch(e){next(e);}
 });
 
 router.get("/admin/reviews", requireAuth, async (req,res,next) => {
