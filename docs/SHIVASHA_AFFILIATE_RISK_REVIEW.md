@@ -8,7 +8,7 @@ Authenticated administrators can review pending affiliate commission candidates 
 
 The endpoint returns up to 200 pending commission records with explainable advisory signals and context counts. Current signals are:
 
-- High transaction value (INR amount threshold currently 500,000; review threshold only).
+- High transaction value (amount threshold currently 500,000 in the stored transaction amount; review threshold only).
 - Commission rate above 30%.
 - At least 1,000 tracked referral clicks in the previous hour.
 - At least 3 pending/approved conversions for the same partner and buyer in the previous 24 hours.
