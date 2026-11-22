@@ -8,7 +8,9 @@ Audit branch: `architecture/four-app-shared-core`
 - Deletion looks up both the video ID and authenticated owner.
 - Upload and delete require HTTP `requireAuth`.
 - Upload has one-file and 150 MB limits and an allowlist of declared video MIME types.
-- Follow-up hardening: declared MIME type is not proof of actual file content. Add file-signature/container validation and upload quotas before treating this as production-grade media validation.
+- Upload now checks the file's leading container signature against the declared WebM, Ogg, MP4 or QuickTime MIME type before sending bytes to Cloudinary; mismatches are rejected with HTTP 415.
+- Tests cover each supported signature, MIME/container mismatches, short buffers and unsupported input.
+- Remaining hardening: a magic-byte check is not a full media decoder or malware scan. Add server-side media probing/transcoding, upload quotas and per-user rate limits before treating uploads as production-grade.
 - Cloudinary URLs are stored as public secure URLs. Confirm expected privacy/access semantics before supporting private or paid video libraries.
 
 ## Live Video Socket.IO rooms
@@ -24,7 +26,7 @@ Audit branch: `architecture/four-app-shared-core`
 - Current `presence:list` and `presence:online/offline` events are global to all authenticated sockets and expose user IDs.
 - This is broader than a contacts-only privacy model. Do not silently change it without deciding the intended Social app presence policy.
 - Recommended policy decision: define whether presence is visible to followers, mutual connections, approved contacts, or everyone; respect blocks and user privacy settings; send only the minimum user identifier needed by the client.
-- No presence broadcast behavior was changed in this patch.
+- No presence broadcast behavior was changed in this patch. The recommended visibility policy (mutual followers/connections, excluding blocked peers) remains pending an explicit product decision.
 
 ## Socket account lifecycle gap fixed
 
