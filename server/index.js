@@ -7,6 +7,7 @@ import http from "http";
 import { Server } from "socket.io";
 import jwt from "jsonwebtoken";
 import Conversation from "./models/Conversation.js";
+import User from "./models/User.js";
 import { isConversationRoomAuthorized } from "./realtime/conversationAccess.js";
 import authRoutes from "./routes/auth.js";
 import userRoutes from "./routes/users.js";
@@ -60,11 +61,18 @@ const io = new Server(httpServer, {
   cors: { origin: allowedOrigins, methods: ["GET", "POST"] }
 });
 
-io.use((socket, next) => {
+io.use(async (socket, next) => {
   try {
     const token = socket.handshake.auth?.token;
     if (!token || !process.env.JWT_SECRET) return next(new Error("Authentication required"));
-    socket.user = jwt.verify(token, process.env.JWT_SECRET);
+    const claims = jwt.verify(token, process.env.JWT_SECRET);
+    if (!claims?.id) return next(new Error("Invalid authentication token"));
+    // Match HTTP requireAuth: a valid but deleted or moderation-blocked account
+    // must not retain realtime access until its JWT expires.
+    const user = await User.findById(claims.id).select("_id moderationBlocked").lean();
+    if (!user) return next(new Error("Account not found"));
+    if (user.moderationBlocked) return next(new Error("This account is temporarily restricted"));
+    socket.user = { ...claims, id: user._id.toString() };
     next();
   } catch {
     next(new Error("Invalid authentication token"));
