@@ -2,7 +2,7 @@
 
 **Shivasha is a Software Company.** Its flagship product, **Shivasha Global Technology Super App**, is organized into four main Purushartha categories — Dharma (धर्म), Artha (अर्थ), Kaam (काम) and Moksh (मोक्ष). The 12 Jyotish houses are subcategories grouped 1/5/9 under Dharma, 2/6/10 under Artha, 3/7/11 under Kaam and 4/8/12 under Moksh. The product roadmap includes 15 modules and 7 delivery phases. The current application remains the foundation; the four-Purushartha navigation and 12-house subcategory explorer are product-mapping milestones, not a claim that all planned modules are already live.
 
-**Product plan:** [Global Super App Master Plan](./docs/SHIVASHA_GLOBAL_SUPER_APP_PLAN.md)
+**Product plans:** [Global Super App Master Plan](./docs/SHIVASHA_GLOBAL_SUPER_APP_PLAN.md) · [Education & Affiliate Marketplace](./docs/SHIVASHA_EDUCATION_AFFILIATE_MARKETPLACE.md)
 
 **Self-host on your own computer:** [Self-hosting guide](./docs/SELF_HOSTING.md) — Docker Compose runs the frontend, API and a local MongoDB database. [Cinematic render worker guide](./docs/CINEMATIC_RENDER_WORKER.md) — optional FFmpeg video grading worker.
 
@@ -34,6 +34,9 @@ The existing React-based social community app, Node.js/Express API and MongoDB d
 - Direct messaging and real-time presence/typing integration
 - User report/moderation UI
 - Unified Content Studio prototype with filters for long videos, Reels/Shorts, articles, images, courses, live-event formats and business product videos
+- Learning Academy: instructor course submissions, admin review, published catalogue, free enrollment, lesson progress and completion certificate IDs
+- Verified course sales ledger: admin-attested sale records, instructor revenue shares, optional INR affiliate commission, platform remainder, instructor earnings dashboard and refund/chargeback reversal with enrollment access revocation\n- Learning commerce groundwork: provider-neutral paid-course orders, admin manual payment reconciliation, student refund requests, moderated course reviews and instructor/affiliate payout preview. No payment gateway, automatic webhook settlement or payout transfer is active\n- Personalized Learning Academy discovery: authenticated recommendations based on selected category, level, language and active learning history; own courses and already-enrolled courses are excluded. This is transparent rule-based ranking and does not call an external AI provider\n- Affiliate campaign assistant: Hindi/English WhatsApp, Facebook and YouTube draft copy for published courses, with partner referral URL and mandatory affiliate disclosure. Drafts require manual review and are never auto-published; deterministic templates do not call an external AI provider
+- Affiliate Partner Centre: free partner enrollment, referral links, click/enquiry tracking and admin-reviewed commission records; payouts and payment gateway checkout are not enabled
 - Four-Purushartha category dashboards with 12-house subcategories
 - Authenticated content publishing for articles, images, videos, Reels, courses, live-event listings and business videos
 - Database-backed content feed, category/house/type/search filters, own-content view and owner-only deletion
