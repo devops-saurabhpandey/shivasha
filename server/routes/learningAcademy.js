@@ -44,6 +44,14 @@ router.post("/courses", requireAuth, async (req,res,next) => {
   }catch(e){next(e);}
 });
 
+router.get("/admin/courses", requireAuth, async (req,res,next) => {
+  try {
+    if(!await isAdmin(req.user.id)) return res.status(403).json({message:"Admin access required."});
+    const courses=await LearningCourse.find({status:"pending_review"}).populate("instructor","name email").sort({createdAt:1}).limit(100).lean();
+    res.json({courses:courses.map(course=>({...publicCourse(course),status:course.status,instructor:course.instructor}))});
+  } catch(e){next(e);}
+});
+
 router.patch("/courses/:id/review", requireAuth, async (req,res,next) => {
   try {
     if(!await isAdmin(req.user.id)) return res.status(403).json({message:"Admin access required."});
