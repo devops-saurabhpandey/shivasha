@@ -47,10 +47,9 @@ test("membership schemas restrict roles and lifecycle statuses", () => {
 });
 
 test("unknown fields are rejected to avoid silently accepting unreviewed authorization data", async () => {
-  const membership = new GroupMembership({
+  assert.throws(() => new GroupMembership({
     groupId: objectId(), userId: objectId(), unexpectedPermission: "all"
-  });
-  await assert.rejects(() => membership.validate(), /unexpectedPermission/);
+  }), /unexpectedPermission/);
 });
 
 test("required group and community names and creators are validated", async () => {
