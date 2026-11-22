@@ -1,13 +1,17 @@
 import { Router } from "express";
+import multer from "multer";
 import mongoose from "mongoose";
 import SocialSpacePost from "../models/SocialSpacePost.js";
+import SocialSpaceMediaAsset from "../models/SocialSpaceMediaAsset.js";
 import User from "../models/User.js";
 import { requireAuth } from "../middleware/auth.js";
 import { isBlockedEitherDirection } from "../social/blockPolicy.js";
+import { detectSocialMediaType } from "../media/socialMediaSignature.js";
 import { canCreateSpacePost, canReadSpaceContent, canDeleteSpacePost, canEditSpacePost, normalizeSpacePostText, normalizeSpaceCommentText } from "../social/socialSpacePostPolicy.js";
 
 function createSpacePostRouter({ Resource, Membership, resourceType, resourceKey }) {
  const router = Router();
+ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 150 * 1024 * 1024, files: 1 } });
  async function loadContext(resourceId, userId) {
   const resource = await Resource.findById(resourceId).lean();
   if (!resource) return null;
@@ -39,15 +43,71 @@ function createSpacePostRouter({ Resource, Membership, resourceType, resourceKey
    .sort({ createdAt: -1 }).limit(50).lean();
   res.json({ posts });
  });
+ router.post("/:id/posts/media", requireAuth, upload.single("media"), async (req, res) => {
+  if (!validId(req.params.id)) return res.status(404).json({ message: "Resource not found" });
+  const context = await loadContext(req.params.id, req.user.id);
+  if (!context || !canCreateSpacePost({ resourceStatus: context.resource.status, membership: context.membership })) return res.status(403).json({ message: "Active membership is required to upload media" });
+  if (!req.file) return res.status(400).json({ message: "Select one image or video file" });
+  const mediaType = detectSocialMediaType(req.file.buffer, req.file.mimetype);
+  if (!mediaType) return res.status(415).json({ message: "File content does not match a supported image or video type" });
+  const limit = mediaType === "image" ? 15 * 1024 * 1024 : 150 * 1024 * 1024;
+  if (req.file.size > limit) return res.status(413).json({ message: mediaType === "image" ? "Images are limited to 15 MB" : "Videos are limited to 150 MB" });
+  if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
+   return res.status(503).json({ message: "Media storage is not configured. Configure Cloudinary before enabling uploads." });
+  }
+  let cloudinary, uploaded;
+  try {
+   const { v2 } = await import("cloudinary");
+   cloudinary = v2;
+   cloudinary.config({ cloud_name: process.env.CLOUDINARY_CLOUD_NAME, api_key: process.env.CLOUDINARY_API_KEY, api_secret: process.env.CLOUDINARY_API_SECRET });
+   uploaded = await new Promise((resolve, reject) => {
+    const stream = cloudinary.uploader.upload_stream({
+     folder: "shivasha/social-spaces/" + resourceType,
+     resource_type: mediaType === "video" ? "video" : "image",
+     ...(mediaType === "image" ? { transformation: [{ width: 1600, height: 1600, crop: "limit", quality: "auto", fetch_format: "auto" }] } : {}),
+     timeout: 120000
+    }, (error, result) => error ? reject(error) : resolve(result));
+    stream.end(req.file.buffer);
+   });
+   const asset = await SocialSpaceMediaAsset.create({
+    ownerId: req.user.id, resourceType, resourceId: context.resource._id,
+    mediaType, mimeType: req.file.mimetype, secureUrl: uploaded.secure_url,
+    publicId: uploaded.public_id, bytes: uploaded.bytes || req.file.size
+   });
+   return res.status(201).json({ assetId: asset._id, mediaType, url: asset.secureUrl, bytes: asset.bytes });
+  } catch (error) {
+   if (uploaded?.public_id && cloudinary) {
+    try { await cloudinary.uploader.destroy(uploaded.public_id, { resource_type: mediaType === "video" ? "video" : "image" }); } catch {}
+   }
+   return res.status(503).json({ message: "Media upload could not be completed" });
+  }
+ });
  router.post("/:id/posts", requireAuth, async (req, res) => {
   if (!validId(req.params.id)) return res.status(404).json({ message: "Resource not found" });
   const context = await loadContext(req.params.id, req.user.id);
   if (!context) return res.status(404).json({ message: "Resource not found" });
   if (!canCreateSpacePost({ resourceStatus: context.resource.status, membership: context.membership })) return res.status(403).json({ message: "Active membership is required to publish" });
-  const text = normalizeSpacePostText(req.body?.text);
-  if (!text) return res.status(400).json({ message: "Post text must contain 1 to 3000 characters" });
-  const post = await SocialSpacePost.create({ resourceType, resourceId: context.resource._id, authorId: req.user.id, text });
-  res.status(201).json({ post });
+  const text = normalizeSpacePostText(req.body?.text) || "";
+  const ids = req.body?.mediaAssetIds === undefined ? [] : req.body.mediaAssetIds;
+  if (!Array.isArray(ids) || ids.length > 4 || ids.some(id => !validId(id)) || new Set(ids.map(String)).size !== ids.length) return res.status(400).json({ message: "Provide up to four unique valid mediaAssetIds" });
+  if (!text && ids.length === 0) return res.status(400).json({ message: "Post text or media is required" });
+  const assets = ids.length ? await SocialSpaceMediaAsset.find({ _id: { $in: ids }, ownerId: req.user.id, resourceType, resourceId: context.resource._id, status: "uploaded" }) : [];
+  if (assets.length !== ids.length) return res.status(400).json({ message: "One or more media assets are invalid, already used, or belong to another resource" });
+  if (ids.length) {
+   const claimed = await SocialSpaceMediaAsset.updateMany({ _id: { $in: ids }, ownerId: req.user.id, resourceType, resourceId: context.resource._id, status: "uploaded" }, { $set: { status: "attached" } });
+   if (claimed.modifiedCount !== ids.length) return res.status(409).json({ message: "A media asset was already attached. Upload it again." });
+  }
+  try {
+   const post = await SocialSpacePost.create({
+    resourceType, resourceId: context.resource._id, authorId: req.user.id, text,
+    attachments: assets.map(asset => ({ mediaType: asset.mediaType, url: asset.secureUrl, mimeType: asset.mimeType, bytes: asset.bytes }))
+   });
+   if (ids.length) await SocialSpaceMediaAsset.updateMany({ _id: { $in: ids }, status: "attached" }, { $set: { postId: post._id } });
+   res.status(201).json({ post });
+  } catch (error) {
+   if (ids.length) await SocialSpaceMediaAsset.updateMany({ _id: { $in: ids }, ownerId: req.user.id, status: "attached", postId: null }, { $set: { status: "uploaded" } });
+   throw error;
+  }
  });
  router.post("/:id/posts/:postId/like", requireAuth, async (req, res) => {
   if (!validId(req.params.id) || !validId(req.params.postId)) return res.status(404).json({ message: "Post not found" });
@@ -96,6 +156,10 @@ function createSpacePostRouter({ Resource, Membership, resourceType, resourceKey
   if (!canDeleteSpacePost({ authorId: post.authorId, requesterId: req.user.id, requesterRole: context.membership.role })) return res.status(403).json({ message: "You cannot moderate this post" });
   await post.deleteOne();
   res.json({ deleted: true, postId: req.params.postId });
+ });
+ router.use((error, _req, res, _next) => {
+  if (error instanceof multer.MulterError && error.code === "LIMIT_FILE_SIZE") return res.status(413).json({ message: "Media file exceeds the 150 MB upload limit" });
+  return res.status(400).json({ message: "Media upload request is invalid" });
  });
  return router;
 }

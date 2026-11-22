@@ -83,4 +83,4 @@ A separate SocialSpacePost model and dedicated Group/Community post routes are a
 - Reads and interactions exclude or reject users blocked in either direction. Resource creators are also checked against the viewer's current block state.
 - Existing global Social feed and one-to-one Messages remain separate and unchanged.
 
-This first slice intentionally supports text posts only. Photo/video upload is not enabled until a shared media pipeline validates image bytes, probes video containers, applies quotas and stores ownership metadata. There is no group chat, realtime event, content notification, UI, migration, production index creation, deployment or merge in this slice.
+Text posts and secure Photo/Video attachments are supported by the API. There is no group chat, realtime event, content notification, frontend UI, migration, production index creation, deployment or merge in this slice.

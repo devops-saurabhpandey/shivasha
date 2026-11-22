@@ -5,7 +5,8 @@ const schema = new mongoose.Schema({
  resourceType: { type: String, enum: ["group", "community"], required: true },
  resourceId: { type: mongoose.Schema.Types.ObjectId, required: true },
  authorId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
- text: { type: String, required: true, trim: true, minlength: 1, maxlength: 3000 },
+ text: { type: String, default: "", trim: true, maxlength: 3000 },
+ attachments: { type: [{ mediaType: { type: String, enum: ["image", "video"], required: true }, url: { type: String, required: true }, mimeType: { type: String, required: true }, bytes: { type: Number, required: true, min: 1 } }], default: [] },
  likes: { type: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }], default: [] },
  comments: { type: [commentSchema], default: [] },
  editedAt: { type: Date, default: null }
