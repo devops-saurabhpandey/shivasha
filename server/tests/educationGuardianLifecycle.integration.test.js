@@ -18,12 +18,12 @@ test("guardian routes enforce expiry, one-time redemption, student consent and p
   if (!databaseName || !/_test$/i.test(databaseName)) {
     throw new Error("Refusing to run guardian integration tests unless MONGODB_TEST_URI names a database ending in _test");
   }
-  if (process.env.MONGODB_URI && process.env.MONGODB_URI === mongoUri) {
+  if (process.env.MONGODB_URI && process.env.MONGODB_URI === guardianMongoUri) {
     throw new Error("MONGODB_TEST_URI must not point at the configured application database");
   }
 
   process.env.JWT_SECRET = "shivasha-guardian-integration-test-only-secret";
-  await mongoose.connect(mongoUri, { serverSelectionTimeoutMS: 15000 });
+  await mongoose.connect(guardianMongoUri, { serverSelectionTimeoutMS: 15000 });
   const app = express();
   app.use(express.json());
   app.use("/api/education/quiz", educationQuizRoutes);
