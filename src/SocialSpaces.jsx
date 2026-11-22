@@ -20,7 +20,8 @@ export default function SocialSpaces({auth,socket}) {
  const [showCreate,setShowCreate]=useState(false),[name,setName]=useState(""),[description,setDescription]=useState(""),[privacy,setPrivacy]=useState("private");
  const [text,setText]=useState(""),[files,setFiles]=useState([]),[comments,setComments]=useState({}),[commentDrafts,setCommentDrafts]=useState({});
  const [inviteToken,setInviteToken]=useState("");
- const [members,setMembers]=useState([]),[pendingMembers,setPendingMembers]=useState([]),[issuedInvite,setIssuedInvite]=useState(null);\n const [chatMessages,setChatMessages]=useState([]),[chatDraft,setChatDraft]=useState(""),[chatLoading,setChatLoading]=useState(false),[chatSending,setChatSending]=useState(false);
+ const [members,setMembers]=useState([]),[pendingMembers,setPendingMembers]=useState([]),[issuedInvite,setIssuedInvite]=useState(null);
+ const [chatMessages,setChatMessages]=useState([]),[chatDraft,setChatDraft]=useState(""),[chatLoading,setChatLoading]=useState(false),[chatSending,setChatSending]=useState(false);
  const root=kind==="groups"?"/api/social/groups":"/api/social/communities";
  const label=kind==="groups"?"Group":"Community";
  const loadItems=async()=>{
