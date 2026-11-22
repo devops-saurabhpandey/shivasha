@@ -159,6 +159,7 @@ router.patch("/admin/commissions/:id/review", async (req, res, next) => {
     const reviewNote = cleanText(req.body?.reviewNote, 300);
     if (!mongoose.isValidObjectId(id)) return res.status(400).json({ message: "Invalid commission ID." });
     if (!["approved", "reversed"].includes(status)) return res.status(400).json({ message: "Review status must be approved or reversed." });
+    if (status === "reversed" && !reviewNote) return res.status(400).json({ message: "A reason is required to reverse a commission." });
     const previous = await AffiliateCommission.findOne({ _id: id, status: "pending_review" }).select("_id status").lean();
     if (!previous) return res.status(404).json({ message: "Pending commission not found; it may already have been reviewed." });
     const commission = await AffiliateCommission.findOneAndUpdate(
