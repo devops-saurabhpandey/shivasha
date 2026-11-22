@@ -87,7 +87,9 @@ function createSpacePostRouter({ Resource, Membership, resourceType, resourceKey
   const context = await loadContext(req.params.id, req.user.id);
   if (!context) return res.status(404).json({ message: "Resource not found" });
   if (!canCreateSpacePost({ resourceStatus: context.resource.status, membership: context.membership })) return res.status(403).json({ message: "Active membership is required to publish" });
-  const text = normalizeSpacePostText(req.body?.text) || "";
+  const rawText = req.body?.text;
+  const text = rawText === undefined ? "" : (typeof rawText === "string" ? rawText.trim() : null);
+  if (text === null || text.length > 3000) return res.status(400).json({ message: "Post text must be a string of at most 3000 characters" });
   const ids = req.body?.mediaAssetIds === undefined ? [] : req.body.mediaAssetIds;
   if (!Array.isArray(ids) || ids.length > 4 || ids.some(id => !validId(id)) || new Set(ids.map(String)).size !== ids.length) return res.status(400).json({ message: "Provide up to four unique valid mediaAssetIds" });
   if (!text && ids.length === 0) return res.status(400).json({ message: "Post text or media is required" });
@@ -95,7 +97,10 @@ function createSpacePostRouter({ Resource, Membership, resourceType, resourceKey
   if (assets.length !== ids.length) return res.status(400).json({ message: "One or more media assets are invalid, already used, or belong to another resource" });
   if (ids.length) {
    const claimed = await SocialSpaceMediaAsset.updateMany({ _id: { $in: ids }, ownerId: req.user.id, resourceType, resourceId: context.resource._id, status: "uploaded" }, { $set: { status: "attached" } });
-   if (claimed.modifiedCount !== ids.length) return res.status(409).json({ message: "A media asset was already attached. Upload it again." });
+   if (claimed.modifiedCount !== ids.length) {
+    await SocialSpaceMediaAsset.updateMany({ _id: { $in: ids }, ownerId: req.user.id, resourceType, resourceId: context.resource._id, status: "attached", postId: null }, { $set: { status: "uploaded" } });
+    return res.status(409).json({ message: "A media asset was already attached. Upload it again." });
+   }
   }
   try {
    const post = await SocialSpacePost.create({
