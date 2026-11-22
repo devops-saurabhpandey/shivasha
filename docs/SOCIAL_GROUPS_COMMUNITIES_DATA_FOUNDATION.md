@@ -100,3 +100,17 @@ This UI does not yet provide member approval/moderation dashboards, invitation i
 The Groups & Communities workspace includes a management panel for active Owner/Admin members. It loads active members and pending requests through the member-list API, allows permitted approvals/rejections and remove/ban actions, and issues one-time invitation tokens with copy and revoke controls. The UI suppresses moderation controls for Owner accounts and prevents Admin users from seeing moderation actions against peer Admins; backend policy remains the final authorization boundary.
 
 Invitation tokens are displayed once and expire after 24 hours. The UI does not expose a token history because the API intentionally does not return raw tokens after issuance.
+
+
+## Separate Group & Community chat
+
+Group Chat and Community Chat use a dedicated `SocialSpaceChatMessage` collection and resource-scoped endpoints:
+- `GET /api/social/groups/:id/chat/messages` and `POST /api/social/groups/:id/chat/messages`
+- `GET /api/social/communities/:id/chat/messages` and `POST /api/social/communities/:id/chat/messages`
+- `POST /api/social/{groups|communities}/:id/chat/read`
+
+Every request re-loads the resource and the current user's active membership from MongoDB. Pending, removed, banned, non-member, inactive-resource and missing-resource users fail closed. Message history is limited to the latest 100 messages; message text is limited to 2,000 characters. Read state is recorded per member.
+
+Messages from either-direction blocked peers are excluded from history. Realtime delivery uses authenticated per-user Socket.IO rooms and only sends to currently active members who are not blocked in either direction. This chat is distinct from existing one-to-one conversations and messages.
+
+The Social Groups & Communities UI now shows the selected space's chat to active members, supports sending text messages, refreshes history and listens for scoped realtime message events. Group and Community chat histories are isolated by resource type and ID.

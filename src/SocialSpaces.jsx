@@ -14,13 +14,13 @@ async function request(path,auth,options={}) {
  if(!response.ok)throw new Error(data.message||"Request failed ("+response.status+")");
  return data;
 }
-export default function SocialSpaces({auth}) {
+export default function SocialSpaces({auth,socket}) {
  const [kind,setKind]=useState("groups"),[items,setItems]=useState([]),[selected,setSelected]=useState(null),[membership,setMembership]=useState(null),[posts,setPosts]=useState([]);
  const [loading,setLoading]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState(""),[notice,setNotice]=useState("");
  const [showCreate,setShowCreate]=useState(false),[name,setName]=useState(""),[description,setDescription]=useState(""),[privacy,setPrivacy]=useState("private");
  const [text,setText]=useState(""),[files,setFiles]=useState([]),[comments,setComments]=useState({}),[commentDrafts,setCommentDrafts]=useState({});
  const [inviteToken,setInviteToken]=useState("");
- const [members,setMembers]=useState([]),[pendingMembers,setPendingMembers]=useState([]),[issuedInvite,setIssuedInvite]=useState(null);
+ const [members,setMembers]=useState([]),[pendingMembers,setPendingMembers]=useState([]),[issuedInvite,setIssuedInvite]=useState(null);\n const [chatMessages,setChatMessages]=useState([]),[chatDraft,setChatDraft]=useState(""),[chatLoading,setChatLoading]=useState(false),[chatSending,setChatSending]=useState(false);
  const root=kind==="groups"?"/api/social/groups":"/api/social/communities";
  const label=kind==="groups"?"Group":"Community";
  const loadItems=async()=>{
@@ -84,6 +84,31 @@ export default function SocialSpaces({auth}) {
  const reviewMember=async(userId,action)=>{setBusy(true);setError("");try{await request(root+"/"+selected._id+"/members/"+userId+"/review",auth,{method:"POST",body:JSON.stringify({action})});await loadSpace(selected);setNotice("Member status updated")}catch(e){setError(e.message)}finally{setBusy(false)}};
  const createInvite=async()=>{setBusy(true);setError("");try{const data=await request(root+"/"+selected._id+"/invitations",auth,{method:"POST",body:JSON.stringify({})});setIssuedInvite(data.invitation);setNotice("Invitation token created. Copy it now; it is shown only once.")}catch(e){setError(e.message)}finally{setBusy(false)}};
  const revokeInvite=async()=>{if(!issuedInvite)return;setBusy(true);setError("");try{await request(root+"/"+selected._id+"/invitations/"+issuedInvite.id+"/revoke",auth,{method:"POST",body:JSON.stringify({})});setIssuedInvite(null);setNotice("Invitation revoked")}catch(e){setError(e.message)}finally{setBusy(false)}};
+ useEffect(()=>{
+  if(!selected?._id||membership?.status!=="active"){setChatMessages([]);return}
+  let cancelled=false;
+  const path=root+"/"+selected._id+"/chat/messages";
+  setChatLoading(true);
+  request(path,auth).then(data=>{
+   if(cancelled)return;
+   setChatMessages(data.messages||[]);
+   return request(root+"/"+selected._id+"/chat/read",auth,{method:"POST",body:JSON.stringify({})});
+  }).catch(e=>{if(!cancelled)setError(e.message)}).finally(()=>{if(!cancelled)setChatLoading(false)});
+  const onMessage=message=>{
+   if(String(message.resourceId)!==String(selected._id)||message.resourceType!==(kind==="groups"?"group":"community"))return;
+   setChatMessages(prev=>prev.some(item=>item._id===message._id)?prev:[...prev,message]);
+  };
+  socket?.on("social-space:message:new",onMessage);
+  return ()=>{cancelled=true;socket?.off("social-space:message:new",onMessage)};
+ },[selected?._id,membership?.status,kind,auth?.token,socket]);
+ const sendChatMessage=async e=>{
+  e.preventDefault();const value=chatDraft.trim();if(!value||!selected)return;
+  setChatSending(true);setError("");
+  try{
+   const message=await request(root+"/"+selected._id+"/chat/messages",auth,{method:"POST",body:JSON.stringify({text:value})});
+   setChatMessages(prev=>prev.some(item=>item._id===message._id)?prev:[...prev,message]);setChatDraft("");
+  }catch(e){setError(e.message)}finally{setChatSending(false)}
+ };
  const privacyLabel={public:"Public",private:"Private", "invite-only":"Invite only"};
  return <section style={styles.shell}>
   <header style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:12,flexWrap:"wrap",marginBottom:18}}>
@@ -143,6 +168,18 @@ export default function SocialSpaces({auth}) {
       <div style={styles.muted}>{files.length} file(s) selected · Up to 4 attachments. Images max 15 MB each; videos max 150 MB each.</div>
       <button disabled={busy||(!text.trim()&&!files.length)} style={{...styles.button,background:"#172554",color:"#fff"}}>{busy?"Publishing…":"Publish post"}</button>
      </form>}
+     {canPost&&<section style={{...styles.panel,display:"grid",gap:12}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8}}><div><h3 style={{margin:"0 0 4px"}}>{label} Chat</h3><p style={styles.muted}>Only active members can read and send messages.</p></div><button type="button" onClick={()=>request(root+"/"+selected._id+"/chat/messages",auth).then(data=>setChatMessages(data.messages||[])).catch(e=>setError(e.message))} style={{...styles.button,background:"#eef1f7"}}>↻ Refresh</button></div>
+      <div aria-live="polite" style={{display:"grid",gap:8,maxHeight:360,overflowY:"auto",padding:4}}>
+       {chatLoading?<p style={styles.muted}>Loading chat…</p>:chatMessages.length?chatMessages.map(message=><div key={message._id} style={{padding:"10px 12px",borderRadius:12,background:String(message.senderId?._id||message.senderId)===String(auth.user?.id||auth.user?._id)?"#edf2ff":"#f5f6f8",justifySelf:String(message.senderId?._id||message.senderId)===String(auth.user?.id||auth.user?._id)?"end":"start",maxWidth:"90%"}}>
+        <b style={{fontSize:12}}>{message.senderId?.name||"Member"}</b><div style={{whiteSpace:"pre-wrap",overflowWrap:"anywhere",marginTop:4}}>{message.text}</div><div style={{...styles.muted,fontSize:11,marginTop:4}}>{message.createdAt?new Date(message.createdAt).toLocaleString():""}</div>
+       </div>):<p style={styles.muted}>No messages yet. Start the conversation.</p>}
+      </div>
+      <form onSubmit={sendChatMessage} style={{display:"flex",gap:8,alignItems:"end"}}>
+       <textarea value={chatDraft} onChange={e=>setChatDraft(e.target.value)} maxLength={2000} rows={2} placeholder="Write a message to active members…" style={{...styles.input,resize:"vertical"}}/>
+       <button disabled={chatSending||!chatDraft.trim()} style={{...styles.button,background:"#172554",color:"#fff"}}>{chatSending?"Sending…":"Send"}</button>
+      </form>
+     </section>}
      <div style={{fontWeight:850}}>Posts & discussions</div>
      {posts.length?posts.map(post=><article key={post._id} style={{...styles.panel,display:"grid",gap:10}}>
       <div style={{display:"flex",alignItems:"center",gap:9}}><div style={{width:34,height:34,borderRadius:50,background:"#e8edf8",display:"grid",placeItems:"center",fontWeight:800}}>{(post.authorId?.name||"S").slice(0,1).toUpperCase()}</div><div><b style={{fontSize:13}}>{post.authorId?.name||"Member"}</b><div style={styles.muted}>{post.createdAt?new Date(post.createdAt).toLocaleString():""}</div></div></div>
