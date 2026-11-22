@@ -12,6 +12,7 @@ function StatCard({ label, value }) {
 }
 
 export default function AdminDashboard({ auth }) {
+  const headers = { Authorization: "Bearer " + auth?.token };
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -32,7 +33,6 @@ export default function AdminDashboard({ auth }) {
 
   useEffect(() => {
     let cancelled = false;
-    const headers = { Authorization: "Bearer " + auth?.token };
     fetch(API_BASE + "/api/admin/stats", { headers })
       .then(async response => {
         const data = await response.json().catch(() => ({}));
