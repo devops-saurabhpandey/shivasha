@@ -8,7 +8,7 @@ export function createSocialInviteToken() {
 }
 
 export function hashSocialInviteToken(token) {
-  if (typeof token !== "string" || token.length < 32 || token.length > 256) {
+  if (typeof token !== "string" || !/^[A-Za-z0-9_-]{43}$/.test(token)) {
     throw new TypeError("Invalid invitation token");
   }
   return createHash("sha256").update(token, "utf8").digest("hex");
