@@ -72,6 +72,16 @@ router.post("/admin/sales/verify", requireAuth, async (req,res,next) => {
   }catch(e){next(e);}
 });
 
+router.get("/admin/pending-paid-enrollments", requireAuth, async (req,res,next) => {
+  try{
+    if(!await isAdmin(req.user.id))return res.status(403).json({message:"Admin access required."});
+    const enrollments=await LearningEnrollment.find({paymentStatus:"verified",transactionReference:{$exists:true,$ne:""}}).populate("course","title price currency instructor").populate("student","name email").sort({createdAt:-1}).limit(200).lean();
+    const sales=await LearningSale.find({}).select("enrollment").lean();
+    const recorded=new Set(sales.map(x=>String(x.enrollment)));
+    res.json({enrollments:enrollments.filter(x=>x.course&&!recorded.has(String(x._id)))});
+  }catch(e){next(e);}
+});
+
 router.get("/admin/sales", requireAuth, async (req,res,next) => {
   try{
     if(!await isAdmin(req.user.id))return res.status(403).json({message:"Admin access required."});
