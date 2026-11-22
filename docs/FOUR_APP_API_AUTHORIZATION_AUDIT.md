@@ -7,7 +7,7 @@ This is a source-code audit of representative Social, Business, Edutech and Ente
 ## Social
 
 ### Changes implemented on this branch
-- Extended mutual-block filtering to Social Discover, user search, Business Directory, profile connections, and notification feeds/unread counts. Public user projections continue to omit private block lists.
+- Extended mutual-block filtering to Social Discover, user search, Business Directory, profile connections, and notification feeds/unread counts. Public user projections use an explicit profile-field allowlist and omit email, password hashes, moderation state, saved posts and private block lists.
 - Direct-message conversation lists now omit a conversation when either participant has blocked the other. Creating a conversation and reading, sending, or marking messages read are denied with 404 when either-direction blocking exists.
 - Added a mutual-block policy: a post is hidden when the viewer blocked its author or the author blocked the viewer.
 - Applied this policy to feed and hashtag reads, direct post reads, saved-post reads, and post save/repost/comment/reply/like actions. Blocked interactions return 404 to avoid confirming inaccessible content.
