@@ -4,6 +4,7 @@ import Post from "../models/Post.js";
 import Notification from "../models/Notification.js";
 import Report from "../models/Report.js";
 import { requireAuth } from "../middleware/auth.js";
+import { isBlockedEitherDirection } from "../social/blockPolicy.js";
 
 const router = express.Router();
 const publicUser = query => query.select("-passwordHash -savedPosts -moderationBlocked");
@@ -61,11 +62,16 @@ router.get("/search", requireAuth, async (req, res) => {
 });
 
 router.get("/:id", requireAuth, async (req, res) => {
-  const user = await publicUser(User.findById(req.params.id));
-  if (!user) return res.status(404).json({ message: "User not found" });
+  const [user, me] = await Promise.all([
+    publicUser(User.findById(req.params.id).select("+blockedUsers")),
+    User.findById(req.user.id).select("following blockedUsers")
+  ]);
+  if (!user || !me) return res.status(404).json({ message: "User not found" });
+  if (isBlockedEitherDirection(me._id, user._id, me.blockedUsers || [], user.blockedUsers || [])) {
+    return res.status(404).json({ message: "User not found" });
+  }
   const posts = await Post.find({ author: user._id }).populate("author", "name avatarUrl").sort({ createdAt: -1 }).limit(50);
-  const me = await User.findById(req.user.id).select("following blockedUsers");
-  res.json({ user, posts, isFollowing: me.following.some(id => id.toString() === user._id.toString()), isBlocked: me.blockedUsers.some(id => id.toString() === user._id.toString()) });
+  res.json({ user, posts, isFollowing: me.following.some(id => id.toString() === user._id.toString()), isBlocked: false });
 });
 
 router.get("/:id/connections", requireAuth, async (req, res) => {
@@ -81,6 +87,9 @@ router.post("/:id/follow", requireAuth, async (req, res) => {
   if (req.params.id === req.user.id) return res.status(400).json({ message: "You cannot follow yourself" });
   const [me, target] = await Promise.all([User.findById(req.user.id), User.findById(req.params.id)]);
   if (!me || !target) return res.status(404).json({ message: "User not found" });
+  if (isBlockedEitherDirection(me._id, target._id, me.blockedUsers || [], target.blockedUsers || [])) {
+    return res.status(404).json({ message: "User not found" });
+  }
   const following = me.following.some(id => id.toString() === target._id.toString());
   if (following) {
     me.following = me.following.filter(id => id.toString() !== target._id.toString());
