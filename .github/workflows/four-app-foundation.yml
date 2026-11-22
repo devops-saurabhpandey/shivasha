@@ -1,0 +1,30 @@
+name: Four-app foundation tests
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [architecture/four-app-shared-core]
+
+permissions:
+  contents: read
+
+jobs:
+  registry-tests:
+    name: Product registry unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Test frontend product navigation registry
+        run: node --test src/config/productNavigation.test.js
+
+      - name: Test backend API product registry
+        working-directory: server
+        run: node --test tests/productRegistry.test.js
