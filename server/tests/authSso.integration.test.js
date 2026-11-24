@@ -45,8 +45,8 @@ before(async () => {
 after(async () => {
   if (!enabled) return;
   if (user?._id) await User.deleteOne({ _id: user._id });
-  await new Promise(resolve => server?.close(resolve));
-  await mongoose.disconnect();
+  if (server) await new Promise(resolve => server.close(resolve));
+  if (mongoose.connection.readyState) await mongoose.disconnect();
 });
 
 test("SSO login, shared session and logout work from each product origin", {
