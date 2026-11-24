@@ -15,7 +15,7 @@ router.get("/session", requireAuth, async (req, res) => {
     const [user, memberships] = await Promise.all([
       User.findById(req.user.id).select("_id name email role avatarUrl moderationBlocked").lean(),
       ProductMembership.find({ userId: req.user.id })
-        .select("productId role permissions status expiresAt")
+        .select("productId role permissions status expiresAt tenantId")
         .lean()
     ]);
 
