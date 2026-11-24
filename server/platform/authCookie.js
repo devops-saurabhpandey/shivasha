@@ -58,3 +58,9 @@ export function isAllowedBrowserOrigin(origin, env = process.env) {
 export function isUnsafeMethod(method = "GET") {
   return !["GET", "HEAD", "OPTIONS"].includes(String(method).toUpperCase());
 }
+
+export function buildLoginResponsePayload({ ssoEnabled, token, user }) {
+  return ssoEnabled
+    ? { message: "Login successful", sso: true, user }
+    : { message: "Login successful", token, user };
+}
