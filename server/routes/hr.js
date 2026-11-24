@@ -8,7 +8,7 @@ import { createHRCompanyAuthorizationMiddleware } from "../enterprise/hrAuthoriz
 import { validatePayrollTransition } from "../enterprise/payrollWorkflow.js";
 import { MAX_PENDING_HR_AUDIT_EVENTS, createHRAuditEvent, flushHRAuditOutboxForDocument, withHRAuditCapacity } from "../enterprise/hrAuditOutbox.js";
 import { HREmployee, HRAttendance, HRLeave, HRChallan, HRPayrollRun } from "../models/HR.js";
-import { buildMonthlyPayrollRegister } from "../../src/hrPayrollRegister.js";
+import { buildMonthlyPayrollRegister } from "../src/hrPayrollRegister.js";
 
 const router = Router();
 router.use(requireAuth);
