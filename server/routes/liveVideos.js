@@ -2,6 +2,7 @@ import { Router } from "express";
 import multer from "multer";
 import LiveVideo from "../models/LiveVideo.js";
 import { requireAuth } from "../middleware/auth.js";
+import { hasValidVideoSignature } from "../media/videoSignature.js";
 
 const router = Router();
 // Limit memory use; recordings larger than 150 MB are rejected.
@@ -31,6 +32,9 @@ router.get("/", requireAuth, async (req, res) => {
 
 router.post("/upload", requireAuth, upload.single("video"), async (req, res) => {
   if (!req.file) return res.status(400).json({ message: "Choose a recorded live video first." });
+  if (!hasValidVideoSignature(req.file.buffer, req.file.mimetype)) {
+    return res.status(415).json({ message: "Video content does not match its declared file type." });
+  }
   let cloudinary;
   let uploaded;
   try {

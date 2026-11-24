@@ -4,9 +4,19 @@ import Post from "../models/Post.js";
 import Notification from "../models/Notification.js";
 import Report from "../models/Report.js";
 import { requireAuth } from "../middleware/auth.js";
+import { isBlockedEitherDirection } from "../social/blockPolicy.js";
 
 const router = express.Router();
-const publicUser = query => query.select("-passwordHash -savedPosts -moderationBlocked");
+const publicUser = query => query.select("name bio avatarUrl businessName businessCategory businessDescription businessListed createdAt");
+
+async function getBlockedPeerIds(viewerId) {
+  const [viewer, blockers] = await Promise.all([
+    User.findById(viewerId).select("blockedUsers").lean(),
+    User.find({ blockedUsers: viewerId }).select("_id").lean()
+  ]);
+  if (!viewer) throw new Error("Authenticated user not found");
+  return [...new Set([...(viewer.blockedUsers || []), ...blockers.map(user => user._id)].map(id => String(id)))];
+}
 
 router.get("/me", requireAuth, async (req, res) => {
   const user = await User.findById(req.user.id).select("-passwordHash");
@@ -29,14 +39,16 @@ router.patch("/me", requireAuth, async (req, res) => {
 });
 
 router.get("/discover", requireAuth, async (req, res) => {
-  const users = await publicUser(User.find({ _id: { $ne: req.user.id }, moderationBlocked: { $ne: true } }).sort({ createdAt: -1 }).limit(30));
+  const excludedIds = await getBlockedPeerIds(req.user.id);
+  const users = await publicUser(User.find({ _id: { $nin: [req.user.id, ...excludedIds] }, moderationBlocked: { $ne: true } }).sort({ createdAt: -1 }).limit(30));
   res.json(users);
 });
 
 router.get("/directory", requireAuth, async (req, res) => {
   const q = String(req.query.q || "").trim().slice(0, 80);
   const category = String(req.query.category || "").trim().slice(0, 80);
-  const filter = { businessListed: true, moderationBlocked: { $ne: true } };
+  const excludedIds = await getBlockedPeerIds(req.user.id);
+  const filter = { _id: { $nin: excludedIds }, businessListed: true, moderationBlocked: { $ne: true } };
   if (q) {
     const escaped = q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     filter.$or = [
@@ -52,8 +64,9 @@ router.get("/directory", requireAuth, async (req, res) => {
 router.get("/search", requireAuth, async (req, res) => {
   const q = String(req.query.q || "").trim();
   if (q.length < 2) return res.json([]);
+  const excludedIds = await getBlockedPeerIds(req.user.id);
   const users = await publicUser(User.find({
-    _id: { $ne: req.user.id },
+    _id: { $nin: [req.user.id, ...excludedIds] },
     moderationBlocked: { $ne: true },
     $or: [{ name: { $regex: q, $options: "i" } }, { bio: { $regex: q, $options: "i" } }, { email: { $regex: q, $options: "i" } }]
   }).limit(30));
@@ -61,19 +74,33 @@ router.get("/search", requireAuth, async (req, res) => {
 });
 
 router.get("/:id", requireAuth, async (req, res) => {
-  const user = await publicUser(User.findById(req.params.id));
-  if (!user) return res.status(404).json({ message: "User not found" });
+  const [user, me, targetPrivacy] = await Promise.all([
+    publicUser(User.findById(req.params.id)),
+    User.findById(req.user.id).select("following blockedUsers"),
+    User.findById(req.params.id).select("blockedUsers")
+  ]);
+  if (!user || !me || !targetPrivacy) return res.status(404).json({ message: "User not found" });
+  if (isBlockedEitherDirection(me._id, user._id, me.blockedUsers || [], targetPrivacy.blockedUsers || [])) {
+    return res.status(404).json({ message: "User not found" });
+  }
   const posts = await Post.find({ author: user._id }).populate("author", "name avatarUrl").sort({ createdAt: -1 }).limit(50);
-  const me = await User.findById(req.user.id).select("following blockedUsers");
-  res.json({ user, posts, isFollowing: me.following.some(id => id.toString() === user._id.toString()), isBlocked: me.blockedUsers.some(id => id.toString() === user._id.toString()) });
+  res.json({ user, posts, isFollowing: me.following.some(id => id.toString() === user._id.toString()), isBlocked: false });
 });
 
 router.get("/:id/connections", requireAuth, async (req, res) => {
   const type = req.query.type === "following" ? "following" : "followers";
-  const user = await User.findById(req.params.id).select(type);
-  if (!user) return res.status(404).json({ message: "User not found" });
-  const ids = user[type] || [];
-  const users = await User.find({ _id: { $in: ids } }).select("name bio avatarUrl followers following").limit(100);
+  const [user, me, targetPrivacy] = await Promise.all([
+    User.findById(req.params.id).select(type),
+    User.findById(req.user.id).select("blockedUsers"),
+    User.findById(req.params.id).select("blockedUsers")
+  ]);
+  if (!user || !me || !targetPrivacy) return res.status(404).json({ message: "User not found" });
+  if (isBlockedEitherDirection(me._id, user._id, me.blockedUsers || [], targetPrivacy.blockedUsers || [])) {
+    return res.status(404).json({ message: "User not found" });
+  }
+  const excludedIds = await getBlockedPeerIds(req.user.id);
+  const ids = (user[type] || []).filter(id => !excludedIds.includes(String(id)));
+  const users = await User.find({ _id: { $in: ids }, moderationBlocked: { $ne: true } }).select("name bio avatarUrl").limit(100);
   res.json({ type, users });
 });
 
@@ -81,6 +108,9 @@ router.post("/:id/follow", requireAuth, async (req, res) => {
   if (req.params.id === req.user.id) return res.status(400).json({ message: "You cannot follow yourself" });
   const [me, target] = await Promise.all([User.findById(req.user.id), User.findById(req.params.id)]);
   if (!me || !target) return res.status(404).json({ message: "User not found" });
+  if (isBlockedEitherDirection(me._id, target._id, me.blockedUsers || [], target.blockedUsers || [])) {
+    return res.status(404).json({ message: "User not found" });
+  }
   const following = me.following.some(id => id.toString() === target._id.toString());
   if (following) {
     me.following = me.following.filter(id => id.toString() !== target._id.toString());

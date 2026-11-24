@@ -6,11 +6,25 @@ import mongoose from "mongoose";
 import http from "http";
 import { Server } from "socket.io";
 import jwt from "jsonwebtoken";
+import Conversation from "./models/Conversation.js";
+import User from "./models/User.js";
+import { authenticateSocketUser } from "./realtime/socketAuthentication.js";
+import { parseCookieHeader, AUTH_COOKIE_NAME, isAllowedBrowserOrigin } from "./platform/authCookie.js";
+import { isConversationRoomAuthorized, isConversationPeerBlocked } from "./realtime/conversationAccess.js";
 import authRoutes from "./routes/auth.js";
 import userRoutes from "./routes/users.js";
 import postRoutes from "./routes/posts.js";
 import notificationRoutes from "./routes/notifications.js";
 import messageRoutes from "./routes/messages.js";
+import { groupRoutes, communityRoutes } from "./routes/socialGroupsCommunities.js";
+import { createSocialSpacePostRouters } from "./routes/socialSpacePosts.js";
+import { createSocialSpaceChatRouters } from "./routes/socialSpaceChat.js";
+import Group from "./models/Group.js";
+import GroupMembership from "./models/GroupMembership.js";
+import Community from "./models/Community.js";
+import CommunityMembership from "./models/CommunityMembership.js";
+const { groupPostRoutes, communityPostRoutes } = createSocialSpacePostRouters({ Group, GroupMembership, Community, CommunityMembership });
+const { groupChatRoutes, communityChatRoutes } = createSocialSpaceChatRouters({ Group, GroupMembership, Community, CommunityMembership });
 import adminRoutes from "./routes/admin.js";
 import contentRoutes from "./routes/content.js";
 import businessRoutes from "./routes/business.js";
@@ -46,27 +60,49 @@ dotenv.config();
 const app = express();
 const httpServer = http.createServer(app);
 const PORT = process.env.PORT || 5000;
-const allowedOrigins = process.env.FRONTEND_URL ? process.env.FRONTEND_URL.split(",").map(origin => origin.trim()) : "*";
+const ssoEnabled = process.env.AUTH_COOKIE_SSO === "true";
+const defaultSsoOrigins = [
+  "https://social.shivasha.com",
+  "https://business.shivasha.com",
+  "https://edutech.shivasha.com",
+  "https://enterprise.shivasha.com"
+];
+const allowedOrigins = process.env.FRONTEND_URL
+  ? process.env.FRONTEND_URL.split(",").map(origin => origin.trim()).filter(Boolean)
+  : (ssoEnabled ? defaultSsoOrigins : "*");
+const ssoCorsOrigin = (origin, callback) => {
+  if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
+  return callback(new Error("Origin is not allowed by SHIVASHA CORS policy"));
+};
+const corsOptions = ssoEnabled
+  ? { origin: ssoCorsOrigin, credentials: true }
+  : { origin: allowedOrigins };
 
-app.use(cors({ origin: allowedOrigins }));
+app.use(cors(corsOptions));
 app.use(express.json());
 
 const onlineUsers = new Map();
 const liveRooms = new Map();
 
 const io = new Server(httpServer, {
-  cors: { origin: allowedOrigins, methods: ["GET", "POST"] }
+  cors: { ...corsOptions, methods: ["GET", "POST"] }
 });
 
-io.use((socket, next) => {
-  try {
-    const token = socket.handshake.auth?.token;
-    if (!token || !process.env.JWT_SECRET) return next(new Error("Authentication required"));
-    socket.user = jwt.verify(token, process.env.JWT_SECRET);
-    next();
-  } catch {
-    next(new Error("Invalid authentication token"));
+io.use(async (socket, next) => {
+  const cookieToken = parseCookieHeader(socket.handshake.headers?.cookie || "")[AUTH_COOKIE_NAME];
+  const bearerToken = socket.handshake.auth?.token;
+  if (!bearerToken && cookieToken && !isAllowedBrowserOrigin(socket.handshake.headers?.origin)) {
+    return next(new Error("Untrusted realtime connection origin"));
   }
+  const result = await authenticateSocketUser({
+    token: bearerToken || cookieToken,
+    jwtSecret: process.env.JWT_SECRET,
+    verifyToken: jwt.verify,
+    findUser: id => User.findById(id).select("_id moderationBlocked").lean()
+  });
+  if (!result.ok) return next(new Error(result.error));
+  socket.user = result.user;
+  next();
 });
 
 io.on("connection", socket => {
@@ -137,10 +173,57 @@ io.on("connection", socket => {
   });
 
   socket.on("presence:heartbeat", () => socket.emit("presence:pong", { at: Date.now() }));
-  socket.on("typing:start", ({ conversationId } = {}) => { if (conversationId) socket.to("conversation:" + conversationId).emit("typing:start", { userId, conversationId }); });
-  socket.on("typing:stop", ({ conversationId } = {}) => { if (conversationId) socket.to("conversation:" + conversationId).emit("typing:stop", { userId, conversationId }); });
-  socket.on("conversation:join", ({ conversationId } = {}) => { if (conversationId) socket.join("conversation:" + conversationId); });
-  socket.on("conversation:leave", ({ conversationId } = {}) => { if (conversationId) socket.leave("conversation:" + conversationId); });
+  const canUseConversationRealtime = async conversationId => {
+    if (!isConversationRoomAuthorized(socket, conversationId)) return false;
+    try {
+      const conversation = await Conversation.findOne({ _id: conversationId, participants: userId }).select("participants").lean();
+      if (!conversation) return false;
+      return !(await isConversationPeerBlocked({
+        participantIds: conversation.participants,
+        userId,
+        findUser: id => User.findById(id).select("blockedUsers").lean()
+      }));
+    } catch {
+      return false;
+    }
+  };
+  socket.on("typing:start", async payload => {
+    const conversationId = payload?.conversationId;
+    if (!await canUseConversationRealtime(conversationId)) {
+      if (typeof conversationId === "string") socket.leave("conversation:" + conversationId.trim());
+      return;
+    }
+    socket.to("conversation:" + conversationId).emit("typing:start", { userId, conversationId });
+  });
+  socket.on("typing:stop", async payload => {
+    const conversationId = payload?.conversationId;
+    if (!await canUseConversationRealtime(conversationId)) {
+      if (typeof conversationId === "string") socket.leave("conversation:" + conversationId.trim());
+      return;
+    }
+    socket.to("conversation:" + conversationId).emit("typing:stop", { userId, conversationId });
+  });
+  socket.on("conversation:join", async payload => {
+    const conversationId = payload?.conversationId;
+    const id = typeof conversationId === "string" ? conversationId.trim() : "";
+    if (!id || id.length > 64) return;
+    try {
+      const conversation = await Conversation.findOne({ _id: id, participants: userId }).select("participants").lean();
+      const blocked = conversation && await isConversationPeerBlocked({
+        participantIds: conversation.participants,
+        userId,
+        findUser: peerId => User.findById(peerId).select("blockedUsers").lean()
+      });
+      if (conversation && !blocked && socket.connected) socket.join("conversation:" + String(conversation._id));
+    } catch {
+      // Invalid IDs and database errors fail closed: the socket does not join.
+    }
+  });
+  socket.on("conversation:leave", payload => {
+    const conversationId = payload?.conversationId;
+    const id = typeof conversationId === "string" ? conversationId.trim() : "";
+    if (id && id.length <= 64) socket.leave("conversation:" + id);
+  });
 
   socket.on("disconnect", () => {
     const count = Math.max((onlineUsers.get(userId) || 1) - 1, 0);
@@ -189,6 +272,12 @@ app.use("/api/users", userRoutes);
 app.use("/api/posts", postRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/messages", messageRoutes);
+app.use("/api/social/groups", groupRoutes);
+app.use("/api/social/communities", communityRoutes);
+app.use("/api/social/groups", groupPostRoutes);
+app.use("/api/social/communities", communityPostRoutes);
+app.use("/api/social/groups", groupChatRoutes);
+app.use("/api/social/communities", communityChatRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/content", contentRoutes);
 app.use("/api/business", businessRoutes);

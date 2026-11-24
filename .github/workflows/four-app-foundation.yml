@@ -1,0 +1,40 @@
+name: Four-app foundation tests
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [architecture/four-app-shared-core]
+
+permissions:
+  contents: read
+
+jobs:
+  registry-tests:
+    name: Product registry and membership tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install frontend dependencies
+        run: npm install --no-package-lock
+
+      - name: Test frontend product navigation registry
+        run: node --test src/config/productNavigation.test.js
+
+      - name: Build all four frontend entry points
+        run: npm run build
+
+      - name: Install backend dependencies
+        working-directory: server
+        run: npm install --no-package-lock
+
+      - name: Test product registry, access policy, membership schema, middleware and Business AI auth
+        working-directory: server
+        run: node --test tests/productRegistry.test.js tests/productAccessPolicy.test.js tests/productMembership.test.js tests/requireProductAccess.test.js routes/businessAI.test.js realtime/conversationAccess.test.js realtime/socketAuthentication.test.js social/postAuthorization.test.js social/blockPolicy.test.js social/groupAccessPolicy.test.js social/groupMembershipPolicy.test.js social/socialSpacePostPolicy.test.js media/videoSignature.test.js media/socialMediaSignature.test.js enterprise/hrAuthorization.test.js tests/educationGuardianLifecycle.test.js tests/educationGuardianLifecycle.integration.test.js tests/socialGroupsCommunities.integration.test.js tests/socialSpacePosts.integration.test.js tests/socialSpaceChat.integration.test.js models/socialGroupsCommunities.test.js models/SocialSpaceChatMessage.test.js social/socialSpaceChatPolicy.test.js models/socialInvite.test.js social/socialInvitePolicy.test.js

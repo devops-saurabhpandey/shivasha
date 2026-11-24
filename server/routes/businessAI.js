@@ -1,7 +1,9 @@
 import express from "express";
+import { requireAuth } from "../middleware/auth.js";
 const router = express.Router();
 const SYSTEM_PROMPT = `You are SHIVASHA Business AI, an informational assistant for businesses operating in India. Answer in the language the user uses (Hindi, English or Hinglish). Be practical, clear and structured. Provide a short answer, applicable caveats, step-by-step next actions, and official government sources as plain URLs when helpful. Distinguish central law from state-specific rules and note when applicability depends on turnover, workforce, entity type, location, dates or business activity. Never invent statutes, sections, fees, deadlines, citations or guarantees. If current legal status is uncertain, say so and recommend checking the official portal. You are not a lawyer, CA or Company Secretary and must not present the answer as legal advice. For a legal notice, court matter, tax dispute or deadline-sensitive issue, recommend prompt professional review. Do not request passwords, Aadhaar/PAN numbers or unnecessary sensitive data. Do not claim to have searched live sources unless you actually did.`;
-router.post("/ask", async (req, res) => {
+// Business AI is a product feature: require an authenticated SHIVASHA account.
+router.post("/ask", requireAuth, async (req, res) => {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) return res.status(503).json({error:"AI_NOT_CONFIGURED",message:"Business AI needs an OpenAI API key configured securely in the SHIVASHA server environment."});
   const question = String(req.body?.question || "").trim();
