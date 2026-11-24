@@ -24,7 +24,7 @@ const ENTRY_FILES = Object.freeze({
 
 export function normalizeHostname(value) {
   if (typeof value !== "string") return "";
-  return value.trim().toLowerCase().replace(/:\\d+$/, "").replace(/\\.$/, "");
+  return value.trim().toLowerCase().replace(/:\d+$/, "").replace(/\.$/, "");
 }
 
 export function getProductHostMap(env = process.env) {
