@@ -2,8 +2,35 @@ import { Router } from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import User from "../models/User.js";
+import ProductMembership from "../models/ProductMembership.js";
+import { requireAuth } from "../middleware/auth.js";
+import { buildSharedSession } from "../platform/sharedSession.js";
 
 const router = Router();
+
+// One authenticated identity endpoint shared by all four application frontends.
+// This reports membership state; product APIs must still enforce access server-side.
+router.get("/session", requireAuth, async (req, res) => {
+  try {
+    const [user, memberships] = await Promise.all([
+      User.findById(req.user.id).select("_id name email role avatarUrl moderationBlocked").lean(),
+      ProductMembership.find({ userId: req.user.id })
+        .select("productId role permissions status expiresAt")
+        .lean()
+    ]);
+
+    if (!user) return res.status(401).json({ message: "Account not found" });
+    if (user.moderationBlocked) return res.status(403).json({ message: "This account is temporarily restricted" });
+
+    return res.json({
+      identity: { id: String(user._id), name: user.name, email: user.email, avatarUrl: user.avatarUrl || "" },
+      applications: buildSharedSession(memberships),
+      sharedCore: { identity: true, api: true, database: true }
+    });
+  } catch {
+    return res.status(503).json({ message: "Shared session could not be loaded" });
+  }
+});
 
 router.post("/register", async (req, res) => {
   try {
