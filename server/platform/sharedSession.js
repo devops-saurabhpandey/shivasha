@@ -15,10 +15,11 @@ export function buildSharedSession(memberships = [], now = new Date()) {
         const expiresAt = item.expiresAt ? new Date(item.expiresAt) : null;
         const expired = expiresAt && (!Number.isFinite(expiresAt.getTime()) || expiresAt <= now);
         const active = item.status === "active" && !expired;
+        const effectiveStatus = item.status === "active" && expired ? "expired" : (item.status || "inactive");
 
         return {
           role: typeof item.role === "string" ? item.role : null,
-          status: active ? "active" : (item.status || "inactive"),
+          status: active ? "active" : effectiveStatus,
           permissions: Array.isArray(item.permissions)
             ? item.permissions.filter(value => typeof value === "string")
             : [],
