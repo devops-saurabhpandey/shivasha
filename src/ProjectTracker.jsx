@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 
 const API_BASE = (import.meta.env.VITE_API_URL || "https://shivasha.onrender.com").replace(/\/$/, "");
 const starterTasks = [
@@ -30,6 +30,27 @@ export default function ProjectTracker({ auth }) {
   const [error,setError] = useState("");
   const [filter,setFilter] = useState("all");
   const [draft,setDraft] = useState({ project:"Shivasha", title:"", priority:"medium" });
+  const [github,setGithub] = useState(null);
+  const [githubLoading,setGithubLoading] = useState(false);
+  const [githubError,setGithubError] = useState("");
+
+  const loadGitHub = useCallback(async (refresh = false) => {
+    setGithubLoading(true); setGithubError("");
+    try {
+      const response = await fetch(API_BASE+"/api/admin/github-projects"+(refresh?"?refresh=1":""), { headers:{ Authorization:"Bearer "+(auth?.token || "") } });
+      const data = await response.json().catch(()=>({}));
+      if (!response.ok) throw new Error(data.message || "Unable to sync GitHub projects");
+      setGithub(data);
+    } catch (e) { setGithubError(e.message); }
+    finally { setGithubLoading(false); }
+  }, [auth?.token]);
+
+  useEffect(() => {
+    if (!auth?.token) return undefined;
+    loadGitHub();
+    const interval = setInterval(() => loadGitHub(), 5 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, [auth?.token, loadGitHub]);
 
   const headers = { "Content-Type":"application/json", Authorization:"Bearer "+(auth?.token || "") };
   const persist = async next => {
@@ -84,19 +105,53 @@ export default function ProjectTracker({ auth }) {
     <div className="feed-head"><div><h2>My Project Dashboard</h2><p>Private workspace · Only your signed-in admin account can access these tasks.</p></div><span style={{fontSize:12,color:"#64748b"}}>{saving?"Saving…":"Cloud-saved"}</span></div>
     {error && <div className="api-error" role="alert">{error}</div>}
     <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(135px,1fr))",gap:12,marginBottom:18}}>
-      {[["Total Tasks",counts.total],["Completed",counts.completed],["In Progress",counts.progress],["Pending",counts.pending]].map(([label,value])=><div key={label} style={card}><small style={{color:"#64748b"}}>{label}</small><div style={{fontSize:27,fontWeight:800,marginTop:5}}>{value}</div></div>)}
+      {[[ "Total Tasks",counts.total ],[ "Completed",counts.completed ],[ "In Progress",counts.progress ],[ "Pending",counts.pending ]].map(([label,value])=><div key={label} style={card}><small style={{color:"#64748b"}}>{label}</small><div style={{fontSize:27,fontWeight:800,marginTop:5}}>{value}</div></div>)}
+    </div>
+    <div style={{...card,marginBottom:18}}>
+      <div className="feed-head" style={{alignItems:"center"}}>
+        <div><h3 style={{margin:"0 0 4px"}}>GitHub Projects Sync</h3><p style={{margin:0,color:"#64748b",fontSize:13}}>All owned repositories, including archived repositories, plus recent Issues, Pull Requests and Actions status.</p></div>
+        <button onClick={()=>loadGitHub(true)} disabled={githubLoading} style={{...button,background:"#111827",color:"#fff"}}>{githubLoading?"Syncing…":"↻ Sync GitHub"}</button>
+      </div>
+      {githubError && <div className="api-error" role="alert">{githubError}</div>}
+      {githubLoading && !github && <p>Loading GitHub repository status…</p>}
+      {github && <>
+        <div style={{display:"flex",gap:12,flexWrap:"wrap",margin:"14px 0"}}>
+          {[[ "Repositories",github.repositoryCount ],[ "Recent Issues",github.totals.openIssues ],[ "Open PRs",github.totals.openPullRequests ],[ "Workflow failures",github.totals.workflowFailures ],[ "Running workflows",github.totals.workflowsRunning ]].map(([label,value])=><div key={label} style={{background:"#f8fafc",borderRadius:10,padding:10,minWidth:105}}><small style={{color:"#64748b"}}>{label}</small><div style={{fontSize:22,fontWeight:800}}>{value}</div></div>)}
+        </div>
+        <small style={{color:"#64748b"}}>Owner: {github.owner} · Last synced: {new Date(github.syncedAt).toLocaleString()} · Auto-refresh every 5 minutes while this page is open.</small>
+        <div style={{display:"grid",gap:10,marginTop:12}}>
+          {github.projects.map(project=><article key={project.id} style={{border:"1px solid #e5eaf1",borderRadius:11,padding:12}}>
+            <div style={{display:"flex",justifyContent:"space-between",gap:10,flexWrap:"wrap"}}>
+              <a href={project.url} target="_blank" rel="noreferrer" style={{fontWeight:800,color:"#3730a3"}}>{project.fullName}</a>
+              <small style={{color:"#64748b"}}>{project.visibility}{project.archived?" · Archived":""}{project.fork?" · Fork":""} · Updated {new Date(project.updatedAt).toLocaleDateString()}</small>
+            </div>
+            {project.description && <p style={{fontSize:13,color:"#64748b",margin:"5px 0"}}>{project.description}</p>}
+            <div style={{display:"flex",gap:12,flexWrap:"wrap",fontSize:13,marginTop:7}}>
+              <span>Recent Issues: {project.issues.length}{project.issues.length===10?" (latest 10)":""}</span>
+              <span>Open PRs: {project.pullRequests.length}</span>
+              {project.language && <span>Language: {project.language}</span>}
+              <span>Actions: {project.workflow ? (project.workflow.status==="completed" ? (project.workflow.conclusion||"completed") : project.workflow.status) : "No recent run"}</span>
+            </div>
+            {project.issues.length>0 && <div style={{marginTop:8,fontSize:13}}><b>Issues:</b> {project.issues.slice(0,3).map((item,index)=><React.Fragment key={item.number}>{index>0?" · ":""}<a href={item.url} target="_blank" rel="noreferrer">#{item.number} {item.title}</a></React.Fragment>)}</div>}
+            {project.pullRequests.length>0 && <div style={{marginTop:6,fontSize:13}}><b>Pull Requests:</b> {project.pullRequests.slice(0,3).map((item,index)=><React.Fragment key={item.number}>{index>0?" · ":""}<a href={item.url} target="_blank" rel="noreferrer">#{item.number} {item.title}</a></React.Fragment>)}</div>}
+            {project.workflow?.url && <div style={{marginTop:6,fontSize:13}}><a href={project.workflow.url} target="_blank" rel="noreferrer">Open latest GitHub Actions run</a></div>}
+            {project.syncWarning && <small style={{display:"block",color:"#b45309",marginTop:5}}>{project.syncWarning}</small>}
+          </article>)}
+        </div>
+      </>}
     </div>
     <div style={{...card,marginBottom:18}}>
       <h3 style={{marginTop:0}}>Add a task</h3>
       <form onSubmit={add} style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(160px,1fr))",gap:10}}>
-        <input aria-label="Project name" value={draft.project} onChange={e=>setDraft({...draft,project:e.target.value})} placeholder="Project name" style={{padding:11,border:"1px solid #dbe2ea",borderRadius:9,minWidth:0}}/>
+        <input aria-label="Project name" list="github-project-options" value={draft.project} onChange={e=>setDraft({...draft,project:e.target.value})} placeholder="Project name" style={{padding:11,border:"1px solid #dbe2ea",borderRadius:9,minWidth:0}}/>
+        <datalist id="github-project-options">{(github?.projects || []).map(project=><option key={project.id} value={project.name}/>)}</datalist>
         <input aria-label="Task title" required value={draft.title} onChange={e=>setDraft({...draft,title:e.target.value})} placeholder="What needs to be done?" style={{padding:11,border:"1px solid #dbe2ea",borderRadius:9,minWidth:0}}/>
         <select aria-label="Task priority" value={draft.priority} onChange={e=>setDraft({...draft,priority:e.target.value})} style={{padding:11,border:"1px solid #dbe2ea",borderRadius:9}}><option value="high">High priority</option><option value="medium">Medium priority</option><option value="low">Low priority</option></select>
         <button style={{...button,background:"#4f46e5",color:"#fff"}} disabled={saving}>+ Add Task</button>
       </form>
     </div>
     <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:12}}>
-      {[["all","All"],["pending","Pending"],["in-progress","In Progress"],["completed","Completed"]].map(([value,label])=><button key={value} onClick={()=>setFilter(value)} style={{...button,background:filter===value?"#312e81":"#eef2ff",color:filter===value?"#fff":"#3730a3"}}>{label}</button>)}
+      {[[ "all","All" ],[ "pending","Pending" ],[ "in-progress","In Progress" ],[ "completed","Completed" ]].map(([value,label])=><button key={value} onClick={()=>setFilter(value)} style={{...button,background:filter===value?"#312e81":"#eef2ff",color:filter===value?"#fff":"#3730a3"}}>{label}</button>)}
     </div>
     {loading ? <div className="panel empty">Loading your private project tracker…</div> : visible.length ? <div style={{display:"grid",gap:10}}>
       {visible.map(task=><article key={task.id} style={{...card,display:"grid",gridTemplateColumns:"minmax(0,1fr) auto",gap:12,alignItems:"center"}}>
