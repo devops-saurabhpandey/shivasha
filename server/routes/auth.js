@@ -5,8 +5,14 @@ import User from "../models/User.js";
 import ProductMembership from "../models/ProductMembership.js";
 import { requireAuth } from "../middleware/auth.js";
 import { buildSharedSession } from "../platform/sharedSession.js";
+import { getAuthCookieOptions, clearAuthCookieOptions, AUTH_COOKIE_NAME } from "../platform/authCookie.js";
 
 const router = Router();
+
+router.post("/logout", (_req, res) => {
+  res.clearCookie(AUTH_COOKIE_NAME, clearAuthCookieOptions());
+  return res.json({ message: "Logged out" });
+});
 
 // One authenticated identity endpoint shared by all four application frontends.
 // This reports membership state; product APIs must still enforce access server-side.
@@ -70,6 +76,10 @@ router.post("/login", async (req, res) => {
       process.env.JWT_SECRET,
       { expiresIn: "7d" }
     );
+
+    if (process.env.AUTH_COOKIE_SSO === "true") {
+      res.cookie(AUTH_COOKIE_NAME, token, getAuthCookieOptions());
+    }
 
     res.json({
       message: "Login successful",
