@@ -47,6 +47,7 @@ export default function ProductPortal({ productId }) {
   const product = SHIVASHA_APPS[productId];
   const [session, setSession] = useState(null);
   const [sessionState, setSessionState] = useState("checking");
+  const [logoutError, setLogoutError] = useState("");
 
   useEffect(() => {
     let active = true;
@@ -70,11 +71,15 @@ export default function ProductPortal({ productId }) {
   }, []);
 
   const logout = async () => {
+    setLogoutError("");
     try {
-      await fetch(API_BASE + "/api/auth/logout", { method: "POST", credentials: "include" });
-    } finally {
+      const response = await fetch(API_BASE + "/api/auth/logout", { method: "POST", credentials: "include" });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.message || "Sign out failed");
       setSession(null);
       setSessionState("signed-out");
+    } catch (error) {
+      setLogoutError(error.message || "Could not sign out. Please try again.");
     }
   };
 
@@ -92,6 +97,7 @@ export default function ProductPortal({ productId }) {
         {sessionState === "signed-in" && <div>
           <p style={{ lineHeight: 1.6 }}>Signed in as <strong>{session.identity?.name || session.identity?.email}</strong> ({session.identity?.email}).</p>
           <p style={{ lineHeight: 1.6, marginBottom: 12 }}>Your account is recognized by the shared identity service. This application's permissions are still checked separately.</p>
+          {logoutError && <p role="alert" style={{ color: "#b91c1c" }}>{logoutError}</p>}
           <button type="button" onClick={logout} style={{ padding: "9px 14px", borderRadius: 8, border: "1px solid #cbd5e1", background: "#fff", cursor: "pointer" }}>Sign out of Shivasha</button>
         </div>}
         {sessionState === "signed-out" && <a href="https://social.shivasha.com" style={{ display: "inline-block", marginTop: 12, padding: "10px 14px", borderRadius: 8, background: "#172554", color: "#fff", fontWeight: 700, textDecoration: "none" }}>Sign in with Shivasha</a>}
