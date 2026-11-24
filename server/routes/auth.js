@@ -68,6 +68,11 @@ router.post("/register", async (req, res) => {
 });
 
 router.post("/login", async (req, res) => {
+  // Prevent login CSRF: an attacker must not be able to silently sign a
+  // victim browser into the attacker's account and plant that session cookie.
+  if (process.env.AUTH_COOKIE_SSO === "true" && !isAllowedBrowserOrigin(req.headers.origin)) {
+    return res.status(403).json({ message: "Untrusted request origin" });
+  }
   try {
     const { email, password } = req.body;
     const user = await User.findOne({ email });
