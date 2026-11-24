@@ -31,6 +31,10 @@ test("cookie domain is opt-in and SameSite=None requires HTTPS in production", (
   assert.equal(options.secure, true);
 });
 
+test("SameSite=None always requires Secure even outside production", () => {
+  assert.equal(getAuthCookieOptions({ AUTH_COOKIE_SAME_SITE: "none" }).secure, true);
+});
+
 test("parses cookies and safely handles malformed encoding", () => {
   assert.deepEqual(parseCookieHeader("a=1; shivasha_sso=abc%2E123; bad=%E0%A4%A"), {
     a: "1",
