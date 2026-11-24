@@ -59,16 +59,32 @@ dotenv.config();
 const app = express();
 const httpServer = http.createServer(app);
 const PORT = process.env.PORT || 5000;
-const allowedOrigins = process.env.FRONTEND_URL ? process.env.FRONTEND_URL.split(",").map(origin => origin.trim()) : "*";
+const ssoEnabled = process.env.AUTH_COOKIE_SSO === "true";
+const defaultSsoOrigins = [
+  "https://social.shivasha.com",
+  "https://business.shivasha.com",
+  "https://edutech.shivasha.com",
+  "https://enterprise.shivasha.com"
+];
+const allowedOrigins = process.env.FRONTEND_URL
+  ? process.env.FRONTEND_URL.split(",").map(origin => origin.trim()).filter(Boolean)
+  : (ssoEnabled ? defaultSsoOrigins : "*");
+const ssoCorsOrigin = (origin, callback) => {
+  if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
+  return callback(new Error("Origin is not allowed by SHIVASHA CORS policy"));
+};
+const corsOptions = ssoEnabled
+  ? { origin: ssoCorsOrigin, credentials: true }
+  : { origin: allowedOrigins };
 
-app.use(cors({ origin: allowedOrigins }));
+app.use(cors(corsOptions));
 app.use(express.json());
 
 const onlineUsers = new Map();
 const liveRooms = new Map();
 
 const io = new Server(httpServer, {
-  cors: { origin: allowedOrigins, methods: ["GET", "POST"] }
+  cors: { ...corsOptions, methods: ["GET", "POST"] }
 });
 
 io.use(async (socket, next) => {
