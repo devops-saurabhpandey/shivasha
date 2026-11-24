@@ -9,6 +9,7 @@ import jwt from "jsonwebtoken";
 import Conversation from "./models/Conversation.js";
 import User from "./models/User.js";
 import { authenticateSocketUser } from "./realtime/socketAuthentication.js";
+import { parseCookieHeader, AUTH_COOKIE_NAME } from "./platform/authCookie.js";
 import { isConversationRoomAuthorized, isConversationPeerBlocked } from "./realtime/conversationAccess.js";
 import authRoutes from "./routes/auth.js";
 import userRoutes from "./routes/users.js";
@@ -89,7 +90,7 @@ const io = new Server(httpServer, {
 
 io.use(async (socket, next) => {
   const result = await authenticateSocketUser({
-    token: socket.handshake.auth?.token,
+    token: socket.handshake.auth?.token || parseCookieHeader(socket.handshake.headers?.cookie || "")[AUTH_COOKIE_NAME],
     jwtSecret: process.env.JWT_SECRET,
     verifyToken: jwt.verify,
     findUser: id => User.findById(id).select("_id moderationBlocked").lean()
