@@ -81,7 +81,7 @@ export default function App() {
           session = await apiFetch("/api/auth/session", null);
         }
         if (!active) return;
-        const restored = { ...(saved || {}), token: saved?.token || null, user: session.identity, sso: true };
+        const restored = { ...(saved || {}), token: session.authMethod === "cookie" ? null : (saved?.token || null), user: session.identity, sso: session.authMethod === "cookie" || Boolean(saved?.sso) };
         setAuth(restored);
         if (saved) localStorage.setItem("shivasha_auth", JSON.stringify(restored));
       } catch {
@@ -109,7 +109,7 @@ export default function App() {
 }
 function Login({onLogin}) {
   const [mode,setMode]=useState("login"),[form,setForm]=useState({name:"",email:"",password:""}),[message,setMessage]=useState(""),[loading,setLoading]=useState(false),[showPassword,setShowPassword]=useState(false);
-  const submit=async e=>{e.preventDefault();setMessage("");setLoading(true);try{const d=await apiFetch("/api/auth/"+mode,null,{method:"POST",body:JSON.stringify(form)});if(mode==="register"){setMode("login");setMessage("Account created. Now login.")}else{localStorage.setItem("shivasha_auth",JSON.stringify(d));onLogin(d)}}catch(e){setMessage(e.message)}finally{setLoading(false)}};
+  const submit=async e=>{e.preventDefault();setMessage("");setLoading(true);try{const d=await apiFetch("/api/auth/"+mode,null,{method:"POST",body:JSON.stringify(form)});if(mode==="register"){setMode("login");setMessage("Account created. Now login.")}else if(d.sso){const session=await apiFetch("/api/auth/session",null);const next={token:null,user:session.identity,sso:true};localStorage.setItem("shivasha_auth",JSON.stringify(next));onLogin(next)}else{localStorage.setItem("shivasha_auth",JSON.stringify(d));onLogin(d)}}catch(e){setMessage(e.message)}finally{setLoading(false)}};
   const changeMode=next=>{setMode(next);setMessage("")};
   return <main className="login-page">
     
