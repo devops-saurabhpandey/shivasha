@@ -3,6 +3,7 @@ import { createReadStream, existsSync, statSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { execFileSync } from "node:child_process";
+import { getProductEntryForHost } from "./server/platform/productDomainResolver.js";
 
 const projectRoot = path.dirname(fileURLToPath(import.meta.url));
 const root = path.join(projectRoot, "dist");
@@ -47,8 +48,11 @@ const server = http.createServer((req, res) => {
     return res.end("Bad Request");
   }
 
+  // Hostname chooses only the public frontend shell. It never grants API access.
+  const productEntry = getProductEntryForHost(req.headers.host);
+  const fallbackEntry = productEntry?.entryFile || "index.html";
   const relative = pathname.replace(/^\/+/, "");
-  let target = path.resolve(root, relative || "index.html");
+  let target = path.resolve(root, relative || fallbackEntry);
   if (!target.startsWith(root + path.sep) && target !== path.join(root, "index.html")) {
     res.writeHead(403);
     return res.end("Forbidden");
@@ -58,10 +62,11 @@ const server = http.createServer((req, res) => {
     target = path.join(target, "index.html");
   }
 
-  // SPA routes should return index.html; missing asset requests should remain 404s.
+  // Product-specific SPA routes fall back to that hostname's own entry point.
+  // Missing asset requests remain 404s instead of returning an HTML document.
   if (!existsSync(target) || !statSync(target).isFile()) {
     if (!path.extname(pathname) || pathname.endsWith(".html")) {
-      target = path.join(root, "index.html");
+      target = path.join(root, fallbackEntry);
     } else {
       res.writeHead(404);
       return res.end("Not Found");
@@ -75,7 +80,7 @@ const server = http.createServer((req, res) => {
 
   res.writeHead(200, {
     "Content-Type": mime[path.extname(target).toLowerCase()] || "application/octet-stream",
-    "Cache-Control": target.endsWith("index.html") ? "no-cache" : "public, max-age=3600"
+    "Cache-Control": target.endsWith(".html") ? "no-cache" : "public, max-age=3600"
   });
   if (req.method === "HEAD") return res.end();
   createReadStream(target).pipe(res);
