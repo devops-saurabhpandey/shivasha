@@ -66,3 +66,19 @@ test("unsafe methods are identified for cookie CSRF checks", () => {
   assert.equal(isUnsafeMethod("POST"), true);
   assert.equal(isUnsafeMethod("DELETE"), true);
 });
+
+test("cookie SSO login response never exposes a JavaScript-readable JWT", async () => {
+  const { buildLoginResponsePayload } = await import("../platform/authCookie.js");
+  const user = { id: "user-1", email: "person@example.com" };
+  const payload = buildLoginResponsePayload({ ssoEnabled: true, token: "secret-jwt", user });
+  assert.deepEqual(payload, { message: "Login successful", sso: true, user });
+  assert.equal("token" in payload, false);
+});
+
+test("legacy login response retains bearer token only when cookie SSO is disabled", async () => {
+  const { buildLoginResponsePayload } = await import("../platform/authCookie.js");
+  const user = { id: "user-1", email: "person@example.com" };
+  const payload = buildLoginResponsePayload({ ssoEnabled: false, token: "legacy-jwt", user });
+  assert.equal(payload.token, "legacy-jwt");
+  assert.equal(payload.sso, undefined);
+});
