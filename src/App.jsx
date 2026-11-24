@@ -39,7 +39,7 @@ import SocialSpaces from "./SocialSpaces.jsx";
 
 const API_BASE = (import.meta.env.VITE_API_URL || "https://shivasha.onrender.com").replace(/\/$/, "");
 function apiFetch(path, auth, options = {}) {
-  return fetch(API_BASE + path, {...options, headers: {"Content-Type":"application/json", ...(auth?.token ? {Authorization:"Bearer "+auth.token}:{}), ...(options.headers||{})}})
+  return fetch(API_BASE + path, {...options, credentials: "include", headers: {"Content-Type":"application/json", ...(auth?.token ? {Authorization:"Bearer "+auth.token}:{}), ...(options.headers||{})}})
     .then(async r => {
       const raw = await r.text();
       let data = {};
@@ -63,9 +63,49 @@ export default function App() {
     }
   }, []);
   const [auth,setAuth]=useState(()=>{try{return JSON.parse(localStorage.getItem("shivasha_auth"))||null}catch{return null}});
+  const [authChecked,setAuthChecked]=useState(false);
   const [showLogin,setShowLogin]=useState(false);
+
+  useEffect(() => {
+    let active = true;
+    const restoreSession = async () => {
+      const saved = (() => { try { return JSON.parse(localStorage.getItem("shivasha_auth")) || null; } catch { return null; } })();
+      try {
+        let session;
+        try {
+          session = await apiFetch("/api/auth/session", saved);
+        } catch (error) {
+          if (!saved?.token) throw error;
+          // A stale legacy bearer token must not prevent a valid SSO cookie
+          // from restoring the account on another Shivasha application.
+          session = await apiFetch("/api/auth/session", null);
+        }
+        if (!active) return;
+        const restored = { ...(saved || {}), token: saved?.token || null, user: session.identity, sso: true };
+        setAuth(restored);
+        if (saved) localStorage.setItem("shivasha_auth", JSON.stringify(restored));
+      } catch {
+        if (!active) return;
+        localStorage.removeItem("shivasha_auth");
+        setAuth(null);
+      } finally {
+        if (active) setAuthChecked(true);
+      }
+    };
+    restoreSession();
+    return () => { active = false; };
+  }, []);
+
+  const logout = () => {
+    apiFetch("/api/auth/logout", null, { method: "POST" }).catch(() => {});
+    localStorage.removeItem("shivasha_auth");
+    setAuth(null);
+    setShowLogin(false);
+  };
+
+  if (!authChecked) return <main className="login-page" aria-live="polite"><section className="login-wrap"><p className="muted">Checking your SHIVASHA session…</p></section></main>;
   if(!auth) return showLogin ? <Login onLogin={setAuth}/> : <PublicHome onGetStarted={()=>document.getElementById("services")?.scrollIntoView({behavior:"smooth"})} onLogin={()=>setShowLogin(true)}/>;
-  return <SocialApp auth={auth} setAuth={setAuth} onLogout={()=>{localStorage.removeItem("shivasha_auth");setAuth(null);setShowLogin(false)}}/>;
+  return <SocialApp auth={auth} setAuth={setAuth} onLogout={logout}/>;
 }
 function Login({onLogin}) {
   const [mode,setMode]=useState("login"),[form,setForm]=useState({name:"",email:"",password:""}),[message,setMessage]=useState(""),[loading,setLoading]=useState(false),[showPassword,setShowPassword]=useState(false);
