@@ -5,7 +5,7 @@ import User from "../models/User.js";
 import ProductMembership from "../models/ProductMembership.js";
 import { requireAuth } from "../middleware/auth.js";
 import { buildSharedSession } from "../platform/sharedSession.js";
-import { getAuthCookieOptions, clearAuthCookieOptions, AUTH_COOKIE_NAME, isAllowedBrowserOrigin } from "../platform/authCookie.js";
+import { getAuthCookieOptions, clearAuthCookieOptions, AUTH_COOKIE_NAME, isAllowedBrowserOrigin, buildLoginResponsePayload } from "../platform/authCookie.js";
 
 const router = Router();
 
@@ -86,11 +86,10 @@ router.post("/login", async (req, res) => {
     }
 
     const userPayload = { id: user._id, name: user.name, email: user.email, role: user.role };
-    if (process.env.AUTH_COOKIE_SSO === "true") {
-      // Browser SSO clients receive only the HttpOnly cookie, never a JS-readable JWT.
-      return res.json({ message: "Login successful", sso: true, user: userPayload });
-    }
-    return res.json({ message: "Login successful", token, user: userPayload });
+    // Browser SSO clients receive only the HttpOnly cookie, never a JS-readable JWT.
+    return res.json(buildLoginResponsePayload({
+      ssoEnabled: process.env.AUTH_COOKIE_SSO === "true", token, user: userPayload
+    }));
   } catch (error) {
     res.status(500).json({ message: "Login failed", error: error.message });
   }
