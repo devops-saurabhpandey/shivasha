@@ -5,7 +5,7 @@ export function getAuthCookieOptions(env = process.env) {
   const sameSite = ["strict", "lax", "none"].includes(String(env.AUTH_COOKIE_SAME_SITE || "lax").toLowerCase())
     ? String(env.AUTH_COOKIE_SAME_SITE || "lax").toLowerCase()
     : "lax";
-  const secure = env.NODE_ENV === "production" || env.AUTH_COOKIE_SECURE === "true";
+  const secure = env.NODE_ENV === "production" || env.AUTH_COOKIE_SECURE === "true" || sameSite === "none";
   return {
     httpOnly: true,
     secure,
