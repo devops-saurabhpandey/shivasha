@@ -33,6 +33,7 @@ If using an API host outside `shivasha.com`, `SameSite=None; Secure` may be requ
 - Cookie-authenticated unsafe methods require an exact trusted Origin match. Bearer-token clients are unchanged.
 - CORS allows credentials only for the configured frontend origins while SSO is enabled.
 - Social frontend includes credentials, restores its session from `GET /api/auth/session`, and can use the cookie for Socket.IO.
+- All four migration-stage product portals check the same session, show the signed-in identity, link to the app suite, and provide shared logout. The Business, Edutech and Enterprise portals are still migration-stage portals, not complete product runtimes.
 - `POST /api/auth/logout` clears the SSO cookie. Other frontends must call this endpoint on logout too.
 - The shared session endpoint is informational; every product API still needs server-side product/tenant authorization.
 
@@ -41,7 +42,7 @@ If using an API host outside `shivasha.com`, `SameSite=None; Secure` may be requ
 1. Configure DNS and TLS for all four frontend domains and `api.shivasha.com`.
 2. Configure the shared API base URL in each frontend build as `https://api.shivasha.com`.
 3. Set the API environment variables above and redeploy the API.
-4. Update Business, Edutech and Enterprise frontends to use `credentials: "include"` for API requests and call `GET /api/auth/session` during startup.
+4. When those portals become full product runtimes, preserve `credentials: "include"` and call `GET /api/auth/session` during startup in their API clients.
 5. Verify login on Social, then open each other app in the same browser profile and confirm the session is restored without another login.
 6. Verify logout from each app clears the shared API cookie; test expired token, blocked account, untrusted Origin, and missing-cookie cases.
 7. Keep bearer-token compatibility until all clients are migrated; remove local token persistence only in a separately tested change.
