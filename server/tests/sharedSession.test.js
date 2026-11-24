@@ -34,7 +34,9 @@ test("expired active memberships are not reported as active", () => {
     status: "active",
     expiresAt: "2026-11-23T00:00:00.000Z"
   }], now);
-  assert.equal(result.find(item => item.productId === "edutech").membershipStatus, "inactive");
+  const edutech = result.find(item => item.productId === "edutech");
+  assert.equal(edutech.membershipStatus, "inactive");
+  assert.equal(edutech.memberships[0].status, "expired");
 });
 
 test("ignores unknown products and malformed membership records", () => {
