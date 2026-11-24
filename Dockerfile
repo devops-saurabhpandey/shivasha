@@ -10,6 +10,9 @@ RUN npm install --omit=dev && npm cache clean --force
 # Copy SHIVASHA API source
 COPY server/ ./
 
+# Copy shared payroll calculation modules used by the HR API
+COPY src/ ./src/
+
 ENV PORT=5000
 EXPOSE 5000
 
