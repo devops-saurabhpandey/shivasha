@@ -5,11 +5,14 @@ import User from "../models/User.js";
 import ProductMembership from "../models/ProductMembership.js";
 import { requireAuth } from "../middleware/auth.js";
 import { buildSharedSession } from "../platform/sharedSession.js";
-import { getAuthCookieOptions, clearAuthCookieOptions, AUTH_COOKIE_NAME } from "../platform/authCookie.js";
+import { getAuthCookieOptions, clearAuthCookieOptions, AUTH_COOKIE_NAME, isAllowedBrowserOrigin } from "../platform/authCookie.js";
 
 const router = Router();
 
-router.post("/logout", (_req, res) => {
+router.post("/logout", (req, res) => {
+  if (process.env.AUTH_COOKIE_SSO === "true" && !isAllowedBrowserOrigin(req.headers.origin)) {
+    return res.status(403).json({ message: "Untrusted request origin" });
+  }
   res.clearCookie(AUTH_COOKIE_NAME, clearAuthCookieOptions());
   return res.json({ message: "Logged out" });
 });
@@ -31,6 +34,7 @@ router.get("/session", requireAuth, async (req, res) => {
     return res.json({
       identity: { id: String(user._id), name: user.name, email: user.email, avatarUrl: user.avatarUrl || "" },
       applications: buildSharedSession(memberships),
+      authMethod: req.authMethod || "bearer",
       sharedCore: { identity: true, api: true, database: true }
     });
   } catch {
@@ -81,11 +85,12 @@ router.post("/login", async (req, res) => {
       res.cookie(AUTH_COOKIE_NAME, token, getAuthCookieOptions());
     }
 
-    res.json({
-      message: "Login successful",
-      token,
-      user: { id: user._id, name: user.name, email: user.email, role: user.role }
-    });
+    const userPayload = { id: user._id, name: user.name, email: user.email, role: user.role };
+    if (process.env.AUTH_COOKIE_SSO === "true") {
+      // Browser SSO clients receive only the HttpOnly cookie, never a JS-readable JWT.
+      return res.json({ message: "Login successful", sso: true, user: userPayload });
+    }
+    return res.json({ message: "Login successful", token, user: userPayload });
   } catch (error) {
     res.status(500).json({ message: "Login failed", error: error.message });
   }
