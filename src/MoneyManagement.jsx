@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import "./money-management.css";
 
-const STORAGE_PREFIX = "shivasha_money_management_v2";
+const STORAGE_PREFIX = "shivasha_money_management_v1";
 const SETTINGS_PREFIX = "shivasha_money_balance_settings_v1";
 const BUCKETS = [
   { id: "survival", title: "Survival Money", hindi: "जरूरी खर्च", description: "घर, भोजन, बिजली, यात्रा और रोजमर्रा की जरूरतें", color: "#2563eb" },
